@@ -62,12 +62,6 @@ def read_ast():
             project_node_dict[node_type].append(node)
         # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
         set_method_detail(project_node_dict)
-        # 循环当前项目中的所有节点，如果节点的类型已经存在了，直接记录下来，否则先创建key然后当作数组往里面添加。
-        for node in project_node_list:
-            if total_node_list.__contains__(node.node_type):
-                total_node_list.get(node.node_type).append(node)
-            else:
-                total_node_list[node.node_type] = [node]
         # 如果需要打印树，那就打印。
         if config.show_plt:
             print_tree(project_node_list)
@@ -77,6 +71,13 @@ def read_ast():
         if config.show_corpus_msg:
             w2v = Word2Vec.load(config.corpus_file_path)
             print(w2v.wv.vocab.keys())
+        # 循环当前项目中的所有节点，如果节点的类型已经存在了，直接记录下来，否则先创建key然后当作数组往里面添加。
+        for node in project_node_list:
+            if total_node_list.__contains__(node.node_type):
+                total_node_list.get(node.node_type).append(node)
+            else:
+                total_node_list[node.node_type] = [node]
+        print(total_node_list.keys())
 
 
 # 根据传入的json内容生成一个简单的AST的树结构数据。
@@ -234,31 +235,33 @@ def set_method_detail(project_node_dict):
             # 将这里的函数名字和参数都添加到FunctionDefinition节点的attribute上。
             node.append_attribute("method_name", method_name)
             node.append_attribute("params", params)
-    # 循环所有的ModifierDefinition节点，找出其中的method_name作为新的属性。
-    for node in project_node_dict['ModifierDefinition']:
-        # 为了取出方法的名字，先获取start和end，然后去切分字符串。
-        start = node.attribute['src_code'][0].index(" ") + 1
-        end = node.attribute['src_code'][0].index(")") + 1
-        # 切分字符串，获取函数的完全信息
-        # modifier onlyOwner(uint a) {
-        # 假如上面这个例子，取出来的是onlyOwner(uint a)
-        method_full_content = node.attribute['src_code'][0][start: end]
-        # 取出onlyOwner(uint a)中的函数名字，onlyOwner
-        method_name = method_full_content[0: method_full_content.index("(")]
-        # 存放最终的参数的数组，使用数组，里面只保存对应的参数的类型。
-        params = []
-        # 被切分以后的参数名字，这里面保存的是['uint a', ' uint b',...]
-        after_split_params = method_full_content.replace(method_name, "").replace("(", "").replace(")", "").split(",")
-        # 这里取到的部分还是uint a这种，还需要再次切分
-        for param in after_split_params:
-            # 如果长度是0，直接跳过。
-            if len(param) == 0:
-                continue
-            # 需要考虑到后面的参数会有空格开头的情况，比如onlyOwner(uint a, uint b)
-            if param.split(" ")[0] != "":
-                params.append(param.split(" ")[0])
-            else:
-                params.append(param.split(" ")[1])
-        # 将这里的函数名字和参数都添加到ModifierDefinition节点的attribute上。
-        node.append_attribute("method_name", method_name)
-        node.append_attribute("params", params)
+    # 如果存在修饰符才启动这段代码
+    if "ModifierDefinition" in project_node_dict.keys():
+        # 循环所有的ModifierDefinition节点，找出其中的method_name作为新的属性。
+        for node in project_node_dict['ModifierDefinition']:
+            # 为了取出方法的名字，先获取start和end，然后去切分字符串。
+            start = node.attribute['src_code'][0].index(" ") + 1
+            end = node.attribute['src_code'][0].index(")") + 1
+            # 切分字符串，获取函数的完全信息
+            # modifier onlyOwner(uint a) {
+            # 假如上面这个例子，取出来的是onlyOwner(uint a)
+            method_full_content = node.attribute['src_code'][0][start: end]
+            # 取出onlyOwner(uint a)中的函数名字，onlyOwner
+            method_name = method_full_content[0: method_full_content.index("(")]
+            # 存放最终的参数的数组，使用数组，里面只保存对应的参数的类型。
+            params = []
+            # 被切分以后的参数名字，这里面保存的是['uint a', ' uint b',...]
+            after_split_params = method_full_content.replace(method_name, "").replace("(", "").replace(")", "").split(",")
+            # 这里取到的部分还是uint a这种，还需要再次切分
+            for param in after_split_params:
+                # 如果长度是0，直接跳过。
+                if len(param) == 0:
+                    continue
+                # 需要考虑到后面的参数会有空格开头的情况，比如onlyOwner(uint a, uint b)
+                if param.split(" ")[0] != "":
+                    params.append(param.split(" ")[0])
+                else:
+                    params.append(param.split(" ")[1])
+            # 将这里的函数名字和参数都添加到ModifierDefinition节点的attribute上。
+            node.append_attribute("method_name", method_name)
+            node.append_attribute("params", params)
