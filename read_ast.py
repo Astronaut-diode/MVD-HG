@@ -25,6 +25,8 @@ def read_ast():
         data_ast_json_project_dir_path = data_ast_json_dir_path + project_dir_name + "/"
         # 记录每个工程文件夹中保存的所有的节点有哪些，每个文件夹都是只使用一个，下次的文件夹时需要刷新内容。
         project_node_list = []
+        # 代表项目是否完整
+        project_file_complete = True
         # 遍历工程项目中的每一个文件
         for ast_json_file_name in os.listdir(data_ast_json_project_dir_path):
             # 抽象语法树文件的完全路径,如""/home/xjj/AST-GNN/data/AST_json/project_name/file_name.json"
@@ -48,9 +50,17 @@ def read_ast():
             # 正式的开始读取json文件中的内容
             with open(full_ast_json_path, 'r') as ast_json:
                 # 使用json的方式加载文件内容
-                content = json.load(ast_json)
+                try:
+                    content = json.load(ast_json)
+                except Exception as e:
+                    print(data_ast_json_project_dir_path, "项目有问题，跳过分析", e)
+                    project_file_complete = False
+                    break
                 # 将文件中的内容转化为图结构的数据，传入的内容有抽象语法树的内容，当前项目的所有节点列表，还有读入当前文件之前已经有多少个节点了，这个待会进去会变得，所以先记录下来。
                 create_graph(content, project_node_list, len(project_node_list), data_sol_source_dir_path + project_dir_name + "/" + ast_json_file_name.replace(".json", ".sol"))
+        # 代表项目内容并不完整无法使用,直接跳转到下一个项目文件夹。
+        if not project_file_complete:
+            continue
         # 此时整个工程文件夹中的节点都已经构建完成，将这些节点按照节点类型分类，同时放到字典中，保存的格式{"nodeType1": [...], "nodeType2": [...]}
         project_node_dict = {}
         # 循环工程文件夹内所有的节点，为了将这些节点分类保存起来。
@@ -219,10 +229,7 @@ def set_method_detail(project_node_dict):
         # 说明不是构造函数，是普通函数
         else:
             # 取出main(uint a, uint b)中的函数名字。
-            try:
-                method_name = method_full_content[0: method_full_content.index("(")]
-            except Exception as e:
-                print(e)
+            method_name = method_full_content[0: method_full_content.index("(")]
             # 存放最终的参数的数组，使用数组，里面只保存对应的参数的类型。
             params = []
             # 被切分以后的参数名字，这里面保存的是['uint a', ' uint b',...]

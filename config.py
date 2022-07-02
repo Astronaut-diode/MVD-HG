@@ -1,5 +1,5 @@
 # 是否要调用print_tree方法来显示图片
-show_plt = True
+show_plt = False
 # 是否要在print_tree方法中显示抽象语法树的边
 show_AST_plt = True
 # 是否要在print_tree方法中显示控制流图的边
