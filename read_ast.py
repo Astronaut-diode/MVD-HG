@@ -93,8 +93,6 @@ def create_graph(content, node_list, node_list_len, source_file_name):
         # 读取其中的字符
         for char in read_file.read():
             # 如果是\n那需要当作两个字符来处理，这个是为了适配用的。
-            if char == "\n":
-                src.append(char)
             src.append(char)
     # 创建队列，待会用来保存广度遍历里的东西
     queue = Queue(maxsize=0)
