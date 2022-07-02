@@ -68,6 +68,12 @@ def generate_ast():
                     # 逐行的将内容写到json文件当中。
                     for line in f.readlines():
                         write_file.write(line)
+                # 返回的操作码
+                opcode = f.close()
+                # 有返回码，说明有问题，那就删除源文件和生成的json文件
+                if not opcode is None:
+                    os.remove(data_ast_json_dir_path + project_dir_name + "/" + file_name.replace(".sol", ".json"))
+                    os.remove(data_sol_source_dir_path + project_dir_name + "/" + file_name)
             else:
                 print(full_compile_file_path + "====>", "缺少编译器版本，请在对应的虚拟环境中安装，使用命令====>", "solc-select install", version)
 
