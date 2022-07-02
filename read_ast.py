@@ -39,7 +39,8 @@ def read_ast():
                         write_file.write(line)
                         continue
                     # 如果发现已经到了这一行，那么说明从这里开始已经需要记录了。
-                    if line.replace("\n", "") == "======= " + data_sol_source_dir_path + project_dir_name + "/" + ast_json_file_name.replace(".json", ".sol") + " =======":  # 会存在文件之间引用的情况，需要解析正确的json部分
+                    # 使用了新的判断条件，原先的通用性不是很好
+                    if line.replace("\n", "").__contains__("======="):
                         flag = True
             # 删除原始的json文件，同时将刚刚生成的w.json文件转化为正确的名字。
             os.remove(full_ast_json_path)
@@ -181,6 +182,9 @@ def set_method_detail(project_node_dict):
         # 为了取出方法的名字，先获取start和end，然后去切分字符串。
         start = node.attribute['src_code'][0].index(" ") + 1
         end = node.attribute['src_code'][0].index(")") + 1
+        # 如果是以"constructor("开头的
+        if node.attribute['src_code'][0].startswith("constructor("):
+            start = 0
         # 切分字符串，获取函数的完全信息
         # function call(uint a) public pure returns(uint){
         # 假如上面这个例子，取出来的是call(uint a)
@@ -215,7 +219,10 @@ def set_method_detail(project_node_dict):
         # 说明不是构造函数，是普通函数
         else:
             # 取出main(uint a, uint b)中的函数名字。
-            method_name = method_full_content[0: method_full_content.index("(")]
+            try:
+                method_name = method_full_content[0: method_full_content.index("(")]
+            except Exception as e:
+                print(e)
             # 存放最终的参数的数组，使用数组，里面只保存对应的参数的类型。
             params = []
             # 被切分以后的参数名字，这里面保存的是['uint a', ' uint b',...]
@@ -239,7 +246,18 @@ def set_method_detail(project_node_dict):
         for node in project_node_dict['ModifierDefinition']:
             # 为了取出方法的名字，先获取start和end，然后去切分字符串。
             start = node.attribute['src_code'][0].index(" ") + 1
-            end = node.attribute['src_code'][0].index(")") + 1
+            # 修饰符有的时候可能不是以函数的形式出现的
+            # modifier lockTheSwap {
+            #   _;
+            # }
+            if node.attribute['src_code'][0].__contains__(")"):
+                end = node.attribute['src_code'][0].index(")") + 1
+            else:
+                # 直接取出start,end之间的内容，这样子只有函数名，没有参数
+                end = node.attribute['src_code'][0].find(" ", start)
+                node.append_attribute("method_name", node.attribute['src_code'][0][start: end])
+                node.append_attribute("params", [])
+                continue
             # 切分字符串，获取函数的完全信息
             # modifier onlyOwner(uint a) {
             # 假如上面这个例子，取出来的是onlyOwner(uint a)
