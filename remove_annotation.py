@@ -50,7 +50,7 @@ def remove_annotation():
                         continue
                     # 如果存在的不是段注释的模式，而是行注释
                     if len(re.findall("//", line)) > 0:
-                        tmp_file.write(line[0:line.index("//")])
+                        tmp_file.write(line[0:line.index("//")] + "\n")
                     # 如果不在注释状态，而且没有行注释，那就可以直接写到临时文件当中。
                     else:
                         tmp_file.write(line)
