@@ -25,8 +25,6 @@ def read_ast():
         data_ast_json_project_dir_path = data_ast_json_dir_path + project_dir_name + "/"
         # 记录每个工程文件夹中保存的所有的节点有哪些，每个文件夹都是只使用一个，下次的文件夹时需要刷新内容。
         project_node_list = []
-        # 代表项目是否完整
-        project_file_complete = True
         # 遍历工程项目中的每一个文件
         for ast_json_file_name in os.listdir(data_ast_json_project_dir_path):
             # 抽象语法树文件的完全路径,如""/home/xjj/AST-GNN/data/AST_json/project_name/file_name.json"
@@ -190,6 +188,7 @@ def create_graph(content, node_list, node_list_len, source_file_name):
         # 如果是节点类型，说明需要更换父节点了。
         elif isinstance(q, Node):
             parent_node = q
+    print(source_file_name, "create_graph完成")
 
 
 # 传入一个队列中的内容，然后生成节点
