@@ -15,6 +15,9 @@ def remove_annotation():
         data_sol_source_dir_project_path = data_sol_source_dir_path + project_name + "/"
         # 遍历工程文件夹下面的所有文件
         for file_name in os.listdir(data_sol_source_dir_project_path):
+            # 如果是临时文件需要跳过该文件的处理
+            if file_name == "tmp.sol":
+                continue
             # 源文件的全路径
             file = data_sol_source_dir_project_path + file_name
             # 打开源文件和一个新文件，将源文件中的内容抄到新的文件当中去。
@@ -35,6 +38,11 @@ def remove_annotation():
                             continue
                     # 说明当前行是存在/**注释的，可以先打开注解模式,如果同一行中有多个段注释，需要采用while才能删除
                     while len(re.findall("/\\*", line)) > 0:
+                        # 有可能是//开头，这个时候/*是直接被忽略的
+                        if len(re.findall("//", line)) > 0:
+                            # 如果发现//比较考前，那就视为行注释。
+                            if line.index("//") < line.index("/*"):
+                                break
                         annotation_state = True
                         # 如果发现在这一行就结束了段注释，那么要及时的关闭的注释状态
                         if len(re.findall("\\*/", line)) > 0:
@@ -58,3 +66,4 @@ def remove_annotation():
             os.remove(file)
             # 将临时文件的文件名改成源文件，实现覆写功能
             os.rename(data_sol_source_dir_project_path + "tmp.sol", file)
+            print(file, "注释删除完毕")
