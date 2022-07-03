@@ -74,8 +74,19 @@ def generate_ast():
                 if not opcode is None:
                     os.remove(data_ast_json_dir_path + project_dir_name + "/" + file_name.replace(".sol", ".json"))
                     os.remove(data_sol_source_dir_path + project_dir_name + "/" + file_name)
+                    print(data_sol_source_dir_path + project_dir_name + "/" + file_name, "由于编译过程有问题删除")
             else:
-                print(full_compile_file_path + "====>", "缺少编译器版本，请在对应的虚拟环境中安装，使用命令====>", "solc-select install", version)
+                # 如果是这种版本，就说明没有找到对应的版本号，直接删除完事
+                not_exist_versions = ["0.0.0", "0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.4.5", "0.4.6", "0.4.7", "0.4.8", "0.4.9", "0.4.10"]
+                if version in not_exist_versions:
+                    os.remove(data_sol_source_dir_path + project_dir_name + "/" + file_name)
+                    print(data_sol_source_dir_path + project_dir_name + "/" + file_name, "由于无效版本号被删除")
+                else:
+                    # 将所有缺乏的版本的号码，输出到一个txt文件中，到时候方便一次性安装。
+                    with open("/home/xjj/AST-GNN/data/absent_version_cmd.txt", 'a') as write_file:
+                        write_file.write("solc-select install" + version + "\n")
+                    write_file.close()
+                    print(full_compile_file_path + "====>", "缺少编译器版本，请在对应的虚拟环境中安装，使用命令====>", "solc-select install", version)
 
 
 # 获取数组中最大的版本号
