@@ -75,9 +75,11 @@ def generate_ast():
                     os.remove(data_ast_json_dir_path + project_dir_name + "/" + file_name.replace(".sol", ".json"))
                     os.remove(data_sol_source_dir_path + project_dir_name + "/" + file_name)
                     print(data_sol_source_dir_path + project_dir_name + "/" + file_name, "由于编译过程有问题删除")
+                else:
+                    print(data_sol_source_dir_path + project_dir_name + "/" + file_name, "编译完成")
             else:
                 # 如果是这种版本，就说明没有找到对应的版本号，直接删除完事
-                not_exist_versions = ["0.0.0", "0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.4.5", "0.4.6", "0.4.7", "0.4.8", "0.4.9", "0.4.10"]
+                not_exist_versions = ["0.0.0", "0.1.0", "0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.4.5", "0.4.6", "0.4.7", "0.4.8", "0.4.9", "0.4.10"]
                 if version in not_exist_versions:
                     os.remove(data_sol_source_dir_path + project_dir_name + "/" + file_name)
                     print(data_sol_source_dir_path + project_dir_name + "/" + file_name, "由于无效版本号被删除")
