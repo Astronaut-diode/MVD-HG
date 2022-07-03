@@ -50,17 +50,10 @@ def read_ast():
             # 正式的开始读取json文件中的内容
             with open(full_ast_json_path, 'r') as ast_json:
                 # 使用json的方式加载文件内容
-                try:
-                    content = json.load(ast_json)
-                except Exception as e:
-                    print(data_ast_json_project_dir_path, "项目有问题，跳过分析", e)
-                    project_file_complete = False
-                    break
+                # 现在如果有问题，在一开始生成json的时候就已经被发现了，会直接被删除掉，而不是等到现在，所以不再需要进行try/catch。
+                content = json.load(ast_json)
                 # 将文件中的内容转化为图结构的数据，传入的内容有抽象语法树的内容，当前项目的所有节点列表，还有读入当前文件之前已经有多少个节点了，这个待会进去会变得，所以先记录下来。
                 create_graph(content, project_node_list, len(project_node_list), data_sol_source_dir_path + project_dir_name + "/" + ast_json_file_name.replace(".json", ".sol"))
-        # 代表项目内容并不完整无法使用,直接跳转到下一个项目文件夹。
-        if not project_file_complete:
-            continue
         # 此时整个工程文件夹中的节点都已经构建完成，将这些节点按照节点类型分类，同时放到字典中，保存的格式{"nodeType1": [...], "nodeType2": [...]}
         project_node_dict = {}
         # 循环工程文件夹内所有的节点，为了将这些节点分类保存起来。
@@ -88,7 +81,12 @@ def read_ast():
                 total_node_list.get(node.node_type).append(node)
             else:
                 total_node_list[node.node_type] = [node]
-        print(total_node_list.keys())
+        # 将所有的节点类型放到了一个数组中进行排序，更加方便比对结果。
+        node_types = []
+        for key in total_node_list.keys():
+            node_types.append(key)
+        node_types.sort()
+        print(len(total_node_list.keys()), node_types)
 
 
 # 根据传入的json内容生成一个简单的AST的树结构数据。
@@ -101,10 +99,13 @@ def create_graph(content, node_list, node_list_len, source_file_name):
     src = []
     # 将内容进行循环遍历最终记录到上面的src的数组中。
     with open(source_file_name, 'r') as read_file:
-        # 读取其中的字符
+        # 读取其中的字符，这样子可以实现后面的源代码对齐。
         for char in read_file.read():
-            # 如果是\n那需要当作两个字符来处理，这个是为了适配用的。
-            src.append(char)
+            # 通过utf-8的编码格式进行编码，这样子如果遇见了中文这些汉字可以转化为三个字节，更加的适配。
+            # 而且src中的部分也是因为有中文等才会出现不对齐的情况。
+            byte_list = bytes(char, encoding="utf-8")
+            for byte in byte_list:
+                src.append(byte)
     # 创建队列，待会用来保存广度遍历里的东西
     queue = Queue(maxsize=0)
     # 根据内容创建节点，注意这里的id，需要时本身的id加上已经被记录的个数，否则到了下一份文件中，又从0开始就不好了。
@@ -117,8 +118,13 @@ def create_graph(content, node_list, node_list_len, source_file_name):
             queue.put(content[key])
         # 这里代表了源代码的位置，可以直接使用下标从刚刚的源代码数组中切片获取。
         if key == "src":
+            # 先获取其中的开始位置和结束的位置
             index_list = content["src"].split(":")
+            # 根据开始和结束的位置我们可以截取出其中的字节部分
             src_content = src[int(index_list[0]): int(index_list[0]) + int(index_list[1])]
+            # 根据字节的部分，我们再将其重新转化为原始的内容
+            src_content = str(bytes(src_content), encoding="utf-8")
+            # 将原始的内容添加到src_code当中。
             parent_node.append_attribute("src_code", "".join(src_content))
     # 先记录当前节点，作为广度遍历的根。
     node_list.append(parent_node)
@@ -141,8 +147,13 @@ def create_graph(content, node_list, node_list_len, source_file_name):
                         queue.put(q[key])
                         node.append_attribute(key, q[key])
                     if key == "src":
+                        # 先获取原始代码转化为byte以后的起始和终止的位置
                         index_list = q["src"].split(":")
+                        # 根据开始和结束的位置，截取出byte的串
                         src_content = src[int(index_list[0]): int(index_list[0]) + int(index_list[1])]
+                        # 根据byte的串，我们可以重新转化为原文
+                        src_content = str(bytes(src_content), encoding="utf-8")
+                        # 将原文添加到对应的属性中。
                         node.append_attribute("src_code", "".join(src_content))
                 # 先记录其属性，再记录这个节点
                 node_list.append(node)
@@ -166,8 +177,13 @@ def create_graph(content, node_list, node_list_len, source_file_name):
                                 queue.put(obj[key])
                                 node.append_attribute(key, obj[key])
                             if key == "src":
+                                # 先获取在bytes中的开始的位置和结束的位置
                                 index_list = obj["src"].split(":")
+                                # 根据开始和结束的位置，我们可以获取对应的byte串
                                 src_content = src[int(index_list[0]): int(index_list[0]) + int(index_list[1])]
+                                # 将byte串重新转化为字符串
+                                src_content = str(bytes(src_content), encoding="utf-8")
+                                # 将字符串直接添加到我们设定好的属性中去。
                                 node.append_attribute("src_code", "".join(src_content))
                         # 先记录其属性，再记录这个节点。
                         node_list.append(node)
