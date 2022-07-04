@@ -1,11 +1,11 @@
 # 是否要调用print_tree方法来显示图片
-show_plt = False
+show_plt = True
 # 是否要在print_tree方法中显示抽象语法树的边
 show_AST_plt = True
 # 是否要在print_tree方法中显示控制流图的边
-show_CFG_plt = False
+show_CFG_plt = True
 # 是否要在print_tree方法中忽略一些不重要的叶子节点
-ignore_AST_some_list = False
+ignore_AST_some_list = True
 # 设定好颜色集
 color_dict = {"SourceUnit": "#ddd02f",
               "PragmaDirective": "#ddd02f",
@@ -22,7 +22,7 @@ color_dict = {"SourceUnit": "#ddd02f",
               "Return": "red",
               "Break": "purple", "Continue": "purple"}
 # 忽略不显示的节点类型。
-ignore_list = ["ElementaryTypeName", "Assignment", "BinaryOperation", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
+ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
 # 词库文件的保存位置。
 corpus_file_path = "./data/corpus_model.pkl"
 # 词库文件当中，保存的每个单词的维度向量
