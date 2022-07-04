@@ -6,6 +6,7 @@ from gensim.models.word2vec import Word2Vec
 from bean.Node import Node
 from print_tree import print_tree
 from built_corpus import built_corpus_bfs, built_corpus_dfs
+from append_control_flow_information import append_control_flow_information
 
 # 在linux环境下的当前工程路径
 parent_path = os.getcwd()
@@ -64,6 +65,8 @@ def read_ast():
             project_node_dict[node_type].append(node)
         # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
         set_method_detail(project_node_dict)
+        # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
+        append_control_flow_information(project_node_list, project_node_dict)
         # 如果需要打印树，那就打印。
         if config.show_plt:
             print_tree(project_node_list)
