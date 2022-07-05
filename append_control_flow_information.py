@@ -25,7 +25,7 @@ def append_control_flow_information(project_node_list, project_node_dict):
             pop_node = stack.get()
             if pop_node in already_connected_node_list:
                 continue
-            # 根据节点的类型进行不同的操作。
+            # 根据节点的类型进行不同的操作，注意，这里永远不会出现虚拟节点，哪怕出现也没关系，因为不会有对应的操作。
             if pop_node.node_type == "FunctionDefinition":
                 function_definition_type_link_next_node(pop_node, project_node_dict, stack, already_connected_node_list)
             elif pop_node.node_type == "IfStatement":
@@ -43,7 +43,15 @@ def append_control_flow_information(project_node_list, project_node_dict):
             elif pop_node.node_type == "Break":
                 break_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
             elif pop_node.node_type == "Continue":
-                continue_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                continue_link_next_node(pop_node, stack, already_connected_node_list)
+    # 在所有的连接完成以后，删除所有的虚拟节点
+    for for_statement_node in project_node_dict['ForStatement']:
+        for index, node in enumerate(for_statement_node.childes):
+            if node.node_type == "virtue_node":
+                # 删除这个子节点
+                del for_statement_node.childes[index]
+                # 删除这个虚拟节点的下游边
+                del node.control_childes[0]
 
 
 # 找到block节点下面的第一句语句。
@@ -276,8 +284,8 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         # 设定id和type都是None，这样就不会找到对应的节点
         loop_expression_node_node_id = None
         loop_expression_node_node_type = None
-        # 因为找不到对应的节点，所以需要先创建一个虚拟节点代替一下。
-        loop_expression_node = Node(for_statement_node.node_id + 2, "virtue_node", None)
+        # 因为找不到对应的节点，所以需要先创建一个虚拟节点代替一下。这里设置parent是为了删除的时候方便找到上级节点。
+        loop_expression_node = Node(for_statement_node.node_id + 2, "virtue_node", for_statement_node)
         # 这个虚拟节点比较特殊，需要设定为子节点，方便在遇到了Continue的时候直接找到当前这个虚拟节点。
         for_statement_node.append_child(loop_expression_node)
     else:
@@ -465,7 +473,7 @@ def break_link_next_node(break_node, stack, already_connected_node_list, ban_nod
 # 规律：
 # 1.先找到当前的节点是处于哪个循环控制中，最近的一个，一直往上递归就行。
 # 2.如果是For循环，那continue需要连接到其中的loop
-def continue_link_next_node(continue_node, stack, already_connected_node_list, ban_node_list):
+def continue_link_next_node(continue_node, stack, already_connected_node_list):
     ancestor = continue_node.parent
     # 只要不是这三个循环节点中的一个的时候，就继续往上找
     while ancestor.node_type not in ['ForStatement', 'WhileStatement', 'DoWhileStatement']:
