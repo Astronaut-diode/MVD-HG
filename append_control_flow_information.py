@@ -1,4 +1,5 @@
 from queue import LifoQueue
+from bean.Node import Node
 
 
 # 在工程文件夹内容全部读取完毕以后，传入生成的节点列表和节点字典，来为所有的节点添加控制流的边，此时的FunctionDefinition节点已经拥有了自己的method_name和params的参数。
@@ -69,8 +70,8 @@ def get_first_command_in_block(block_node):
 def get_next_command_at_now(node, ban_node_list):
     # 父亲节点，上面传入的node是当前节点。
     parent = node.parent
-    # 一直查询，但是直到祖先节点已经是None了，那就可以停止了，说明当前的语句是最后一句话了。
-    if parent is None:
+    # 一直查询，如果祖先节点已经到了FunctionDefinition节点，那就说明已经要超出函数范围了，停下来。可以保证只在函数内查询下一句。
+    if parent.node_type == "FunctionDefinition":
         return None
     #  如果父节点是If语句，那说明找下一句的时候肯定不会在if的子节点中找了
     if parent.node_type == "IfStatement":
@@ -90,6 +91,10 @@ def get_next_command_at_now(node, ban_node_list):
                 # 如果是Block需要找出Block的第一句作为下一句
                 if child.node_type == "Block":
                     next_expression = get_first_command_in_block(child)
+                # 如果是手动设置的虚拟节点，先连上虚拟节点设置好的下游边
+                elif child.node_type == "virtue_node":
+                    next_expression = child.control_childes[0]
+                    break
                 # 否则直接当作下一句处理即可。
                 else:
                     # 找到了的话就不需要继续往后寻找了。
@@ -254,15 +259,42 @@ def variable_declaration_statement_link_next_node(variable_declaration_statement
 # 2.body最后一句连接loop不需要写.
 def for_statement_link_next_node(for_statement_node, stack, already_connected_node_list, ban_node_list):
     # 从for_statement_node中找出以下的几部分信息，可以作为连接三个条件的判断条件。
-    initialization_expression_node_node_id = for_statement_node.attribute['initializationExpression'][0]['id']
-    initialization_expression_node_node_type = for_statement_node.attribute['initializationExpression'][0]['nodeType']
-    initialization_expression_node = None
-    loop_expression_node_node_id = for_statement_node.attribute['loopExpression'][0]['id']
-    loop_expression_node_node_type = for_statement_node.attribute['loopExpression'][0]['nodeType']
-    loop_expression_node = None
-    condition_node_node_id = for_statement_node.attribute['condition'][0]['id']
-    condition_node_node_type = for_statement_node.attribute['condition'][0]['nodeType']
-    condition_node = None
+    # 这里的三个条件都要判断一下是否为空
+    # 如果初始条件不存在
+    if for_statement_node.attribute['initializationExpression'][0] is None:
+        # 设定id和type都为none，这样就不会找到内容
+        initialization_expression_node_node_id = None
+        initialization_expression_node_node_type = None
+        # 因为找不到节点，所以需要先创建一个虚拟节点代替一下。
+        initialization_expression_node = Node(for_statement_node.node_id + 1, "virtue_node", None)
+    else:
+        initialization_expression_node_node_id = for_statement_node.attribute['initializationExpression'][0]['id']
+        initialization_expression_node_node_type = for_statement_node.attribute['initializationExpression'][0]['nodeType']
+        initialization_expression_node = None
+    # 如果循环条件不存在
+    if for_statement_node.attribute['loopExpression'][0] is None:
+        # 设定id和type都是None，这样就不会找到对应的节点
+        loop_expression_node_node_id = None
+        loop_expression_node_node_type = None
+        # 因为找不到对应的节点，所以需要先创建一个虚拟节点代替一下。
+        loop_expression_node = Node(for_statement_node.node_id + 2, "virtue_node", None)
+        # 这个虚拟节点比较特殊，需要设定为子节点，方便在遇到了Continue的时候直接找到当前这个虚拟节点。
+        for_statement_node.append_child(loop_expression_node)
+    else:
+        loop_expression_node_node_id = for_statement_node.attribute['loopExpression'][0]['id']
+        loop_expression_node_node_type = for_statement_node.attribute['loopExpression'][0]['nodeType']
+        loop_expression_node = None
+    # 如果判断条件不存在
+    if for_statement_node.attribute['condition'][0] is None:
+        # 设定id和type都是None，这样就不会找到对应的节点。
+        condition_node_node_id = None
+        condition_node_node_type = None
+        # 因为找不到对应的节点，所以先创建虚拟节点代替一下。
+        condition_node = Node(for_statement_node.node_id + 3, "virtue_node", None)
+    else:
+        condition_node_node_id = for_statement_node.attribute['condition'][0]['id']
+        condition_node_node_type = for_statement_node.attribute['condition'][0]['nodeType']
+        condition_node = None
     # 循环体的节点。
     block_node = None
     # 找出其中的三个循环节点。
@@ -281,11 +313,12 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         # 如果是Block说明是循环体
         elif node.node_type == "Block":
             block_node = node
+    # 下面不管节点是否存在，因为创建了虚拟节点进行代替，所以可以直接使用。
     # 1.连接for循环和第一句初始化句子
     for_statement_node.append_control_child(initialization_expression_node)
     # 2.连接第一句初始化句子和判断语句。
     initialization_expression_node.append_control_child(condition_node)
-    # 3.连接判断语句和循环体block中的第一句。
+    # 3.连接判断语句和循环体block中的第一句，这里不需要判断是不是虚拟节点，因为这里连接的边在下边是需要用到的。
     next_expression = get_first_command_in_block(block_node)
     # 记住:只有非空的时候才能连接
     if next_expression is not None:
@@ -294,11 +327,35 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
     # 4.最后一句连接到loop上，这个不需要写，最后一句自然会找到loop节点的。
     # 5.连接loop和condition
     loop_expression_node.append_control_child(condition_node)
-    # 6.找出和for循环齐平的下一句句子是谁，然后用condition进行连接。
-    next_expression = get_next_command_at_now(for_statement_node, ban_node_list)
-    if next_expression is not None:
-        condition_node.append_control_child(next_expression)
-        stack.put(next_expression)
+    # 如果condition节点不是虚拟节点，才有资格外连。
+    if not condition_node.node_type == "virtue_node":
+        # 6.找出和for循环齐平的下一句句子是谁，然后用condition进行连接。
+        next_expression = get_next_command_at_now(for_statement_node, ban_node_list)
+        if next_expression is not None:
+            condition_node.append_control_child(next_expression)
+            stack.put(next_expression)
+    # 判断谁是虚拟节点，如果有虚拟节点，一一断开，重新连接。
+    # 如果判断节点是虚拟节点
+    if condition_node.node_type == "virtue_node":
+        # 连上init节点和block中的第一句
+        initialization_expression_node.append_control_child(condition_node.control_childes[0])
+        # 断开init和condition的边
+        del initialization_expression_node.control_childes[0]
+        # 连上loop节点和block中的第一句
+        loop_expression_node.append_control_child(condition_node.control_childes[0])
+        # 断开loop和condition的边。
+        del loop_expression_node.control_childes[0]
+        # 断开虚拟节点的所有的边
+        del condition_node.control_childes[0]
+    # 如果init节点是虚拟节点
+    if initialization_expression_node.node_type == "virtue_node":
+        # 先连上for和init连接的子节点。
+        for_statement_node.append_control_child(initialization_expression_node.control_childes[0])
+        # 断开for和init之间的边
+        del for_statement_node.control_childes[0]
+        # 断开虚拟节点所有的边
+        del initialization_expression_node.control_childes[0]
+    # 如果循环节点是虚拟节点，那也暂时不管，先放着，在最后一句或者continue找到了这个节点的时候，多做一步操作，在最后再删除图上所有的虚拟节点。
     # 以下的几个点都已经配置完成，不需要添加新的出度。
     already_connected_node_list.append(for_statement_node)
     already_connected_node_list.append(initialization_expression_node)
@@ -417,24 +474,39 @@ def continue_link_next_node(continue_node, stack, already_connected_node_list, b
     if ancestor.node_type == "ForStatement":
         for_statement_node = ancestor
         # 从for_statement_node中找出以下的几部分信息，可以作为连接三个条件的判断条件。
-        loop_expression_node = None
-        loop_expression_node_node_id = for_statement_node.attribute['loopExpression'][0]['id']
-        loop_expression_node_node_type = for_statement_node.attribute['loopExpression'][0]['nodeType']
-        # 找出其中的loop节点。
-        for node in for_statement_node.childes:
-            node_id = node.node_id
-            node_type = node.node_type
-            # 说明当前找到的是loopExpression的节点。
-            if node_id == loop_expression_node_node_id and node_type == loop_expression_node_node_type:
-                loop_expression_node = node
-        # 设置next_expression为loop_expression_node
-        next_expression = loop_expression_node
-        # 添加控制流边
-        continue_node.append_control_child(next_expression)
-        # 将下一个节点压入栈中。
-        stack.put(next_expression)
-        # 同时，当前的continue节点已经被处理过了，需要记录。
-        already_connected_node_list.append(continue_node)
+        # 如果这个循环没有loop条件，有可能是None
+        if for_statement_node.attribute['loopExpression'][0] is None:
+            for child in for_statement_node.childes:
+                if child.node_type == "virtue_node":
+                    # 找到虚拟节点提示的下游边
+                    next_expression = child.control_childes[0]
+                    # 添加控制流边
+                    continue_node.append_control_child(next_expression)
+                    # 将下一个节点压入栈中，实际上是不需要的，因为肯定是已经处理过了。
+                    stack.put(next_expression)
+                    # 同时，当前的continue节点已经被处理过了，需要记录。
+                    already_connected_node_list.append(continue_node)
+                    # 只会有一个virtue_node，找到了就可以退出循环了。
+                    break
+        else:
+            loop_expression_node = None
+            loop_expression_node_node_id = for_statement_node.attribute['loopExpression'][0]['id']
+            loop_expression_node_node_type = for_statement_node.attribute['loopExpression'][0]['nodeType']
+            # 找出其中的loop节点。
+            for node in for_statement_node.childes:
+                node_id = node.node_id
+                node_type = node.node_type
+                # 说明当前找到的是loopExpression的节点。
+                if node_id == loop_expression_node_node_id and node_type == loop_expression_node_node_type:
+                    loop_expression_node = node
+            # 设置next_expression为loop_expression_node
+            next_expression = loop_expression_node
+            # 添加控制流边
+            continue_node.append_control_child(next_expression)
+            # 将下一个节点压入栈中。
+            stack.put(next_expression)
+            # 同时，当前的continue节点已经被处理过了，需要记录。
+            already_connected_node_list.append(continue_node)
     elif ancestor.node_type == "WhileStatement":
         while_statement_node = ancestor
         # 记录condition节点
