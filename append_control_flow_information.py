@@ -23,7 +23,7 @@ def append_control_flow_information(project_node_list, project_node_dict):
         while not stack.empty():
             # 不断地从栈中取出内容进行下一步的连接操作，并将下一个节点重新压入到栈中。
             pop_node = stack.get()
-            if pop_node in already_connected_node_list:
+            if pop_node in already_connected_node_list or pop_node is None:
                 continue
             # 根据节点的类型进行不同的操作，注意，这里永远不会出现虚拟节点，哪怕出现也没关系，因为不会有对应的操作。
             if pop_node.node_type == "FunctionDefinition":
@@ -44,14 +44,52 @@ def append_control_flow_information(project_node_list, project_node_dict):
                 break_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
             elif pop_node.node_type == "Continue":
                 continue_link_next_node(pop_node, stack, already_connected_node_list)
+            elif pop_node.node_type == "RevertStatement":
+                revert_statement_link_next_node(pop_node, stack, already_connected_node_list, project_node_dict)
+    # 如果确实存在修饰符
+    if "ModifierDefinition" in project_node_dict.keys():
+        # 循环其中每一个修饰符节点。
+        for modifier_definition_node in project_node_dict['ModifierDefinition']:
+            # 先设定每一个修饰符的最后一句是自己，因为有的函数可能是空的函数体。
+            last_command_in_function_definition_node[modifier_definition_node] = modifier_definition_node
+            # 将这个ModifierDefinition节点压入栈中，作为遍历的根节点。
+            stack.put(modifier_definition_node)
+            # 如果栈不是空的，就一直进行遍历，因为当前函数还有内容没有被操作完。
+            while not stack.empty():
+                pop_node = stack.get()
+                # 如果已经查询过了就先跳过。
+                if pop_node in already_connected_node_list:
+                    continue
+                # 根据节点的类型进行不同的操作，注意，这里永远不会出现虚拟节点，哪怕出现也没关系，因为不会有对应的操作。
+                if pop_node.node_type == "ModifierDefinition":
+                    modifier_definition_node_link_next_node(pop_node, stack, already_connected_node_list)
+                elif pop_node.node_type == "IfStatement":
+                    if_statement_type_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "ExpressionStatement":
+                    expression_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "VariableDeclarationStatement":
+                    variable_declaration_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "ForStatement":
+                    for_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "WhileStatement":
+                    while_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "DoWhileStatement":
+                    do_while_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "Break":
+                    break_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "Continue":
+                    continue_link_next_node(pop_node, stack, already_connected_node_list)
+                elif pop_node.node_type == "PlaceholderStatement":
+                    placeholder_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
     # 在所有的连接完成以后，删除所有的虚拟节点
-    for for_statement_node in project_node_dict['ForStatement']:
-        for index, node in enumerate(for_statement_node.childes):
-            if node.node_type == "virtue_node":
-                # 删除这个子节点
-                del for_statement_node.childes[index]
-                # 删除这个虚拟节点的下游边
-                del node.control_childes[0]
+    if "ForStatement" in project_node_dict.keys():
+        for for_statement_node in project_node_dict['ForStatement']:
+            for index, node in enumerate(for_statement_node.childes):
+                if node.node_type == "virtue_node":
+                    # 删除这个子节点
+                    del for_statement_node.childes[index]
+                    # 删除这个虚拟节点的下游边
+                    del node.control_childes[0]
 
 
 # 找到block节点下面的第一句语句。
@@ -66,6 +104,8 @@ def get_first_command_in_block(block_node):
         else:
             next_expression = child
             break
+    if next_expression is None:
+        return None
     # 如果发现找到的结果还是Block节点，那就继续往下面找
     if next_expression.node_type == "Block":
         # 用这个next_expression继续深入查询。
@@ -79,7 +119,7 @@ def get_next_command_at_now(node, ban_node_list):
     # 父亲节点，上面传入的node是当前节点。
     parent = node.parent
     # 一直查询，如果祖先节点已经到了FunctionDefinition节点，那就说明已经要超出函数范围了，停下来。可以保证只在函数内查询下一句。
-    if parent.node_type == "FunctionDefinition":
+    if parent.node_type == "FunctionDefinition" or parent.node_type == "ModifierDefinition":
         return None
     #  如果父节点是If语句，那说明找下一句的时候肯定不会在if的子节点中找了
     if parent.node_type == "IfStatement":
@@ -87,7 +127,7 @@ def get_next_command_at_now(node, ban_node_list):
     # 返回的结果。
     next_expression = None
     # 忽略操作的几类节点。这里的最前的两种类型是为了避免for循环的最后一句话会连接到初始条件或者判断条件上。
-    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UnaryOperation', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'PlaceholderStatement', 'EventDefinition', 'ArrayTypeName', 'Literal', 'Mapping', 'ContractDefinition']
+    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UnaryOperation', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'EventDefinition', 'ArrayTypeName', 'Literal', 'Mapping', 'ContractDefinition']
     has_find_flag = False
     # 只要在父亲节点的子节点中找到当前节点，然后继续往后循环一个元素，如果该元素的类型还不是上面的忽略类型，那就说明那就是下一句。
     for child in parent.childes:
@@ -555,3 +595,47 @@ def continue_link_next_node(continue_node, stack, already_connected_node_list):
         stack.put(next_expression)
         # 同时，当前的continue节点已经被处理过了，需要记录。
         already_connected_node_list.append(continue_node)
+
+
+# 如果遇见了ModifierDefinition节点时的操作方法
+# 规律:
+# 1.直接找出其中的Block节点，取出第一句话，连上去。
+def modifier_definition_node_link_next_node(modifier_definition_node, stack, already_connected_node_list):
+    for node in modifier_definition_node.childes:
+        if node.node_type == "Block":
+            # 取出block中的第一句
+            next_expression = get_first_command_in_block(node)
+            # 添加ModifierDefinition节点和block第一句之间的控制流边
+            modifier_definition_node.append_control_child(next_expression)
+            # 压入栈
+            stack.put(next_expression)
+            # 设定为已经操作过了。
+            already_connected_node_list.append(modifier_definition_node)
+            break
+
+
+# 当遇到了PlaceholderStatement的时候的操作方法
+# 规则，直接找下一句进行连接
+def placeholder_statement_link_next_node(placeholder_statement_node, stack, already_connected_node_list, ban_node_list):
+    next_expression = get_next_command_at_now(placeholder_statement_node, ban_node_list)
+    if next_expression is not None:
+        placeholder_statement_node.append_control_child(next_expression)
+        stack.put(next_expression)
+    already_connected_node_list.append(placeholder_statement_node)
+
+
+# 如果遇见了revertStatement节点，使用的方法
+# 规则：
+# 去找到整个图范围内部的ErrorDefinition节点
+# 将revertStatement节点连接到ErrorDefinition节点上。
+def revert_statement_link_next_node(revert_statement_node, stack, already_connected_node_list, project_node_dict):
+    revert_call_error_id = revert_statement_node.attribute['errorCall'][0]['expression']['referencedDeclaration']
+    for error in project_node_dict['ErrorDefinition']:
+        error_id = error.node_id
+        # 说明找到了对应的节点。
+        if error_id == revert_call_error_id:
+            # 将revertStatement和ErrorDefinition连接起来
+            next_expression = error
+            revert_statement_node.append_control_child(next_expression)
+            stack.put(next_expression)
+            already_connected_node_list.append(revert_statement_node)
