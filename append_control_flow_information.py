@@ -16,7 +16,7 @@ def append_control_flow_information(project_node_list, project_node_dict):
     # 从节点字典中取出所有的FunctionDefinition节点，对每一个FunctionDefinition节点进行操作。
     for function_definition_node in project_node_dict['FunctionDefinition']:
         # 先设定每一个函数的最后一句是自己，因为有的函数可能是空的函数体。
-        last_command_in_function_definition_node[function_definition_node] = function_definition_node
+        last_command_in_function_definition_node[function_definition_node] = [function_definition_node]
         # 将这个FunctionDefinition节点压入栈中，作为遍历的根节点。
         stack.put(function_definition_node)
         # 如果栈不是空的，就一直进行遍历，因为当前函数还有内容没有被操作完。
@@ -53,7 +53,7 @@ def append_control_flow_information(project_node_list, project_node_dict):
         # 循环其中每一个修饰符节点。
         for modifier_definition_node in project_node_dict['ModifierDefinition']:
             # 先设定每一个修饰符的最后一句是自己，因为有的函数可能是空的函数体。
-            last_command_in_function_definition_node[modifier_definition_node] = modifier_definition_node
+            last_command_in_function_definition_node[modifier_definition_node] = [modifier_definition_node]
             # 将这个ModifierDefinition节点压入栈中，作为遍历的根节点。
             stack.put(modifier_definition_node)
             # 如果栈不是空的，就一直进行遍历，因为当前函数还有内容没有被操作完。
@@ -122,19 +122,21 @@ def append_control_flow_information(project_node_list, project_node_dict):
     if "FunctionCall" in project_node_dict.keys():
         # 实现FunctionCall和FunctionDefinition的连接。
         for node in project_node_dict['FunctionCall']:
-            # 这个id就是对应的FunctionDefinition节点的id
-            call_function_node_id = node.attribute['expression'][0]['referencedDeclaration']
-            for tmp_to_find_function_definition_node in project_node_dict['FunctionDefinition']:
-                # 如果FunctionCall中使用的referencedDeclaration和节点的id一致，说明就是调用了这个FunctionDefinition节点。
-                if tmp_to_find_function_definition_node.node_id == call_function_node_id:
-                    # 先将FunctionCall连接到对应的FunctionDefinition上
-                    node.append_control_child(tmp_to_find_function_definition_node)
-                    # 找出这个FunctionDefinition节点的最后一句话
-                    last_command = last_command_in_function_definition_node[tmp_to_find_function_definition_node]
-                    # 将最后一句话连回到FunctionCall节点上,注意，这里的last_command是一个list，里面的内容很多，需要遍历操作。
-                    for command in last_command:
-                        command.append_control_child(node)
-                    break
+            # 如果没有这个字段，说明是外部调用的函数，不需要连接。
+            if 'referencedDeclaration' in node.attribute['expression'][0]:
+                # 这个id就是对应的FunctionDefinition节点的id
+                call_function_node_id = node.attribute['expression'][0]['referencedDeclaration']
+                for tmp_to_find_function_definition_node in project_node_dict['FunctionDefinition']:
+                    # 如果FunctionCall中使用的referencedDeclaration和节点的id一致，说明就是调用了这个FunctionDefinition节点。
+                    if tmp_to_find_function_definition_node.node_id == call_function_node_id:
+                        # 先将FunctionCall连接到对应的FunctionDefinition上
+                        node.append_control_child(tmp_to_find_function_definition_node)
+                        # 找出这个FunctionDefinition节点的最后一句话
+                        last_command = last_command_in_function_definition_node[tmp_to_find_function_definition_node]
+                        # 将最后一句话连回到FunctionCall节点上,注意，这里的last_command是一个list，里面的内容很多，需要遍历操作。
+                        for command in last_command:
+                            command.append_control_child(node)
+                        break
     # 如果确实有ModifierDefinition字段，才有可能进行后续操作。
     if "ModifierDefinition" in project_node_dict.keys():
         # 循环其中每一个修饰符函数
@@ -350,6 +352,9 @@ def function_definition_type_link_next_node(function_definition_node, project_no
             if not len(block_node.childes) == 0:
                 # 设定好下一句是当前的Block的第一个子节点。
                 next_expression = get_first_command_in_block(block_node)
+                # 如果没有，那就直接不要连接了，后面免得出现问题。
+                if next_expression is None:
+                    continue
                 # 将下一句连上来。
                 function_definition_node.append_control_child(next_expression)
                 # 将下一句压入到栈中，进行新的操作。
@@ -384,7 +389,8 @@ def if_statement_type_link_next_node(if_statement_node, stack, already_connected
         elif child_of_if_statement_node.node_type == "IfStatement":
             if_statement_node_num = if_statement_node_num + 1
             if_statement_node_list.append(child_of_if_statement_node)
-        elif child_of_if_statement_node.node_type == "BinaryOperation":
+        # 并不单单是Binary才行，只要不是Block和If都可以算。
+        else:
             binary_operation_node = child_of_if_statement_node
             # if连上binary，后面用binary代替if连剩下的部分即可。
             if_statement_node.append_control_child(binary_operation_node)
