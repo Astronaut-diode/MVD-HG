@@ -374,13 +374,19 @@ def function_definition_type_link_next_node(function_definition_node, project_no
 # 4.如果是if else if,仅需要连接一个Block的第一句还有一个if。
 # 以上查询Block中的内容时，如果Block不存在内容，就需要往祖先节点中找。
 def if_statement_type_link_next_node(if_statement_node, stack, already_connected_node_list, ban_node_list):
+    # 判断条件的节点id和节点类型
+    condition_node_node_id = if_statement_node.attribute['condition'][0]['id']
+    condition_node_node_type = if_statement_node.attribute['condition'][0]['nodeType']
+    condition_node = None
+    # 下面这两个next_expression是在block不存在的时候使用的。
+    next_expression_1 = None
+    next_expression_2 = None
     # if和block的数量
     if_statement_node_num = 0
     block_node_num = 0
     # 当找到这两类节点以后先保存一下，方便后面的操作。
     block_node_list = []
     if_statement_node_list = []
-    binary_operation_node = None
     # 遍历其中所有的子节点，用来计算block子节点和if子节点有多少个。同时将节点的内容添加到数组中。
     for child_of_if_statement_node in if_statement_node.childes:
         if child_of_if_statement_node.node_type == "Block":
@@ -389,57 +395,70 @@ def if_statement_type_link_next_node(if_statement_node, stack, already_connected
         elif child_of_if_statement_node.node_type == "IfStatement":
             if_statement_node_num = if_statement_node_num + 1
             if_statement_node_list.append(child_of_if_statement_node)
-        # 并不单单是Binary才行，只要不是Block和If都可以算。
-        else:
-            binary_operation_node = child_of_if_statement_node
+        # 只有id和类型都已经对上了，才能判断为条件节点。
+        elif child_of_if_statement_node.node_id == condition_node_node_id and child_of_if_statement_node.node_type == condition_node_node_type:
+            condition_node = child_of_if_statement_node
             # if连上binary，后面用binary代替if连剩下的部分即可。
-            if_statement_node.append_control_child(binary_operation_node)
+            if_statement_node.append_control_child(condition_node)
+        # 如果上面的都不是，那就说明有可能是block里面的内容，但是没有写block
+        else:
+            if next_expression_1 is None:
+                next_expression_1 = child_of_if_statement_node
+                block_node_num = block_node_num + 1
+            else:
+                next_expression_2 = child_of_if_statement_node
+                block_node_num = block_node_num + 1
     # 情况1:只有一个if
     if block_node_num == 1 and if_statement_node_num == 0:
-        # 1.先做关于Block的工作,这就是那唯一的一个Block节点。
-        block_node = block_node_list[0]
-        # 设定好下一句是当前的Block的第一个子节点。
-        next_expression = get_first_command_in_block(block_node)
-        if next_expression is not None:
-            binary_operation_node.append_control_child(next_expression)
-            stack.put(next_expression)
+        if len(block_node_list) == 1:
+            # 1.先做关于Block的工作,这就是那唯一的一个Block节点。
+            block_node = block_node_list[0]
+            # 设定好下一句是当前的Block的第一个子节点。
+            next_expression_1 = get_first_command_in_block(block_node)
+        if next_expression_1 is not None:
+            condition_node.append_control_child(next_expression_1)
+            stack.put(next_expression_1)
         # 2.查询当前if语句的下一句
         next_expression = get_next_command_at_now(if_statement_node, ban_node_list)
         if next_expression is not None:
-            binary_operation_node.append_control_child(next_expression)
+            condition_node.append_control_child(next_expression)
             stack.put(next_expression)
     # if else 代表有两个block
     elif block_node_num == 2:
-        # 分别获取两个block节点，然后获取两个block节点中的第一句
-        block_node_1 = block_node_list[0]
-        block_node_2 = block_node_list[1]
         # 找出Block1下面的第一句是谁，然后直接作为if的下一句连接。
-        next_expression = get_first_command_in_block(block_node_1)
-        if next_expression is not None:
-            binary_operation_node.append_control_child(next_expression)
-            stack.put(next_expression)
+        if len(block_node_list) == 2:
+            # 分别获取两个block节点，然后获取两个block节点中的第一句
+            block_node_1 = block_node_list[0]
+            next_expression_1 = get_first_command_in_block(block_node_1)
+        if next_expression_1 is not None:
+            condition_node.append_control_child(next_expression_1)
+            stack.put(next_expression_1)
         # 找出Block2下面的第一句是谁，然后直接作为if的下一句连接。
-        next_expression = get_first_command_in_block(block_node_2)
-        if next_expression is not None:
-            binary_operation_node.append_control_child(next_expression)
-            stack.put(next_expression)
+        if len(block_node_list) == 2:
+            # 分别获取两个block节点，然后获取两个block节点中的第一句
+            block_node_2 = block_node_list[1]
+            next_expression_2 = get_first_command_in_block(block_node_2)
+        if next_expression_2 is not None:
+            condition_node.append_control_child(next_expression_2)
+            stack.put(next_expression_2)
     # 如果两个都是1，说明是if else if...这样的
     elif block_node_num == 1 and if_statement_node_num == 1:
-        # 获取其中的Block节点。
-        block_node = block_node_list[0]
-        # 找出Block下面的第一句，直接作为ifStatement的下一句。
-        next_expression = get_first_command_in_block(block_node)
-        if next_expression is not None:
-            binary_operation_node.append_control_child(next_expression)
-            stack.put(next_expression)
+        if len(block_node_list) > 0:
+            # 获取其中的Block节点。
+            block_node = block_node_list[0]
+            # 找出Block下面的第一句，直接作为ifStatement的下一句。
+            next_expression_1 = get_first_command_in_block(block_node)
+        if next_expression_1 is not None:
+            condition_node.append_control_child(next_expression_1)
+            stack.put(next_expression_1)
         # 获取其中的if节点
         next_expression = if_statement_node_list[0]
         # 这里获取的ifStatement一定不会空
-        binary_operation_node.append_control_child(next_expression)
+        condition_node.append_control_child(next_expression)
         stack.put(next_expression)
     # 这两个点的出度都已经配置完成，不需要进行新的操作。
     already_connected_node_list.append(if_statement_node)
-    already_connected_node_list.append(binary_operation_node)
+    already_connected_node_list.append(condition_node)
 
 
 # 当遇到的结果是ExpressionStatement节点的时候使用的方法。
@@ -529,6 +548,7 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         condition_node = None
     # 循环体的节点。
     block_node = None
+    next_expression = None
     # 找出其中的三个循环节点。
     for node in for_statement_node.childes:
         node_id = node.node_id
@@ -545,13 +565,18 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         # 如果是Block说明是循环体
         elif node.node_type == "Block":
             block_node = node
+        # 如果没有Block那就说明这份代码中的循环只有一句话，没有多行。
+        else:
+            next_expression = node
     # 下面不管节点是否存在，因为创建了虚拟节点进行代替，所以可以直接使用。
     # 1.连接for循环和第一句初始化句子
     for_statement_node.append_control_child(initialization_expression_node)
     # 2.连接第一句初始化句子和判断语句。
     initialization_expression_node.append_control_child(condition_node)
-    # 3.连接判断语句和循环体block中的第一句，这里不需要判断是不是虚拟节点，因为这里连接的边在下边是需要用到的。
-    next_expression = get_first_command_in_block(block_node)
+    # 说明循环体中没有使用{}括起来
+    if block_node is not None:
+        # 3.连接判断语句和循环体block中的第一句，这里不需要判断是不是虚拟节点，因为这里连接的边在下边是需要用到的。
+        next_expression = get_first_command_in_block(block_node)
     # 记住:只有非空的时候才能连接
     if next_expression is not None:
         condition_node.append_control_child(next_expression)
@@ -610,6 +635,7 @@ def while_statement_link_next_node(while_statement_node, stack, already_connecte
     condition_node_node_id = while_statement_node.attribute['condition'][0]['id']
     condition_node_node_type = while_statement_node.attribute['condition'][0]['nodeType']
     block_node = None
+    next_expression = None
     # 分别找出condition节点和block节点
     for node in while_statement_node.childes:
         node_id = node.node_id
@@ -618,10 +644,14 @@ def while_statement_link_next_node(while_statement_node, stack, already_connecte
             condition_node = node
         elif node_type == "Block":
             block_node = node
+        else:
+            next_expression = node
     # 1.while->condition
     while_statement_node.append_control_child(condition_node)
     # 2.condition->block第一句
-    next_expression = get_first_command_in_block(block_node)
+    # 如果block不是空的，那就说明可能是只有一句话。
+    if block_node is not None:
+        next_expression = get_first_command_in_block(block_node)
     # 非空的时候可以进行连接
     if next_expression is not None:
         condition_node.append_control_child(next_expression)
