@@ -1,4 +1,4 @@
-from queue import LifoQueue
+from queue import LifoQueue, Queue
 from bean.Node import Node
 
 
@@ -46,6 +46,8 @@ def append_control_flow_information(project_node_list, project_node_dict):
                 continue_link_next_node(pop_node, stack, already_connected_node_list)
             elif pop_node.node_type == "RevertStatement":
                 revert_statement_link_next_node(pop_node, stack, already_connected_node_list, project_node_dict)
+            elif pop_node.node_type == "Return":
+                return_link_next_node(pop_node, already_connected_node_list)
     # 如果确实存在修饰符
     if "ModifierDefinition" in project_node_dict.keys():
         # 循环其中每一个修饰符节点。
@@ -81,6 +83,8 @@ def append_control_flow_information(project_node_list, project_node_dict):
                     continue_link_next_node(pop_node, stack, already_connected_node_list)
                 elif pop_node.node_type == "PlaceholderStatement":
                     placeholder_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "Return":
+                    return_link_next_node(pop_node, already_connected_node_list)
     # 在所有的连接完成以后，删除所有的虚拟节点
     if "ForStatement" in project_node_dict.keys():
         for for_statement_node in project_node_dict['ForStatement']:
@@ -90,17 +94,65 @@ def append_control_flow_information(project_node_list, project_node_dict):
                     del for_statement_node.childes[index]
                     # 删除这个虚拟节点的下游边
                     del node.control_childes[0]
-    # 如何获取每一个functionDefinition节点下面的最后一句话
-    for function_definition_node in project_node_dict['FunctionDefinition']:
-        # 获取这个函数定义节点子范围内的最后一句，以数组的形式返回。
-        res = get_last_command_at_function(function_definition_node)
-        # 如果其中确实是含有内容的，可以直接将这个内容用来覆盖原始的最后一句话数组。
-        if len(res) > 0:
-            last_command_in_function_definition_node[function_definition_node] = res
-        # 否则，说明该函数极有可能是空函数，默认使用函数名作为最后一句话。
-        else:
-            pass
-    print("芜湖")
+    # 如果确实存在FunctionDefinition键。
+    if 'FunctionDefinition' in project_node_dict.keys():
+        # 如何获取每一个functionDefinition节点下面的最后一句话
+        for function_definition_node in project_node_dict['FunctionDefinition']:
+            # 获取这个函数定义节点子范围内的最后一句，以数组的形式返回。
+            res = get_last_command_at_function(function_definition_node)
+            # 如果其中确实是含有内容的，可以直接将这个内容用来覆盖原始的最后一句话数组。
+            if len(res) > 0:
+                last_command_in_function_definition_node[function_definition_node] = res
+            # 否则，说明该函数极有可能是空函数，默认使用函数名作为最后一句话。
+            else:
+                pass
+    # 如果确实存在修饰符的键。
+    if 'ModifierDefinition' in project_node_dict.keys():
+        # 获取每个modifierDefinition节点下的最后一句话。
+        for modifier_definition_node in project_node_dict['ModifierDefinition']:
+            # 获取这个函数定义节点子范围内的最后一句，以数组的形式返回。
+            res = get_last_command_at_function(modifier_definition_node)
+            # 如果其中确实是含有内容的，可以直接将这个内容用来覆盖原始的最后一句话数组。
+            if len(res) > 0:
+                last_command_in_function_definition_node[modifier_definition_node] = res
+            # 否则，说明该函数极有可能是空函数，默认使用函数名作为最后一句话。
+            else:
+                pass
+    # 如果确实存在FunctionCall这个字段，说明才有可能可以连接。
+    if "FunctionCall" in project_node_dict.keys():
+        # 实现FunctionCall和FunctionDefinition的连接。
+        for node in project_node_dict['FunctionCall']:
+            # 这个id就是对应的FunctionDefinition节点的id
+            call_function_node_id = node.attribute['expression'][0]['referencedDeclaration']
+            for tmp_to_find_function_definition_node in project_node_dict['FunctionDefinition']:
+                # 如果FunctionCall中使用的referencedDeclaration和节点的id一致，说明就是调用了这个FunctionDefinition节点。
+                if tmp_to_find_function_definition_node.node_id == call_function_node_id:
+                    # 先将FunctionCall连接到对应的FunctionDefinition上
+                    node.append_control_child(tmp_to_find_function_definition_node)
+                    # 找出这个FunctionDefinition节点的最后一句话
+                    last_command = last_command_in_function_definition_node[tmp_to_find_function_definition_node]
+                    # 将最后一句话连回到FunctionCall节点上,注意，这里的last_command是一个list，里面的内容很多，需要遍历操作。
+                    for command in last_command:
+                        command.append_control_child(node)
+                    break
+    # 如果确实有ModifierDefinition字段，才有可能进行后续操作。
+    if "ModifierDefinition" in project_node_dict.keys():
+        # 循环其中每一个修饰符函数
+        for modifier_definition_node in project_node_dict["ModifierDefinition"]:
+            # 获取当前这个修饰符的最后一句是谁。
+            last_command = last_command_in_function_definition_node[modifier_definition_node]
+            # 遍历这个修饰符的所有控制流子节点，其中是FunctionDefinition节点的全部断掉，然后用最后一个节点连上作为代替。
+            # 注意，这里需要使用倒序，才能够删除元素。
+            for control_child in modifier_definition_node.control_childes[::-1]:
+                # 找到了FunctionDefinition的控制流子节点
+                if control_child.node_type == "FunctionDefinition":
+                    # 遍历所有的最后一句话，然后连回去。
+                    for command in last_command:
+                        # 最后一句话们们们们们注意是们，连接到FunctionDefinition节点上
+                        command.append_control_child(control_child)
+                    # 删除ModifierDefinition和FunctionDefinition连接的边。
+                    modifier_definition_node.control_childes.remove(control_child)
+    print("Debug")
 
 
 # 找到block节点下面的第一句语句。
@@ -173,6 +225,97 @@ def get_next_command_at_now(node, ban_node_list):
         next_expression = get_next_command_at_now(parent, ban_node_list)
     # 不管有没有找到结果，都直接返回。
     return next_expression
+
+
+# 获取function_definition节点子域中的最后一个节点，以数组形式返回。
+def get_last_command_at_function(function_definition_node):
+    res = set()
+    stack = LifoQueue(maxsize=0)
+    stack.put(function_definition_node)
+    # 只要栈内不是空的，就一直循环。
+    while not stack.empty():
+        pop_node = stack.get()
+        # 条件1:如果控制流子节点只有入度，没有出度，说明该子节点是最终的句子。
+        if len(pop_node.control_childes) > 0:
+            # 循环其中的每一个控制子节点
+            for control_child in pop_node.control_childes:
+                # 如果控制流子节点没有自己的控制流子节点作为输出，那说明就是只有入度没有出度的部分。
+                if len(control_child.control_childes) == 0:
+                    res.add(control_child)
+        # 重新压入所有的子节点，做深度遍历dfs
+        for child in pop_node.childes:
+            stack.put(child)
+    # 上面仅仅只是查了条件1，条件和后面的条件不能一起操作，所以分了两个循环。
+    stack.put(function_definition_node)
+    while not stack.empty():
+        pop_node = stack.get()
+        # 条件2:判断是不是[Return,require,revert]节点中的,如果是，那当前节点也是终止节点。
+        if pop_node.node_type in ['Return', 'require', 'revert']:
+            res.add(pop_node)
+            continue
+        for child in pop_node.childes:
+            stack.put(child)
+    # 条件3:求出第一个Block的最后一个子节点，判断是不是带有判断语句的部分，如果是，那判断语句也极有可能是最后一句话。
+    for block_node in function_definition_node.childes:
+        # 确定有子节点
+        if len(block_node.childes) > 0:
+            # 取出最后一个子节点
+            last_node = block_node.childes[-1]
+            # 如果是循环节点，而且条件节点是存在的
+            if last_node.node_type in ["ForStatement", "WhileStatement", "DoWhileStatement"] and last_node.attribute['condition'][0] is not None:
+                condition_node_node_id = last_node.attribute['condition'][0]['id']
+                condition_node_node_type = last_node.attribute['condition'][0]['nodeType']
+                # 找出其中的三个循环节点。
+                for node in last_node.childes:
+                    node_id = node.node_id
+                    node_type = node.node_type
+                    if node_id == condition_node_node_id and node_type == condition_node_node_type:
+                        condition_node = node
+                        # 那么条件语句节点是有可能成为最后一句的。
+                        res.add(condition_node)
+            # 如果是if语句，只有一个出度，那就说明会是最终节点了。
+            elif last_node.node_type == "IfStatement":
+                # 查询其中的block子节点的数量，ifStatement的数量
+                block_node_num = 0
+                if_statement_node_num = 0
+                # 这个节点就是用在判断语句上的节点，但是节点的类型是不固定的，因为可以是函数调用，可以是bool判断也可以是常量True
+                target_node = None
+                for child in last_node.childes:
+                    if child.node_type == "Block":
+                        block_node_num = block_node_num + 1
+                    elif child.node_type == "IfStatement":
+                        if_statement_node_num = if_statement_node_num + 1
+                    # 既不是block也不是if，那就是我们的目标，而且只会有一个。
+                    else:
+                        target_node = child
+                # 只有当block数量为1，if数量为0的时候，才能说明是使用的是if{}，可以直接视为最终节点。
+                if block_node_num == 1 and if_statement_node_num == 0:
+                    res.add(target_node)
+    return list(res)
+
+
+# 找出当前节点的子域中从深处到浅处的functionCall的list列表，直接连起来。
+def link_function_call_list_at_now_now(node):
+    # 返回的列表,先往里面添加一个初始节点，因为到时候也要添加的，可以方便操作。到时候直接每两个相邻节点直接连边即可。
+    res = [node]
+    # 使用广度遍历所以使用队列queue
+    queue = Queue(maxsize=0)
+    queue.put(node)
+    while not queue.empty():
+        pop_node = queue.get()
+        # 先压入子节点，以进行广度遍历
+        for child in pop_node.childes:
+            queue.put(child)
+        # 如果当前节点是FunctionCall节点，记录下来。
+        if pop_node.node_type == "FunctionCall":
+            res.append(pop_node)
+    # 如果大于等于2，那就说明确实有FunctionCall节点被记录下来了，需要建立环。
+    if len(res) >= 2:
+        # 此时的数组内容应该是[原始node, 第一个FunctionCall，第二个FunctionCall,....,第n个FunctionCall]
+        for index, pre_node in enumerate(res):
+            # 找出下一个元素，可以使用回环取余的方式获取对应的下标。
+            after_node = res[(index + 1) % len(res)]
+            pre_node.append_control_child(after_node)
 
 
 # 如果弹出的节点类型是FunctionDefinition的时候，使用这个函数去找出他的下一句，将他们连接起来，同时将下一句再一次压入到栈中。
@@ -315,6 +458,8 @@ def expression_statement_link_next_node(expression_statement_node, stack, alread
                 # 否则创建一个新的数组，同时添加内容。
                 else:
                     project_node_dict[expression_statement_node.node_type] = [expression_statement_node]
+    # 连接当前节点下面所有的FunctionCall节点。
+    link_function_call_list_at_now_now(expression_statement_node)
     next_expression = get_next_command_at_now(expression_statement_node, ban_node_list)
     if next_expression is not None:
         expression_statement_node.append_control_child(next_expression)
@@ -326,6 +471,8 @@ def expression_statement_link_next_node(expression_statement_node, stack, alread
 # 规则，直接找出当前句子的下一句进行连接。
 def variable_declaration_statement_link_next_node(variable_declaration_statement_node, stack, already_connected_node_list, ban_node_list):
     next_expression = get_next_command_at_now(variable_declaration_statement_node, ban_node_list)
+    # 连接其中所有的FunctionCall节点。
+    link_function_call_list_at_now_now(variable_declaration_statement_node)
     if next_expression is not None:
         variable_declaration_statement_node.append_control_child(next_expression)
         stack.put(next_expression)
@@ -483,9 +630,9 @@ def while_statement_link_next_node(while_statement_node, stack, already_connecte
     already_connected_node_list.append(condition_node)
 
 
-# 当遇到了dowhile节点的时候处理的方法
+# 当遇到了doWhile节点的时候处理的方法
 # 规则:
-# 1.dowhile直接连接block第一句
+# 1.doWhile直接连接block第一句
 # 2.loop直接连回block第一句
 # 3.loop直接连到外面的第一句
 def do_while_statement_link_next_node(do_while_statement_node, stack, already_connected_node_list, ban_node_list):
@@ -503,7 +650,7 @@ def do_while_statement_link_next_node(do_while_statement_node, stack, already_co
             condition_node = node
         elif node_type == "Block":
             block_node = node
-    # 1.dowhile连接第一句body
+    # 1.doWhile连接第一句body
     next_expression = get_first_command_in_block(block_node)
     if next_expression is not None:
         do_while_statement_node.append_control_child(next_expression)
@@ -672,68 +819,8 @@ def revert_statement_link_next_node(revert_statement_node, stack, already_connec
             already_connected_node_list.append(revert_statement_node)
 
 
-# 获取function_definition节点子域中的最后一个节点，以数组形式返回。
-def get_last_command_at_function(function_definition_node):
-    res = set()
-    stack = LifoQueue(maxsize=0)
-    stack.put(function_definition_node)
-    # 只要栈内不是空的，就一直循环。
-    while not stack.empty():
-        pop_node = stack.get()
-        # 条件1:如果控制流子节点只有入度，没有出度，说明该子节点是最终的句子。
-        if len(pop_node.control_childes) > 0:
-            # 循环其中的每一个控制子节点
-            for control_child in pop_node.control_childes:
-                # 如果控制流子节点没有自己的控制流子节点作为输出，那说明就是只有入度没有出度的部分。
-                if len(control_child.control_childes) == 0:
-                    res.add(control_child)
-        # 重新压入所有的子节点，做深度遍历dfs
-        for child in pop_node.childes:
-            stack.put(child)
-    # 上面仅仅只是查了条件1，条件和后面的条件不能一起操作，所以分了两个循环。
-    stack.put(function_definition_node)
-    while not stack.empty():
-        pop_node = stack.get()
-        # 条件2:判断是不是[Return,require,revert]节点中的,如果是，那当前节点也是终止节点。
-        if pop_node.node_type in ['Return', 'require', 'revert']:
-            res.add(pop_node)
-            continue
-        for child in pop_node.childes:
-            stack.put(child)
-    # 条件3:求出第一个Block的最后一个子节点，判断是不是带有判断语句的部分，如果是，那判断语句也极有可能是最后一句话。
-    for block_node in function_definition_node.childes:
-        # 确定有子节点
-        if len(block_node.childes) > 0:
-            # 取出最后一个子节点
-            last_node = block_node.childes[-1]
-            # 如果是循环节点，而且条件节点是存在的
-            if last_node.node_type in ["ForStatement", "WhileStatement", "DoWhileStatement"] and last_node.attribute['condition'][0] is not None:
-                condition_node_node_id = last_node.attribute['condition'][0]['id']
-                condition_node_node_type = last_node.attribute['condition'][0]['nodeType']
-                # 找出其中的三个循环节点。
-                for node in last_node.childes:
-                    node_id = node.node_id
-                    node_type = node.node_type
-                    if node_id == condition_node_node_id and node_type == condition_node_node_type:
-                        condition_node = node
-                        # 那么条件语句节点是有可能成为最后一句的。
-                        res.add(condition_node)
-            # 如果是if语句，只有一个出度，那就说明会是最终节点了。
-            elif last_node.node_type == "IfStatement":
-                # 查询其中的block子节点的数量，ifStatement的数量
-                block_node_num = 0
-                if_statement_node_num = 0
-                # 这个节点就是用在判断语句上的节点，但是节点的类型是不固定的，因为可以是函数调用，可以是bool判断也可以是常量True
-                target_node = None
-                for child in last_node.childes:
-                    if child.node_type == "Block":
-                        block_node_num = block_node_num + 1
-                    elif child.node_type == "IfStatement":
-                        if_statement_node_num = if_statement_node_num + 1
-                    # 既不是block也不是if，那就是我们的目标，而且只会有一个。
-                    else:
-                        target_node = child
-                # 只有当block数量为1，if数量为0的时候，才能说明是使用的是if{}，可以直接视为最终节点。
-                if block_node_num == 1 and if_statement_node_num == 0:
-                    res.add(target_node)
-    return list(res)
+# 关于return的处理方式
+def return_link_next_node(return_node, already_connected_node_list):
+    # return其实没有什么要连接的了。没有必要连接，除非是FunctionDefinition。
+    link_function_call_list_at_now_now(return_node)
+    already_connected_node_list.append(return_node)
