@@ -51,8 +51,10 @@ def read_ast():
                 # 使用json的方式加载文件内容
                 # 现在如果有问题，在一开始生成json的时候就已经被发现了，会直接被删除掉，而不是等到现在，所以不再需要进行try/catch。
                 content = json.load(ast_json)
+                # 使用分而治之的方法，把里面的id属性全部加上len(project_node_list)
+                update_content(content, len(project_node_list))
                 # 将文件中的内容转化为图结构的数据，传入的内容有抽象语法树的内容，当前项目的所有节点列表，还有读入当前文件之前已经有多少个节点了，这个待会进去会变得，所以先记录下来。
-                create_graph(content, project_node_list, len(project_node_list), data_sol_source_dir_path + project_dir_name + "/" + ast_json_file_name.replace(".json", ".sol"))
+                create_graph(content, project_node_list, data_sol_source_dir_path + project_dir_name + "/" + ast_json_file_name.replace(".json", ".sol"))
         # 此时整个工程文件夹中的节点都已经构建完成，将这些节点按照节点类型分类，同时放到字典中，保存的格式{"nodeType1": [...], "nodeType2": [...]}
         project_node_dict = {}
         # 循环工程文件夹内所有的节点，为了将这些节点分类保存起来。
@@ -93,9 +95,8 @@ def read_ast():
 # 根据传入的json内容生成一个简单的AST的树结构数据。
 # content:json文件内容
 # node_list:在当前工程文件夹中，已经记录的所有节点。
-# node_list_len:在扫描当前文件之前，已经记录的所有节点的个数。
 # source_file_name:传入当前源文件的名字，这样子可以再次去读取源文件中的内容，然后根据src的位置去获取当前节点代表的是哪一句语句。
-def create_graph(content, node_list, node_list_len, source_file_name):
+def create_graph(content, node_list, source_file_name):
     # 保存当前源文件源代码的数组，相当于将源代码直接拆分为了['p', 'r', 'a', 'g', ...]这样子，后面直接从中间取出来就知道了节点代表的是哪条语句。
     src = []
     # 将内容进行循环遍历最终记录到上面的src的数组中。
@@ -110,7 +111,7 @@ def create_graph(content, node_list, node_list_len, source_file_name):
     # 创建队列，待会用来保存广度遍历里的东西
     queue = Queue(maxsize=0)
     # 根据内容创建节点，注意这里的id，需要时本身的id加上已经被记录的个数，否则到了下一份文件中，又从0开始就不好了。
-    parent_node = create_new_node(content['id'] + node_list_len, content['nodeType'], None)
+    parent_node = create_new_node(content['id'], content['nodeType'], None)
     # 将第一个节点的除了id和nodeType的所有属性，一起添加到节点上。
     for key in content.keys():
         # 如果不是id或者nodeType的属性，直接记录到attribute中，使用字典的形式。
@@ -137,7 +138,7 @@ def create_graph(content, node_list, node_list_len, source_file_name):
             # 如果含有这两个属性，表明已经是子节点了。
             if 'id' in q.keys() and 'nodeType' in q.keys():
                 # 先新增节点，并作如下三个操作。而且一定要记住，因为每个文件都有可能生成节点，所以节点的id不能直接使用，需要修改。
-                node = create_new_node(q['id'] + node_list_len, q['nodeType'], parent_node)
+                node = create_new_node(q['id'], q['nodeType'], parent_node)
                 # 往队列里插入这个节点，这样子下次找到新的内容就可以更换父节点，就知道谁是谁的父亲了。
                 queue.put(node)
                 # 当前这个节点是原先的父节点的子节点。
@@ -167,7 +168,7 @@ def create_graph(content, node_list, node_list_len, source_file_name):
                     # 如果含有这两个属性，表明已经是子节点了。
                     if 'id' in obj.keys() and 'nodeType' in obj.keys():
                         # 先新增节点，并作如下三个操作。
-                        node = create_new_node(obj['id'] + node_list_len, obj['nodeType'], parent_node)
+                        node = create_new_node(obj['id'], obj['nodeType'], parent_node)
                         # 往队列里插入这个节点，这样子下次找到新的内容就可以更换父节点，就知道谁是谁的父亲了。
                         queue.put(node)
                         # 当前这个节点是原先的父节点的子节点。
@@ -308,3 +309,15 @@ def set_method_detail(project_node_dict):
             # 将这里的函数名字和参数都添加到ModifierDefinition节点的attribute上。
             node.append_attribute("method_name", method_name)
             node.append_attribute("params", params)
+
+
+# 使用递归的方法，修改content中所有的id属性。
+def update_content(content, before_file_project_node_list_len):
+    for key in content.keys():
+        # 这代表里面可能含有id属性。
+        if isinstance(content[key], dict):
+            # 使用递归的方法，去递归的操作属性。
+            update_content(content[key], before_file_project_node_list_len)
+    # 设定里面所有的id属性增加一个长度，而这个长度就是前一个文件读完以后已经有了多少个节点。
+    if 'id' in content.keys():
+        content['id'] = content['id'] + before_file_project_node_list_len
