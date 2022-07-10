@@ -211,11 +211,14 @@ def set_method_detail(project_node_dict):
         # 循环所有的FunctionDefinition节点，找出其中的method_name作为新的属性。
         for node in project_node_dict['FunctionDefinition']:
             # 为了取出方法的名字，先获取start和end，然后去切分字符串。
-            start = node.attribute['src_code'][0].index(" ") + 1
             end = node.attribute['src_code'][0].index(")") + 1
-            # 如果是以"constructor("开头的
-            if node.attribute['src_code'][0].startswith("constructor("):
+            start_left_symbol = node.attribute['src_code'][0].index("(") + 1
+            blank_index = node.attribute['src_code'][0].index(" ") + 1
+            # 如果是先出现左括号，再出现空格，那就有问题。
+            if start_left_symbol < blank_index:
                 start = 0
+            else:
+                start = node.attribute['src_code'][0].index(" ") + 1
             # 切分字符串，获取函数的完全信息
             # function call(uint a) public pure returns(uint){
             # 假如上面这个例子，取出来的是call(uint a)
