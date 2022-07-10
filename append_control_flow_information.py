@@ -60,7 +60,7 @@ def append_control_flow_information(project_node_list, project_node_dict):
             while not stack.empty():
                 pop_node = stack.get()
                 # 如果已经查询过了就先跳过。
-                if pop_node in already_connected_node_list:
+                if pop_node is None or pop_node in already_connected_node_list:
                     continue
                 # 根据节点的类型进行不同的操作，注意，这里永远不会出现虚拟节点，哪怕出现也没关系，因为不会有对应的操作。
                 if pop_node.node_type == "ModifierDefinition":
@@ -160,8 +160,8 @@ def append_control_flow_information(project_node_list, project_node_dict):
 # 找到block节点下面的第一句语句。
 def get_first_command_in_block(block_node):
     next_expression = None
-    # 忽略操作的几类节点。
-    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UnaryOperation', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'PlaceholderStatement', 'EventDefinition', 'ArrayTypeName', 'Literal', 'Mapping', 'ContractDefinition']
+    # 忽略操作的几类节点
+    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UnaryOperation', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'EventDefinition', 'ArrayTypeName', 'Literal', 'Mapping', 'ContractDefinition']
     for child in block_node.childes:
         # 如果发现找到这个节点类型在忽略的类型当中
         if child.node_type in ignore_node_type_list:
@@ -512,7 +512,7 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
     # 从for_statement_node中找出以下的几部分信息，可以作为连接三个条件的判断条件。
     # 这里的三个条件都要判断一下是否为空
     # 如果初始条件不存在
-    if for_statement_node.attribute['initializationExpression'][0] is None:
+    if 'initializationExpression' not in for_statement_node.attribute.keys() or for_statement_node.attribute['initializationExpression'][0] is None:
         # 设定id和type都为none，这样就不会找到内容
         initialization_expression_node_node_id = None
         initialization_expression_node_node_type = None
@@ -523,7 +523,7 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         initialization_expression_node_node_type = for_statement_node.attribute['initializationExpression'][0]['nodeType']
         initialization_expression_node = None
     # 如果循环条件不存在
-    if for_statement_node.attribute['loopExpression'][0] is None:
+    if 'loopExpression' not in  for_statement_node.attribute.keys() or for_statement_node.attribute['loopExpression'][0] is None:
         # 设定id和type都是None，这样就不会找到对应的节点
         loop_expression_node_node_id = None
         loop_expression_node_node_type = None
@@ -536,7 +536,7 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         loop_expression_node_node_type = for_statement_node.attribute['loopExpression'][0]['nodeType']
         loop_expression_node = None
     # 如果判断条件不存在
-    if for_statement_node.attribute['condition'][0] is None:
+    if 'condition' not in for_statement_node.attribute.keys() or for_statement_node.attribute['condition'][0] is None:
         # 设定id和type都是None，这样就不会找到对应的节点。
         condition_node_node_id = None
         condition_node_node_type = None
