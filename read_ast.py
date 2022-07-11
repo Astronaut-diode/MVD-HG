@@ -213,9 +213,13 @@ def set_method_detail(project_node_dict):
             # 为了取出方法的名字，先获取start和end，然后去切分字符串。
             end = node.attribute['src_code'][0].index(")") + 1
             start_left_symbol = node.attribute['src_code'][0].index("(") + 1
-            blank_index = node.attribute['src_code'][0].index(" ") + 1
+            # 如果找的到空格键,那说明是正常的，找不到的话说明提取不出来，直接start用0就行。
+            if node.attribute['src_code'][0].find(" ") is not -1:
+                blank_index = node.attribute['src_code'][0].index(" ") + 1
+            else:
+                blank_index = start_left_symbol
             # 如果是先出现左括号，再出现空格，那就有问题。
-            if start_left_symbol < blank_index:
+            if start_left_symbol <= blank_index:
                 start = 0
             else:
                 start = node.attribute['src_code'][0].index(" ") + 1
