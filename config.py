@@ -1,11 +1,11 @@
 # 是否要调用print_tree方法来显示图片
-show_plt = True
+show_plt = False
 # 是否要在print_tree方法中显示抽象语法树的边
 show_AST_plt = True
 # 是否要在print_tree方法中显示控制流图的边
 show_CFG_plt = True
 # 是否要在print_tree方法中忽略一些不重要的叶子节点
-ignore_AST_some_list = True
+ignore_AST_some_list = False
 # 设定好颜色集
 color_dict = {"SourceUnit": "#ddd02f",
               "PragmaDirective": "#ddd02f",
@@ -39,3 +39,5 @@ img_height = 12.0
 print_compile_cmd = True
 # 在机器上的编译器文件的保存位置
 compile_dir_path = "/home/xjj/.solc-select/artifacts/"
+# 是否需要显示所有的节点的类型。
+need_show_total_node_node_type = True
