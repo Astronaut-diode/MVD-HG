@@ -1,3 +1,4 @@
+# coding=UTF-8
 # 是否要调用print_tree方法来显示图片
 show_plt = False
 # 是否要在print_tree方法中显示抽象语法树的边

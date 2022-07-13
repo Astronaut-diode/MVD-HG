@@ -1,3 +1,4 @@
+# coding=UTF-8
 from dataset import ASTGNNDataset
 from model import ASTGNNModel
 from torch_geometric.loader import DataLoader

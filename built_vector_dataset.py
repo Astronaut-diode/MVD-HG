@@ -1,3 +1,4 @@
+# coding=UTF-8
 from gensim.models import Word2Vec
 import os
 import config

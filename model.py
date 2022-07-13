@@ -1,3 +1,4 @@
+# coding=UTF-8
 from torch_geometric.nn import MessagePassing, GATConv, global_mean_pool, Linear
 from typing import Optional
 from torch import Tensor

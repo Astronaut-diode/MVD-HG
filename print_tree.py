@@ -1,3 +1,4 @@
+# coding=UTF-8
 import networkx as nx
 import matplotlib.pyplot as plt
 import datetime

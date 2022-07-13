@@ -1,3 +1,4 @@
+# coding=UTF-8
 from typing import Tuple, Union, List
 from torch_geometric.data import Data, Dataset
 import torch
