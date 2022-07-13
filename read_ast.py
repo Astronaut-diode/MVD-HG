@@ -75,7 +75,7 @@ def read_ast():
         built_corpus_bfs(project_node_list)
         built_corpus_dfs(project_node_list)
         # 创建数据集
-        built_vector_dataset(project_node_list, data_ast_json_project_dir_path.replace("AST_json", "dataset"))
+        built_vector_dataset(project_node_list, data_ast_json_project_dir_path.replace("AST_json", "raw"))
         # 如果需要打印语料库的词典观察结果，这个可以在config中进行配置。
         if config.show_corpus_msg:
             w2v = Word2Vec.load(config.corpus_file_path)
