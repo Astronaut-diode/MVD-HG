@@ -4,7 +4,7 @@ import config
 import json
 
 data_dir_path = f'{os.getcwd()}/data/'
-dataset_dir_path = f'{data_dir_path}/dataset/'
+dataset_dir_path = f'{data_dir_path}/raw/'
 
 
 # 将每一个工程文件夹中的内容转化成的抽象语法树节点转化为节点向量。注意这里面保存的节点的id都是从1开始的。
@@ -15,7 +15,7 @@ def built_vector_dataset(project_node_list, graph_dataset_dir_path):
     project_node_list.sort(key=lambda node: node.node_id)
     # 首先，判断对应的文件夹是否存在
     if not os.path.exists(graph_dataset_dir_path):
-        os.mkdir(graph_dataset_dir_path)
+        os.makedirs(graph_dataset_dir_path)
     # 传入所有的节点信息，生成对应的节点特征文件。
     create_node_feature_json(project_node_list, graph_dataset_dir_path)
     # 传入所有的节点信息，生成抽象语法树的边文件。
