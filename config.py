@@ -41,3 +41,5 @@ print_compile_cmd = True
 compile_dir_path = "/home/xjj/.solc-select/artifacts/"
 # 是否需要显示所有的节点的类型。
 need_show_total_node_node_type = True
+# 用来控制训练的时候使用的设备
+device = "cuda:1"

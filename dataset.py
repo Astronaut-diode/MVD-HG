@@ -84,7 +84,8 @@ class ASTGNNDataset(Dataset):
         ast_edge_content = json.load(ast_edge_file_handle)
         ast_edge_index = []
         for index, content in enumerate(ast_edge_content):
-            ast_edge_index.append([content['source_node_node_id'], content['target_node_node_id']])
+            # 因为一开始写在json里面的时候是从1开始计算的，但是如果送到模型里面，需要从0开始。
+            ast_edge_index.append([content['source_node_node_id'] - 1, content['target_node_node_id'] - 1])
         ast_edge_index = torch.tensor(data=ast_edge_index, dtype=torch.long)
         ast_edge_file_handle.close()
         return ast_edge_index.T
@@ -96,7 +97,8 @@ class ASTGNNDataset(Dataset):
         cfg_edge_content = json.load(cfg_edge_file_handle)
         cfg_edge_index = []
         for index, content in enumerate(cfg_edge_content):
-            cfg_edge_index.append([content['source_node_node_id'], content['target_node_node_id']])
+            # 因为一开始写在json里面的时候是从1开始计算的，但是如果送到模型里面，需要从0开始。
+            cfg_edge_index.append([content['source_node_node_id'] - 1, content['target_node_node_id'] - 1])
         cfg_edge_index = torch.tensor(data=cfg_edge_index, dtype=torch.long)
         cfg_edge_file_handle.close()
         return cfg_edge_index.T
