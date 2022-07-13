@@ -43,3 +43,5 @@ compile_dir_path = "/home/xjj/.solc-select/artifacts/"
 need_show_total_node_node_type = True
 # 用来控制训练的时候使用的设备
 device = "cuda:1"
+# 一共有三种模式:1.delete,会在运行前先删除之前的运行结果。2.frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
+frozen = "frozen"
