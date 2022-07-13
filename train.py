@@ -1,6 +1,6 @@
 from dataset import ASTGNNDataset
 from model import ASTGNNModel
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 import os
 import torch
 import config
@@ -27,13 +27,15 @@ def train():
         train_correct = 0
         train_total = 0
         for index, batch in enumerate(data_loader):
+            # 将数据转化为指定设备上运行
             batch = batch.to(device)
+            # 经典的五步计算
             optimizer.zero_grad()
             output = model(batch.x, batch.edge_index, batch.batch)
             loss = criterion(output, batch.y)
             loss.backward()
             optimizer.step()
-            # 计算训练阶段的正确率
+            # 进行准确率计算。
             pred = output.argmax(dim=1)
             train_correct = train_correct + (pred == batch.y).sum()
             train_total = train_total + batch.num_graphs
