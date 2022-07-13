@@ -8,6 +8,7 @@ from print_tree import print_tree
 from built_corpus import built_corpus_bfs, built_corpus_dfs
 from append_control_flow_information import append_control_flow_information
 from built_vector_dataset import built_vector_dataset
+import shutil
 
 # 在linux环境下的当前工程路径
 parent_path = os.getcwd()
@@ -15,6 +16,8 @@ parent_path = os.getcwd()
 data_sol_source_dir_path = parent_path + "/data/sol_source/"
 # 在data目录下，生成的ast的json文件的保存目录:/home/xjj/AST-GNN/data/AST_json/
 data_ast_json_dir_path = parent_path + "/data/AST_json/"
+# 在data目录下，已经结束操作的源文件
+data_already_json_dir_path = parent_path + "/data/already_source/"
 
 
 # 读取刚刚保存下的抽象语法树的json文件
@@ -74,12 +77,15 @@ def read_ast():
         # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
         built_corpus_bfs(project_node_list)
         built_corpus_dfs(project_node_list)
-        # 创建数据集
-        built_vector_dataset(project_node_list, data_ast_json_project_dir_path.replace("AST_json", "raw"))
         # 如果需要打印语料库的词典观察结果，这个可以在config中进行配置。
         if config.show_corpus_msg:
             w2v = Word2Vec.load(config.corpus_file_path)
             print(w2v.wv.vocab.keys())
+        # 到了这里说明当前文件夹其实已经操作完了，下次可以不再运行
+        if config.frozen == "frozen":
+            shutil.move(data_sol_source_dir_path + project_dir_name, data_already_json_dir_path)
+        # 创建数据集
+        built_vector_dataset(project_node_list, data_ast_json_project_dir_path.replace("AST_json", "raw"))
         # 如果需要打印所有节点的类型集合，这个可以在config中进行配置。
         if config.need_show_total_node_node_type:
             # 字典的结构是{节点类型:[这个类型的所有节点]}
