@@ -38,17 +38,25 @@ class ASTGNNDataset(Dataset):
 
     # 4.对文件进行处理，然后保存到processed中返回的文件列表里面去。
     def process(self):
+        # 读取文件标签的文件句柄
+        sol_to_label_index_handle = open(self.root + "/sol_to_label.txt", 'r', encoding="UTF-8")
+        # 按照json的方式读取出来
+        sol_to_label_index_json = json.load(sol_to_label_index_handle)
         ast_graph_data_list = []
         cfg_graph_data_list = []
+        # 循环里面每一个工程文件夹，注意，这里是每一个工程文件夹的名字。
         for project in self.raw_file_names:
+            # 通过工程文件夹取出其中的图的标签。
+            y = torch.tensor(data=sol_to_label_index_json[f'{project.split("/")[-1]}.sol'], dtype=torch.long)
+            # 获取对应工程文件夹下的node.json文件中的内容。
             x = self.get_x(project)
             ast_edge_index = self.get_ast_edge(project)
             # 通过x和ast_edge_index一起构造图数据
-            ast_graph_train_data = Data(x=x, edge_index=ast_edge_index, y=torch.tensor(data=0, dtype=torch.long))
+            ast_graph_train_data = Data(x=x, edge_index=ast_edge_index, y=y)
             # 添加到列表中，待会可以直接一次性保存。
             ast_graph_data_list.append(ast_graph_train_data)
             cfg_edge_index = self.get_cfg_edge(project)
-            cfg_graph_train_data = Data(x=x, edge_index=cfg_edge_index, y=torch.tensor(data=0, dtype=torch.long))
+            cfg_graph_train_data = Data(x=x, edge_index=cfg_edge_index, y=y)
             cfg_graph_data_list.append(cfg_graph_train_data)
         # 数据构造完毕以后，直接保存到对应文件中即可。
         torch.save(ast_graph_data_list, self.processed_file_names[0])
