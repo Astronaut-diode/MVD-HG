@@ -341,3 +341,6 @@ def update_content(content, before_file_project_node_list_len):
     # 设定里面所有的id属性增加一个长度，而这个长度就是前一个文件读完以后已经有了多少个节点。
     if 'id' in content.keys():
         content['id'] = content['id'] + before_file_project_node_list_len
+    # 这个属性也是一样的，需要增加之前文件的节点数量。
+    if 'referencedDeclaration' in content.keys():
+        content['referencedDeclaration'] = content['referencedDeclaration'] + before_file_project_node_list_len

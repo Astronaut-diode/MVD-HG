@@ -46,3 +46,5 @@ need_show_total_node_node_type = True
 device = "cuda:1"
 # 一共有三种模式:1.delete,会在运行前先删除之前的运行结果。2.frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
 frozen = "frozen"
+# 训练模型的分类数。
+classes = 2
