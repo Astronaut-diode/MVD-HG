@@ -332,19 +332,21 @@ def function_definition_type_link_next_node(function_definition_node, project_no
             # 取出这个修饰符的名字和id
             used_modifier_name = childes.attribute['modifierName'][0]['name']
             used_modifier_id = childes.attribute['modifierName'][0]['referencedDeclaration']
-            # 根据修饰符的名字和referencedDeclaration去寻找对应的ModifierDefinition节点，并连起来。
-            for modifier_definition_node in project_node_dict['ModifierDefinition']:
-                # 当使用的修饰符的id和遍历的修饰符的id对上，以及名字也对上了，说明节点找到了，出于分离业务更加简单的道理，在这里先简单的连上函数或者修饰符的节点，但是不需要去找最后一句是谁。
-                if modifier_definition_node.attribute['name'][0] == used_modifier_name and modifier_definition_node.node_id == used_modifier_id:
-                    # 设定好下一句是ModifiedDefinition节点。
-                    next_expression = modifier_definition_node
-                    # 将这两个节点互相连接起来。
-                    function_definition_node.append_control_child(next_expression)
-                    next_expression.append_control_child(function_definition_node)
-                    # 将下一句压入栈中进行新的操作。
-                    stack.put(modifier_definition_node)
-                    # 因为我要的内容已经找到了，后续不再操作。
-                    break
+            # 有用到修饰符不代表一定会有对应的节点，可能用的是默认的。
+            if 'ModifierDefinition' in project_node_dict.keys():
+                # 根据修饰符的名字和referencedDeclaration去寻找对应的ModifierDefinition节点，并连起来。
+                for modifier_definition_node in project_node_dict['ModifierDefinition']:
+                    # 当使用的修饰符的id和遍历的修饰符的id对上，以及名字也对上了，说明节点找到了，出于分离业务更加简单的道理，在这里先简单的连上函数或者修饰符的节点，但是不需要去找最后一句是谁。
+                    if modifier_definition_node.attribute['name'][0] == used_modifier_name and modifier_definition_node.node_id == used_modifier_id:
+                        # 设定好下一句是ModifiedDefinition节点。
+                        next_expression = modifier_definition_node
+                        # 将这两个节点互相连接起来。
+                        function_definition_node.append_control_child(next_expression)
+                        next_expression.append_control_child(function_definition_node)
+                        # 将下一句压入栈中进行新的操作。
+                        stack.put(modifier_definition_node)
+                        # 因为我要的内容已经找到了，后续不再操作。
+                        break
     # 2.找出FunctionDefinition节点中的Block节点。
     for block_node in function_definition_node.childes:
         # 如果节点的类型是Block,找这个Block下面的第一个节点作为下一句。
