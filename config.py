@@ -48,3 +48,9 @@ device = "cuda:1"
 frozen = "frozen"
 # 训练模型的分类数。
 classes = 2
+# 训练世代的总数量
+epoch_size = 10
+# 训练的时候的学习率
+learning_rate = 0.005
+# 训练时候的batch大小
+batch_size = 64
