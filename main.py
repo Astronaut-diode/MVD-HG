@@ -18,6 +18,8 @@ if __name__ == '__main__':
         os.mkdir("/home/xjj/AST-GNN/data/AST_json/")
     if not os.path.exists("/home/xjj/AST-GNN/data/already_source/"):
         os.mkdir("/home/xjj/AST-GNN/data/already_source/")
+    if not os.path.exists("/home/xjj/AST-GNN/data/raw/"):
+        os.mkdir("/home/xjj/AST-GNN/data/raw/")
     # 在运行之前先删除之前轮次运行出来的结果,这里当初只是为了方便dev的时候写的。
     if config.frozen == "delete":
         for project_name in os.listdir("/home/xjj/AST-GNN/data/AST_json/"):
