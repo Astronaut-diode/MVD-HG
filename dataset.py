@@ -1,9 +1,11 @@
 # coding=UTF-8
 from typing import Tuple, Union, List
 from torch_geometric.data import Data, Dataset
+import numpy as np
 import torch
 import json
 import os
+import config
 
 
 class ASTGNNDataset(Dataset):
@@ -46,8 +48,10 @@ class ASTGNNDataset(Dataset):
         cfg_graph_data_list = []
         # 循环里面每一个工程文件夹，注意，这里是每一个工程文件夹的名字。
         for project in self.raw_file_names:
-            # 通过工程文件夹取出其中的图的标签。
-            y = torch.tensor(data=sol_to_label_index_json[f'{project.split("/")[-1]}.sol'], dtype=torch.long)
+            # 通过工程文件夹取出其中的图的标签，注意一定要弄成一个独热编码
+            label = torch.as_tensor(data=np.array([[sol_to_label_index_json[f'{project.split("/")[-1]}.sol']]], dtype=np.int64))
+            one_hot = torch.zeros(1, config.classes).scatter_(dim=1, index=label, src=1)
+            y = torch.as_tensor(data=np.array(one_hot, dtype=np.float32))
             # 获取对应工程文件夹下的node.json文件中的内容。
             x = self.get_x(project)
             ast_edge_index = self.get_ast_edge(project)
@@ -81,7 +85,7 @@ class ASTGNNDataset(Dataset):
         for index, content in enumerate(node_content):
             x.append(content['node_feature'])
         # 将x转化为torch形式
-        x = torch.tensor(data=x, dtype=torch.float)
+        x = torch.as_tensor(data=np.array(x, dtype=np.float32))
         # 已经读取完毕，所以需要关闭句柄对象
         node_file_handle.close()
         return x
@@ -95,7 +99,7 @@ class ASTGNNDataset(Dataset):
         for index, content in enumerate(ast_edge_content):
             # 因为一开始写在json里面的时候是从1开始计算的，但是如果送到模型里面，需要从0开始。
             ast_edge_index.append([content['source_node_node_id'] - 1, content['target_node_node_id'] - 1])
-        ast_edge_index = torch.tensor(data=ast_edge_index, dtype=torch.long)
+        ast_edge_index = torch.as_tensor(data=np.array(ast_edge_index, dtype=np.int64))
         ast_edge_file_handle.close()
         return ast_edge_index.T
 
@@ -108,6 +112,6 @@ class ASTGNNDataset(Dataset):
         for index, content in enumerate(cfg_edge_content):
             # 因为一开始写在json里面的时候是从1开始计算的，但是如果送到模型里面，需要从0开始。
             cfg_edge_index.append([content['source_node_node_id'] - 1, content['target_node_node_id'] - 1])
-        cfg_edge_index = torch.tensor(data=cfg_edge_index, dtype=torch.long)
+        cfg_edge_index = torch.as_tensor(data=np.array(cfg_edge_index, dtype=np.int64))
         cfg_edge_file_handle.close()
         return cfg_edge_index.T
