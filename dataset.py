@@ -50,7 +50,8 @@ class ASTGNNDataset(Dataset):
         for project in self.raw_file_names:
             # 通过工程文件夹取出其中的图的标签，注意一定要弄成一个独热编码
             label = torch.as_tensor(data=np.array([[sol_to_label_index_json[f'{project.split("/")[-1]}.sol']]], dtype=np.int64))
-            one_hot = torch.zeros(1, config.classes).scatter_(dim=1, index=label, src=1)
+            # 这里刚刚写参数写错了/(ㄒoㄒ)/~~。
+            one_hot = torch.zeros(1, config.classes).scatter_(1, label, 1)
             y = torch.as_tensor(data=np.array(one_hot, dtype=np.float32))
             # 获取对应工程文件夹下的node.json文件中的内容。
             x = self.get_x(project)
