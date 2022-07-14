@@ -39,7 +39,7 @@ class ASTGNNDataset(Dataset):
     # 4.对文件进行处理，然后保存到processed中返回的文件列表里面去。
     def process(self):
         # 读取文件标签的文件句柄
-        sol_to_label_index_handle = open(self.root + "/sol_to_label.txt", 'r', encoding="UTF-8")
+        sol_to_label_index_handle = open(self.root + "/sol_to_label.json", 'r', encoding="UTF-8")
         # 按照json的方式读取出来
         sol_to_label_index_json = json.load(sol_to_label_index_handle)
         ast_graph_data_list = []
