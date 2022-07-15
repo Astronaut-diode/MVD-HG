@@ -44,7 +44,7 @@ def built_corpus_bfs(project_node_list, data_sol_source_project_dir_path):
             string = string + sentence + " "
         f.write(string)
         f.close()
-        print(data_sol_source_project_dir_path, "语料库添加成功")
+        print(f"{data_sol_source_project_dir_path}语料库添加成功")
     elif config.create_corpus_mode == "update":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
@@ -63,7 +63,7 @@ def built_corpus_bfs(project_node_list, data_sol_source_project_dir_path):
             w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
             # 保存训练以后的模型。
             w2v.save(config.corpus_file_path)
-        print(data_sol_source_project_dir_path, "语料库模型更新成功")
+        print(f"{data_sol_source_project_dir_path}语料库模型更新成功")
 
 
 # 改用深度遍历的方式构建语料库，两种方式一起，综合一下。
@@ -104,7 +104,7 @@ def built_corpus_dfs(project_node_list, data_sol_source_project_dir_path):
             string = string + sentence + " "
         f.write(string)
         f.close()
-        print(data_sol_source_project_dir_path, "语料库添加成功")
+        print(f"{data_sol_source_project_dir_path}语料库添加成功")
     elif config.create_corpus_mode == "update":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
@@ -123,7 +123,7 @@ def built_corpus_dfs(project_node_list, data_sol_source_project_dir_path):
             w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
             # 保存训练以后的模型。
             w2v.save(config.corpus_file_path)
-        print(data_sol_source_project_dir_path, "语料库模型更新成功")
+        print(f"{data_sol_source_project_dir_path}语料库模型更新成功")
 
 
 # 判断这个节点是否包含了name，Literal或者value

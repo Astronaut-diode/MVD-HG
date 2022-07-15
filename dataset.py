@@ -23,8 +23,8 @@ class ASTGNNDataset(Dataset):
         # 保存原始文件中所有工程文件夹名字的列表
         project_file_list = []
         # 循环raw目录下所有的工程文件夹，获取所有的工程文件夹名字
-        for project_name in os.listdir(self.root + "/raw/"):
-            project_dir = os.path.join(self.root + "/raw/", project_name)
+        for project_name in os.listdir(config.data_raw_dir_path):
+            project_dir = os.path.join(config.data_raw_dir_path, project_name)
             project_file_list.append(project_dir)
         return project_file_list
 
@@ -41,7 +41,7 @@ class ASTGNNDataset(Dataset):
     # 4.对文件进行处理，然后保存到processed中返回的文件列表里面去。
     def process(self):
         # 读取文件标签的文件句柄
-        sol_to_label_index_handle = open(self.root + "/sol_to_label.json", 'r', encoding="UTF-8")
+        sol_to_label_index_handle = open(config.sol_to_label_file, 'r', encoding="UTF-8")
         # 按照json的方式读取出来
         sol_to_label_index_json = json.load(sol_to_label_index_handle)
         ast_graph_data_list = []

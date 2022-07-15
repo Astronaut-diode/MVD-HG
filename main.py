@@ -15,7 +15,6 @@ import config
 import utils
 import os
 import shutil
-import sys
 
 
 if __name__ == '__main__':
@@ -27,6 +26,8 @@ if __name__ == '__main__':
         utils.dir_exists(config.data_ast_json_dir_path)
         utils.dir_exists(config.data_complete_dir_path)
         utils.dir_exists(config.data_raw_dir_path)
+        # 先获取原始标签的json，然后根据json中的内容，可以得到一个列表，其中是没有空隙的，我可以直接获取对应的下标的标签。上面操作的project_name就是对应的下标。
+        label_in_memory = utils.get_label()
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
         for project_name in tqdm(os.listdir(config.data_sol_source_dir_path)):
             # sol_source中遍历到的工程文件夹的全路径。
@@ -54,7 +55,9 @@ if __name__ == '__main__':
             built_corpus_bfs(project_node_list=project_node_list, data_sol_source_project_dir_path=data_sol_source_project_dir_path)
             built_corpus_dfs(project_node_list=project_node_list, data_sol_source_project_dir_path=data_sol_source_project_dir_path)
             # 创建数据集
-            built_vector_dataset(project_node_list=project_node_list, graph_dataset_dir_path=config.data_raw_dir_path, data_sol_source_project_dir_path=data_sol_source_project_dir_path)
+            built_vector_dataset(project_node_list=project_node_list, graph_dataset_dir_path=f'{config.data_raw_dir_path}/{project_name}/', data_sol_source_project_dir_path=data_sol_source_project_dir_path)
+            # 将一个新的节点传进去，然后更新到数据集中。
+            utils.update_sol_to_label({f'{project_name}.sol': label_in_memory[int(project_name)][project_name]})
             # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。
             if config.frozen == "frozen":
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
@@ -75,6 +78,6 @@ if __name__ == '__main__':
     elif config.run_mode == "train":
         train()
     end = datetime.datetime.now()
-    print("开始时间:", start)
-    print("结束时间:", end)
-    print("一共耗时:", end - start)
+    print(f"开始时间:{start}")
+    print(f"结束时间:{end}")
+    print(f"一共耗时:f{end - start}")

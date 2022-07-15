@@ -28,13 +28,13 @@ def built_vector_dataset(project_node_list, graph_dataset_dir_path, data_sol_sou
         create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
         # 传入所有的节点信息，生成控制流边的边文件。
         create_cfg_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
-        print(data_sol_source_project_dir_path, "节点和边文件已经构建完毕。")
+        print(f"{data_sol_source_project_dir_path}节点和边文件已经构建完毕。")
 
 
 # 创建保存节点信息的json文件,注意，这里保存的结果点进去看只有一行，主要是为了减少保存的空间，如果想要好看，可以复制的json格式化的在线网站上看。
 def create_node_feature_json(project_node_list, graph_dataset_dir_path, id_mapping_id):
     # 先创建对应的节点特征的json文件,node.json
-    node_feature_file_name = graph_dataset_dir_path + "node.json"
+    node_feature_file_name = f'{graph_dataset_dir_path}/node.json'
     # 用来保存文件的句柄
     node_feature_handle = open(node_feature_file_name, 'w', encoding="UTF-8")
     # 保存到json文件中的节点列表
@@ -57,7 +57,7 @@ def create_node_feature_json(project_node_list, graph_dataset_dir_path, id_mappi
 # 创建抽象语法树的边文件。
 def create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id):
     # 先创建对应的抽象语法树边信息的json文件,ast_edge.json
-    ast_edge_file_name = graph_dataset_dir_path + "ast_edge.json"
+    ast_edge_file_name = f'{graph_dataset_dir_path}/ast_edge.json'
     # 用来保存文件的句柄
     ast_edge_handle = open(ast_edge_file_name, 'w', encoding="UTF-8")
     # 保存到抽象语法树边信息中的节点列表
@@ -79,7 +79,7 @@ def create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_i
 # 创建控制流图的边文件。
 def create_cfg_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id):
     # 先创建对应的控制流图边信息的json文件,cfg_edge.json
-    cfg_edge_file_name = graph_dataset_dir_path + "cfg_edge.json"
+    cfg_edge_file_name = f'{graph_dataset_dir_path}/cfg_edge.json'
     # 用来保存文件的句柄
     cfg_edge_handle = open(cfg_edge_file_name, 'w', encoding="UTF-8")
     # 保存到控制流图边信息中的节点列表

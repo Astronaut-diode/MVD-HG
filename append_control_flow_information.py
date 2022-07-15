@@ -158,7 +158,7 @@ def append_control_flow_information(project_node_list, project_node_dict, data_s
                         command.append_control_child(control_child)
                     # 删除ModifierDefinition和FunctionDefinition连接的边。
                     modifier_definition_node.control_childes.remove(control_child)
-    print(data_sol_source_project_dir_path, "节点控制流更新成功")
+    print(f"{data_sol_source_project_dir_path}节点控制流更新成功")
 
 
 # 找到block节点下面的第一句语句。

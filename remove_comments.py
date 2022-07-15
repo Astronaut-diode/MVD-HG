@@ -61,4 +61,4 @@ def remove_comments(data_sol_source_project_dir_path):
         os.remove(file)
         # 将临时文件的文件名改成源文件，实现覆写功能
         os.rename(tmp_file_name, file)
-        print(file, "注释删除完毕")
+        print(f"{file}注释删除完毕")

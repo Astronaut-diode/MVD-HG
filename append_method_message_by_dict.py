@@ -1,4 +1,6 @@
 # coding=UTF-8
+
+
 # 设置函数的method_name等详细信息到attribute上。
 def append_method_message_by_dict(project_node_dict, data_sol_source_project_dir_path):
     # 存在函数的情况下才调用这段代码
@@ -111,4 +113,4 @@ def append_method_message_by_dict(project_node_dict, data_sol_source_project_dir
             # 将这里的函数名字和参数都添加到ModifierDefinition节点的attribute上。
             node.append_attribute("method_name", method_name)
             node.append_attribute("params", params)
-    print(data_sol_source_project_dir_path, "函数信息更新成功")
+    print(f"{data_sol_source_project_dir_path}函数信息更新成功")

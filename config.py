@@ -10,12 +10,15 @@ data_sol_source_dir_path = f"{data_dir_path}/sol_source"
 data_ast_json_dir_path = f"{data_dir_path}/AST_json"
 data_complete_dir_path = f"{data_dir_path}/complete"
 data_raw_dir_path = f"{data_dir_path}/raw"
+# 标签文件的保存地址，这是加工之前的保存位置。这时候保存的内容比较粗糙,其中保存的格式是[{"0": 0}, {"1": 0}, {"2": 1}....]。
+idx_to_label_file = f'{data_dir_path}/idx_to_label.json'
+sol_to_label_file = f'{data_dir_path}/sol_to_label.json'
 # compile_files中用到的版本匹配规则。
 version_match_rule = "pragma solidity \\^?>?=?0\\.\\d{1,2}\\.\\d{1,2}"
 # 在机器上的编译器文件的保存位置
 compile_dir_path = "/home/xjj/.solc-select/artifacts/"
-# 语料库文件是创建还是更新分别是create和update
-create_corpus_mode = "create"
+# 语料库文件是创建还是更新分别是create和update，如果是create就只是单纯为了获取corpus.txt，而update会用来生成三种训练文件。
+create_corpus_mode = "update"
 # 词库文件的保存位置。
 corpus_file_path = f"{data_dir_path}/corpus_model.pkl"
 corpus_txt_path = f"{data_dir_path}/corpus.txt"
