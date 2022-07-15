@@ -35,7 +35,7 @@ def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_pa
         version = get_max_version(versions)
         # 设根据版本号以及一些已知的信息，可以构建出出命令。
         cmd = config.compile_dir_path + "solc-" + version + " " + full_compile_file_path + " --combined-json ast --allow-paths " + full_compile_file_path + " --ast-compact-json"
-        print(cmd, width=1000, max_seq_len=100, ribbon_width=1000)
+        print(cmd)
         # 判断是否有满足条件的编译器
         allow_flag = False
         # 查看有哪些编译器版本可用，如果不存在可用的需要重新下载
