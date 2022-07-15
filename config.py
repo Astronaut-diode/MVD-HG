@@ -1,3 +1,4 @@
+# coding=UTF-8
 import os
 
 # 三种运行的模式，是创建数据集create，训练train，还是预测valid

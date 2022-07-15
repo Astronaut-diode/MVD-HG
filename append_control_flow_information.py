@@ -14,41 +14,42 @@ def append_control_flow_information(project_node_list, project_node_dict, data_s
     ban_node_list = []
     # 代表在每一个FunctionDefinition节点中最后一句是谁，先不用管函数调用的情况，保存的格式是字典形式。{FunctionDefinitionNode: LastChildesNode}
     last_command_in_function_definition_node = {}
-    # 从节点字典中取出所有的FunctionDefinition节点，对每一个FunctionDefinition节点进行操作。
-    for function_definition_node in project_node_dict['FunctionDefinition']:
-        # 先设定每一个函数的最后一句是自己，因为有的函数可能是空的函数体。
-        last_command_in_function_definition_node[function_definition_node] = [function_definition_node]
-        # 将这个FunctionDefinition节点压入栈中，作为遍历的根节点。
-        stack.put(function_definition_node)
-        # 如果栈不是空的，就一直进行遍历，因为当前函数还有内容没有被操作完。
-        while not stack.empty():
-            # 不断地从栈中取出内容进行下一步的连接操作，并将下一个节点重新压入到栈中。
-            pop_node = stack.get()
-            if pop_node in already_connected_node_list or pop_node is None:
-                continue
-            # 根据节点的类型进行不同的操作，注意，这里永远不会出现虚拟节点，哪怕出现也没关系，因为不会有对应的操作。
-            if pop_node.node_type == "FunctionDefinition":
-                function_definition_type_link_next_node(pop_node, project_node_dict, stack, already_connected_node_list)
-            elif pop_node.node_type == "IfStatement":
-                if_statement_type_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
-            elif pop_node.node_type == "ExpressionStatement":
-                expression_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list, project_node_dict)
-            elif pop_node.node_type == "VariableDeclarationStatement":
-                variable_declaration_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
-            elif pop_node.node_type == "ForStatement":
-                for_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
-            elif pop_node.node_type == "WhileStatement":
-                while_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
-            elif pop_node.node_type == "DoWhileStatement":
-                do_while_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
-            elif pop_node.node_type == "Break":
-                break_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
-            elif pop_node.node_type == "Continue":
-                continue_link_next_node(pop_node, stack, already_connected_node_list)
-            elif pop_node.node_type == "RevertStatement":
-                revert_statement_link_next_node(pop_node, stack, already_connected_node_list, project_node_dict)
-            elif pop_node.node_type == "Return":
-                return_link_next_node(pop_node, already_connected_node_list)
+    if 'FunctionDefinition' in project_node_dict.keys():
+        # 从节点字典中取出所有的FunctionDefinition节点，对每一个FunctionDefinition节点进行操作。
+        for function_definition_node in project_node_dict['FunctionDefinition']:
+            # 先设定每一个函数的最后一句是自己，因为有的函数可能是空的函数体。
+            last_command_in_function_definition_node[function_definition_node] = [function_definition_node]
+            # 将这个FunctionDefinition节点压入栈中，作为遍历的根节点。
+            stack.put(function_definition_node)
+            # 如果栈不是空的，就一直进行遍历，因为当前函数还有内容没有被操作完。
+            while not stack.empty():
+                # 不断地从栈中取出内容进行下一步的连接操作，并将下一个节点重新压入到栈中。
+                pop_node = stack.get()
+                if pop_node in already_connected_node_list or pop_node is None:
+                    continue
+                # 根据节点的类型进行不同的操作，注意，这里永远不会出现虚拟节点，哪怕出现也没关系，因为不会有对应的操作。
+                if pop_node.node_type == "FunctionDefinition":
+                    function_definition_type_link_next_node(pop_node, project_node_dict, stack, already_connected_node_list)
+                elif pop_node.node_type == "IfStatement":
+                    if_statement_type_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "ExpressionStatement":
+                    expression_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list, project_node_dict)
+                elif pop_node.node_type == "VariableDeclarationStatement":
+                    variable_declaration_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "ForStatement":
+                    for_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "WhileStatement":
+                    while_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "DoWhileStatement":
+                    do_while_statement_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "Break":
+                    break_link_next_node(pop_node, stack, already_connected_node_list, ban_node_list)
+                elif pop_node.node_type == "Continue":
+                    continue_link_next_node(pop_node, stack, already_connected_node_list)
+                elif pop_node.node_type == "RevertStatement":
+                    revert_statement_link_next_node(pop_node, stack, already_connected_node_list, project_node_dict)
+                elif pop_node.node_type == "Return":
+                    return_link_next_node(pop_node, already_connected_node_list)
     # 如果确实存在修饰符
     if "ModifierDefinition" in project_node_dict.keys():
         # 循环其中每一个修饰符节点。

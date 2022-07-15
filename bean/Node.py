@@ -1,3 +1,4 @@
+# coding=UTF-8
 class Node:
     # 节点id
     node_id = 0
