@@ -82,11 +82,11 @@ def read_ast():
         if config.show_corpus_msg:
             w2v = Word2Vec.load(config.corpus_file_path)
             print(w2v.wv.vocab.keys())
-        # 到了这里说明当前文件夹其实已经操作完了，下次可以不再运行
-        if config.frozen == "frozen":
-            shutil.move(data_sol_source_dir_path + project_dir_name, data_already_json_dir_path)
         # 创建数据集
         built_vector_dataset(project_node_list, data_ast_json_project_dir_path.replace("AST_json", "raw"))
+        # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。
+        if config.frozen == "frozen":
+            shutil.move(data_sol_source_dir_path + project_dir_name, data_already_json_dir_path)
         # 如果需要打印所有节点的类型集合，这个可以在config中进行配置。
         if config.need_show_total_node_node_type:
             # 字典的结构是{节点类型:[这个类型的所有节点]}
