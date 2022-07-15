@@ -37,23 +37,32 @@ def built_corpus_bfs(project_node_list):
                 # 如果有子节点，把子节点一个个添加进去
                 for child in parent.childes:
                     bfs_queue.put(child)
-    # 将这个语料库，添加到我们的pkl文件中去
-    if os.path.exists(config.corpus_file_path):
-        # 加载之前已经保存好的文件。
-        w2v = Word2Vec.load(config.corpus_file_path)
-        # 为新的sentence创建内容。
-        update_sentences = [sentences]
-        # 将这个内容添加到词表中。
-        w2v.build_vocab(update_sentences, update=True)
-        # 开始训练内容。
-        w2v.train(update_sentences, total_examples=w2v.corpus_count, epochs=10)
-        # 保存训练以后的模型。
-        w2v.save(config.corpus_file_path)
-    else:
-        # 因为之前没有文件，所以先进行训练。
-        w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
-        # 保存训练以后的模型。
-        w2v.save(config.corpus_file_path)
+    if config.create_corpus_mode == "create":
+        f = open("./corpus.txt", 'a', encoding="utf-8")
+        string = ""
+        for sentence in sentences:
+            string = string + sentence + " "
+        f.write(string)
+        f.close()
+        print("语料库添加成功")
+    elif config.create_corpus_mode == "update":
+        # 将这个语料库，添加到我们的pkl文件中去
+        if os.path.exists(config.corpus_file_path):
+            # 加载之前已经保存好的文件。
+            w2v = Word2Vec.load(config.corpus_file_path)
+            # 为新的sentence创建内容。
+            update_sentences = [sentences]
+            # 将这个内容添加到词表中。
+            w2v.build_vocab(update_sentences, update=True)
+            # 开始训练内容。
+            w2v.train(update_sentences, total_examples=w2v.corpus_count, epochs=10)
+            # 保存训练以后的模型。
+            w2v.save(config.corpus_file_path)
+        else:
+            # 因为之前没有文件，所以先进行训练。
+            w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
+            # 保存训练以后的模型。
+            w2v.save(config.corpus_file_path)
 
 
 # 改用深度遍历的方式构建语料库，两种方式一起，综合一下。
@@ -87,23 +96,32 @@ def built_corpus_dfs(project_node_list):
                 # 如果有子节点，把子节点一个个添加进去
                 for child in parent.childes:
                     dfs_stack.put(child)
-    # 将这个语料库，添加到我们的pkl文件中去
-    if os.path.exists(config.corpus_file_path):
-        # 加载之前已经保存好的文件。
-        w2v = Word2Vec.load(config.corpus_file_path)
-        # 为新的sentence创建内容。
-        update_sentences = [sentences]
-        # 将这个内容添加到词表中。
-        w2v.build_vocab(update_sentences, update=True)
-        # 开始训练内容。
-        w2v.train(update_sentences, total_examples=w2v.corpus_count, epochs=10)
-        # 保存训练以后的模型。
-        w2v.save(config.corpus_file_path)
-    else:
-        # 因为之前没有文件，所以先进行训练。
-        w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
-        # 保存训练以后的模型。
-        w2v.save(config.corpus_file_path)
+    if config.create_corpus_mode == "create":
+        f = open("./corpus.txt", 'a', encoding="utf-8")
+        string = ""
+        for sentence in sentences:
+            string = string + sentence + " "
+        f.write(string)
+        f.close()
+        print("语料库添加成功")
+    elif config.create_corpus_mode == "update":
+        # 将这个语料库，添加到我们的pkl文件中去
+        if os.path.exists(config.corpus_file_path):
+            # 加载之前已经保存好的文件。
+            w2v = Word2Vec.load(config.corpus_file_path)
+            # 为新的sentence创建内容。
+            update_sentences = [sentences]
+            # 将这个内容添加到词表中。
+            w2v.build_vocab(update_sentences, update=True)
+            # 开始训练内容。
+            w2v.train(update_sentences, total_examples=w2v.corpus_count, epochs=10)
+            # 保存训练以后的模型。
+            w2v.save(config.corpus_file_path)
+        else:
+            # 因为之前没有文件，所以先进行训练。
+            w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
+            # 保存训练以后的模型。
+            w2v.save(config.corpus_file_path)
 
 
 # 判断这个节点是否包含了name，Literal或者value

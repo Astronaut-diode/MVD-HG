@@ -44,8 +44,6 @@ compile_dir_path = "/home/xjj/.solc-select/artifacts/"
 need_show_total_node_node_type = True
 # 用来控制训练的时候使用的设备
 device = "cuda:1"
-# 一共有三种模式:1.delete,会在运行前先删除之前的运行结果。2.frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
-frozen = "delete"
 # 训练模型的分类数。
 classes = 2
 # 训练世代的总数量
@@ -55,4 +53,9 @@ learning_rate = 0.005
 # 训练时候的batch大小
 batch_size = 50
 # 是否打开训练模式，如果打开，说明数据集都已经构造完毕，只跑训练函数。
-train_mode = True
+train_mode = False
+# 一共有三种模式:1.delete,会在运行前先删除之前的运行结果。2.frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
+frozen = "frozen"
+# 创建语料库的模式，如果是create，那就只保存语料库，但是并不生成模型，这是为了第一次运行的时候先保存大量的语料信息。
+# 如果是update，那就是代表语料库已经更新完毕，继续生成模型就行。
+create_corpus_mode = "create"
