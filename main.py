@@ -1,3 +1,4 @@
+# coding=UTF-8
 from remove_comments import remove_comments
 from compile_files import compile_files
 from read_compile import read_compile
@@ -7,6 +8,7 @@ from built_corpus import built_corpus_bfs, built_corpus_dfs
 from built_vector_dataset import built_vector_dataset
 from print_tree import print_tree
 from train import train
+from gensim.models.word2vec import Word2Vec
 import datetime
 import config
 import utils
@@ -55,6 +57,18 @@ if __name__ == '__main__':
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
             # 打印树的样子。
             print_tree(project_node_list)
+        # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
+        if config.create_corpus_mode == "create":
+            sentences = []
+            # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
+            with open(config.corpus_txt_path, 'r', encoding="utf-8") as corpus_file:
+                for line in corpus_file.readlines():
+                    sentences.append(line.split(" "))
+            # 因为之前没有文件，所以先进行训练,
+            w2v = Word2Vec(sentences=sentences, size=config.encode_dim, workers=16, sg=1, min_count=1)
+            # 保存训练以后的模型。
+            w2v.save(config.corpus_file_path)
+            print("word2Vec模型已经构建完毕.")
     elif config.run_mode == "train":
         train()
     end = datetime.datetime.now()
