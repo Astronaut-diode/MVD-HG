@@ -2,7 +2,6 @@
 import os
 import re
 import config
-import shutil
 
 # 在linux环境下的当前工程路径
 parent_path = os.getcwd()
@@ -10,8 +9,6 @@ parent_path = os.getcwd()
 data_sol_source_dir_path = parent_path + "/data/sol_source/"
 # 在data目录下，生成的ast的json文件的保存目录
 data_ast_json_dir_path = parent_path + "/data/AST_json/"
-# 在data目录下，已经结束操作的源文件
-data_already_json_dir_path = parent_path + "/data/already_source/"
 
 
 # 给定源代码，将源代码转化为抽象语法树
@@ -93,13 +90,6 @@ def generate_ast():
                         write_file.write("solc-select install" + version + "\n")
                     write_file.close()
                     print(full_compile_file_path + "====>", "缺少编译器版本，请在对应的虚拟环境中安装，使用命令====>", "solc-select install", version)
-        # 到了这里说明当前文件夹其实已经操作完了，下次可以不再运行
-        if config.frozen == "frozen":
-            # 如果这个文件夹里确实有内容，那就移到already里面，否则删除该文件夹
-            if not len(os.listdir(data_sol_source_dir_path + project_dir_name)) == 0:
-                shutil.move(data_sol_source_dir_path + project_dir_name, data_already_json_dir_path)
-            else:
-                shutil.rmtree(data_sol_source_dir_path + project_dir_name)
 
 
 # 获取数组中最大的版本号
