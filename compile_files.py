@@ -76,7 +76,8 @@ def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_pa
                 with open("/home/xjj/AST-GNN/data/absent_version_cmd.txt", 'a') as write_file:
                     write_file.write("solc-select install" + version + "\n")
                 write_file.close()
-                print(full_compile_file_path + "====>", "缺少编译器版本，请在对应的虚拟环境中安装，使用命令====>", "solc-select install", version)
+                os.remove(full_compile_file_path)
+                print(full_compile_file_path + "====>", "缺少编译器版本，请在对应的虚拟环境中安装，使用命令====>", "solc-select install", version, "但是我差不多都有了，现在就直接删除好了。")
     # 如果该文件夹内部是空的，那就说明可以直接被删除掉，反正也不会再AST_json文件夹中生成文件后续也不会再用到。
     if os.path.exists(data_ast_json_project_dir_path) and len(os.listdir(data_ast_json_project_dir_path)) == 0:
         shutil.rmtree(data_ast_json_project_dir_path)
