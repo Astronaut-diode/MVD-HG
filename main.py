@@ -9,11 +9,14 @@ from built_vector_dataset import built_vector_dataset
 from print_tree import print_tree
 from train import train
 from gensim.models.word2vec import Word2Vec
+from tqdm import tqdm
 import datetime
 import config
 import utils
 import os
 import shutil
+import sys
+
 
 if __name__ == '__main__':
     start = datetime.datetime.now()
@@ -25,7 +28,7 @@ if __name__ == '__main__':
         utils.dir_exists(config.data_complete_dir_path)
         utils.dir_exists(config.data_raw_dir_path)
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
-        for project_name in os.listdir(config.data_sol_source_dir_path):
+        for project_name in tqdm(os.listdir(config.data_sol_source_dir_path)):
             # sol_source中遍历到的工程文件夹的全路径。
             data_sol_source_project_dir_path = f'{config.data_sol_source_dir_path}/{project_name}'
             data_ast_json_project_dir_path = f'{config.data_ast_json_dir_path}/{project_name}'
