@@ -1,4 +1,27 @@
-# coding=UTF-8
+import os
+
+# 三种运行的模式，是创建数据集create，训练train，还是预测valid
+run_mode = "create"
+# 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
+img_dir_path = f"{os.getcwd()}/img"
+data_dir_path = f"{os.getcwd()}/data"
+data_sol_source_dir_path = f"{data_dir_path}/sol_source"
+data_ast_json_dir_path = f"{data_dir_path}/AST_json"
+data_complete_dir_path = f"{data_dir_path}/complete"
+data_raw_dir_path = f"{data_dir_path}/raw"
+# compile_files中用到的版本匹配规则。
+version_match_rule = "pragma solidity \\^?>?=?0\\.\\d{1,2}\\.\\d{1,2}"
+# 在机器上的编译器文件的保存位置
+compile_dir_path = "/home/xjj/.solc-select/artifacts/"
+# 语料库文件是创建还是更新分别是create和update
+create_corpus_mode = "create"
+# 词库文件的保存位置。
+corpus_file_path = f"{data_dir_path}/corpus_model.pkl"
+corpus_txt_path = f"{data_dir_path}/corpus.txt"
+# 词库文件当中，保存的每个单词的维度向量
+encode_dim = 128
+# 一共有三种模式:frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
+frozen = "frozen"
 # 是否要调用print_tree方法来显示图片
 show_plt = False
 # 是否要在print_tree方法中显示抽象语法树的边
@@ -24,38 +47,17 @@ color_dict = {"SourceUnit": "#ddd02f",
               "Break": "purple", "Continue": "purple"}
 # 忽略不显示的节点类型。
 ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
-# 词库文件的保存位置。
-corpus_file_path = "./data/corpus_model.pkl"
-# 词库文件当中，保存的每个单词的维度向量
-encode_dim = 128
-# 显示词库详细信息
-show_corpus_msg = False
-# 去匹配源文件当中的版本号
-version_match_rule = "pragma solidity \\^?>?=?0\\.\\d{1,2}\\.\\d{1,2}"
 # 最终生成的图片的宽度。
 img_width = 12.0
 # 最终生成的图片的高度。
 img_height = 12.0
-# 是否显示编译sol的命令语句
-print_compile_cmd = True
-# 在机器上的编译器文件的保存位置
-compile_dir_path = "/home/xjj/.solc-select/artifacts/"
-# 是否需要显示所有的节点的类型。
-need_show_total_node_node_type = True
-# 用来控制训练的时候使用的设备
-device = "cuda:1"
-# 训练模型的分类数。
+# 最终的分类数
 classes = 2
-# 训练世代的总数量
-epoch_size = 20
-# 训练的时候的学习率
+# 批处理数量
+batch_size = 64
+# 学习率
 learning_rate = 0.005
-# 训练时候的batch大小
-batch_size = 50
-# 是否打开训练模式，如果打开，说明数据集都已经构造完毕，只跑训练函数。
-train_mode = False
-# 一共有三种模式:1.delete,会在运行前先删除之前的运行结果。2.frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
-frozen = "frozen"
-# 创建语料库的模式，如果是create，那就只保存语料库，但是并不生成模型，这是为了第一次运行的时候先保存大量的语料信息。
-# 如果是update，那就是代表语料库已经更新完毕，继续生成模型就行。
-create_corpus_mode = "create"
+# 世代数量
+epoch_size = 20
+# 使用的设备
+device = "cuda:1"

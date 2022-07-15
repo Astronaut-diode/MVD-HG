@@ -4,31 +4,31 @@ import os
 import config
 import json
 
-data_dir_path = f'{os.getcwd()}/data/'
-dataset_dir_path = f'{data_dir_path}/raw/'
-
 
 # 将每一个工程文件夹中的内容转化成的抽象语法树节点转化为节点向量。注意这里面保存的节点的id都是从1开始的。
 # project_node_list:代表所有的节点
 # graph_dataset_dir_path:代表当前记录的工程文件夹的路径
-def built_vector_dataset(project_node_list, graph_dataset_dir_path):
-    # 先根据节点id进行排序。
-    project_node_list.sort(key=lambda node: node.node_id)
-    # 在数组中节点一开始的节点id——正确对应的元素的id应该是多少
-    id_mapping_id = {}
-    # 遍历原始的节点序列，生成两个数组
-    for index, node in enumerate(project_node_list):
-        id_mapping_id[node.node_id] = index + 1
-    # 首先，判断对应的文件夹是否存在
-    if not os.path.exists(graph_dataset_dir_path):
-        os.makedirs(graph_dataset_dir_path)
-    # 下面这三个函数都增加了节点的映射，这样子既能获取正确的节点间关系，还能获取正确的节点id，删除空白。
-    # 传入所有的节点信息，生成对应的节点特征文件。
-    create_node_feature_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
-    # 传入所有的节点信息，生成抽象语法树的边文件。
-    create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
-    # 传入所有的节点信息，生成控制流边的边文件。
-    create_cfg_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
+def built_vector_dataset(project_node_list, graph_dataset_dir_path, data_sol_source_project_dir_path):
+    # 这时候说明才存在模型，可以用来生成三个基本文件。
+    if config.create_corpus_mode == "update":
+        # 先根据节点id进行排序。
+        project_node_list.sort(key=lambda node: node.node_id)
+        # 在数组中节点一开始的节点id——正确对应的元素的id应该是多少
+        id_mapping_id = {}
+        # 遍历原始的节点序列，生成两个数组
+        for index, node in enumerate(project_node_list):
+            id_mapping_id[node.node_id] = index + 1
+        # 首先，判断对应的文件夹是否存在
+        if not os.path.exists(graph_dataset_dir_path):
+            os.makedirs(graph_dataset_dir_path)
+        # 下面这三个函数都增加了节点的映射，这样子既能获取正确的节点间关系，还能获取正确的节点id，删除空白。
+        # 传入所有的节点信息，生成对应的节点特征文件。
+        create_node_feature_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
+        # 传入所有的节点信息，生成抽象语法树的边文件。
+        create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
+        # 传入所有的节点信息，生成控制流边的边文件。
+        create_cfg_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
+        print(data_sol_source_project_dir_path, "节点和边文件已经构建完毕。")
 
 
 # 创建保存节点信息的json文件,注意，这里保存的结果点进去看只有一行，主要是为了减少保存的空间，如果想要好看，可以复制的json格式化的在线网站上看。

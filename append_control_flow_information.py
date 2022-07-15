@@ -5,7 +5,7 @@ from bean.Node import Node
 
 # 在工程文件夹内容全部读取完毕以后，传入生成的节点列表和节点字典，来为所有的节点添加控制流的边，此时的FunctionDefinition节点已经拥有了自己的method_name和params的参数。
 # 第一趟：直接将所有的整句的句子先连接起来，因为Block中一定不会含有FunctionCall节点。
-def append_control_flow_information(project_node_list, project_node_dict):
+def append_control_flow_information(project_node_list, project_node_dict, data_sol_source_project_dir_path):
     # 设定待会进行遍历的容器。
     stack = LifoQueue(maxsize=0)
     # 记录哪些节点是已经连接好了的，不需要再发生变动的。
@@ -155,7 +155,7 @@ def append_control_flow_information(project_node_list, project_node_dict):
                         command.append_control_child(control_child)
                     # 删除ModifierDefinition和FunctionDefinition连接的边。
                     modifier_definition_node.control_childes.remove(control_child)
-    print("Debug")
+    print(data_sol_source_project_dir_path, "节点控制流更新成功")
 
 
 # 找到block节点下面的第一句语句。
@@ -526,7 +526,7 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         initialization_expression_node_node_type = for_statement_node.attribute['initializationExpression'][0]['nodeType']
         initialization_expression_node = None
     # 如果循环条件不存在
-    if 'loopExpression' not in  for_statement_node.attribute.keys() or for_statement_node.attribute['loopExpression'][0] is None:
+    if 'loopExpression' not in for_statement_node.attribute.keys() or for_statement_node.attribute['loopExpression'][0] is None:
         # 设定id和type都是None，这样就不会找到对应的节点
         loop_expression_node_node_id = None
         loop_expression_node_node_type = None

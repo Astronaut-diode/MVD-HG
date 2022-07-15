@@ -10,6 +10,8 @@ plt.rcParams['figure.figsize'] = (config.img_width, config.img_height)
 
 # 以图的形式绘制出树，方便检查是否正确
 def print_tree(project_node_list):
+    if not config.show_plt:
+        return
     g = nx.MultiDiGraph()  # 无多重边有向图
     # 记录每一层已经被用了多少个位置，这个数组只要比树的最大深度深就行
     now_len_in_deep = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]

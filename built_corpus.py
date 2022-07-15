@@ -7,7 +7,7 @@ from gensim.models.word2vec import Word2Vec
 
 
 # 通过广度遍历的方式构建语料库，其中如果遇见某些节点带有name，literal，value这几种的attribute属性，可以直接取出来一起作为语料。
-def built_corpus_bfs(project_node_list):
+def built_corpus_bfs(project_node_list, data_sol_source_project_dir_path):
     # 待会使用Word2Vec的分词列表
     sentences = []
     # 先找到其中的Source节点
@@ -38,13 +38,13 @@ def built_corpus_bfs(project_node_list):
                 for child in parent.childes:
                     bfs_queue.put(child)
     if config.create_corpus_mode == "create":
-        f = open("./corpus.txt", 'a', encoding="utf-8")
+        f = open(config.corpus_txt_path, 'a', encoding="utf-8")
         string = ""
         for sentence in sentences:
             string = string + sentence + " "
         f.write(string)
         f.close()
-        print("语料库添加成功")
+        print(data_sol_source_project_dir_path, "语料库添加成功")
     elif config.create_corpus_mode == "update":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
@@ -63,10 +63,11 @@ def built_corpus_bfs(project_node_list):
             w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
             # 保存训练以后的模型。
             w2v.save(config.corpus_file_path)
+        print(data_sol_source_project_dir_path, "语料库模型更新成功")
 
 
 # 改用深度遍历的方式构建语料库，两种方式一起，综合一下。
-def built_corpus_dfs(project_node_list):
+def built_corpus_dfs(project_node_list, data_sol_source_project_dir_path):
     # 待会使用Word2Vec的分词列表
     sentences = []
     # 先找到其中的Source节点
@@ -97,13 +98,13 @@ def built_corpus_dfs(project_node_list):
                 for child in parent.childes:
                     dfs_stack.put(child)
     if config.create_corpus_mode == "create":
-        f = open("./corpus.txt", 'a', encoding="utf-8")
+        f = open(config.corpus_txt_path, 'a', encoding="utf-8")
         string = ""
         for sentence in sentences:
             string = string + sentence + " "
         f.write(string)
         f.close()
-        print("语料库添加成功")
+        print(data_sol_source_project_dir_path, "语料库添加成功")
     elif config.create_corpus_mode == "update":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
@@ -122,6 +123,7 @@ def built_corpus_dfs(project_node_list):
             w2v = Word2Vec(sentences=[sentences], size=config.encode_dim, workers=16, sg=1, min_count=1)
             # 保存训练以后的模型。
             w2v.save(config.corpus_file_path)
+        print(data_sol_source_project_dir_path, "语料库模型更新成功")
 
 
 # 判断这个节点是否包含了name，Literal或者value

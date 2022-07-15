@@ -6,15 +6,13 @@ import os
 import torch
 import config
 
-parent_path = os.getcwd()
-data_path = f'{parent_path}/data/'
 device = torch.device(config.device)
 
 
 def train():
     # 获取训练用的数据集。
-    ast_dataset = ASTGNNDataset(data_path, "AST")
-    cfg_dataset = ASTGNNDataset(data_path, "CFG")
+    ast_dataset = ASTGNNDataset(config.data_dir_path, "AST")
+    cfg_dataset = ASTGNNDataset(config.data_dir_path, "CFG")
     # 将数据集加载到loader当中。别用shuffle，用了shuffle这两个数据集打乱的顺序就不一样了，不方便一起循环。
     ast_data_loader = DataLoader(dataset=ast_dataset, batch_size=config.batch_size, shuffle=False, drop_last=False)
     cfg_data_loader = DataLoader(dataset=cfg_dataset, batch_size=config.batch_size, shuffle=False, drop_last=False)
