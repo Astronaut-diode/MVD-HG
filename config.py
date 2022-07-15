@@ -1,7 +1,7 @@
 # coding=UTF-8
 import os
 
-# 三种运行的模式，是创建数据集create，训练train，还是预测valid
+# 四种运行的模式，是创建数据集create，训练train，还是预测valid，如果是truncated代表语言模型受损，需要重新训练。
 run_mode = "create"
 # 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
 img_dir_path = f"{os.getcwd()}/img"
