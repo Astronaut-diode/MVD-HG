@@ -2,6 +2,7 @@
 import os
 import re
 import config
+import shutil
 
 # 在linux环境下的当前工程路径
 parent_path = os.getcwd()
@@ -72,7 +73,7 @@ def generate_ast():
                 # 返回的操作码
                 opcode = f.close()
                 # 有返回码，说明有问题，那就删除源文件和生成的json文件
-                if not opcode is None:
+                if opcode is not None:
                     os.remove(data_ast_json_dir_path + project_dir_name + "/" + file_name.replace(".sol", ".json"))
                     os.remove(data_sol_source_dir_path + project_dir_name + "/" + file_name)
                     print(data_sol_source_dir_path + project_dir_name + "/" + file_name, "由于编译过程有问题删除")
@@ -90,6 +91,9 @@ def generate_ast():
                         write_file.write("solc-select install" + version + "\n")
                     write_file.close()
                     print(full_compile_file_path + "====>", "缺少编译器版本，请在对应的虚拟环境中安装，使用命令====>", "solc-select install", version)
+        # 如果该文件夹内部是空的，那就说明可以直接被删除掉，反正也不会再AST_json文件夹中生成文件后续也不会再用到。
+        if len(os.listdir(data_sol_source_dir_path + project_dir_name)) == 0:
+            shutil.rmtree(data_sol_source_dir_path + project_dir_name)
 
 
 # 获取数组中最大的版本号
