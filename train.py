@@ -45,7 +45,6 @@ def train():
             optimizer.step()
             # 进行准确率计算。
             pred = output.argmax(dim=1)
-            print(pred)
             train_correct = train_correct + (pred == ast_batch.y.argmax(dim=1)).sum()
             train_total = train_total + ast_batch.num_graphs
             print("\r", epoch, index, "当前阶段的loss为{:.4f}, 正确率为{:.2f}%".format(loss, (train_correct / train_total) * 100),

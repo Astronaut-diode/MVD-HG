@@ -3,14 +3,19 @@ from gensim.models import Word2Vec
 import os
 import config
 import json
+import utils
 
 
 # 将每一个工程文件夹中的内容转化成的抽象语法树节点转化为节点向量。注意这里面保存的节点的id都是从1开始的。
 # project_node_list:代表所有的节点
 # graph_dataset_dir_path:代表当前记录的工程文件夹的路径
-def built_vector_dataset(project_node_list, graph_dataset_dir_path, data_sol_source_project_dir_path):
+def built_vector_dataset(project_node_list, file_name):
+    # 对应的raw文件夹路径
+    raw_project_dir_path = os.path.dirname(file_name).replace("AST_json", "raw").replace(".json", "")
+    # 文件夹里面文件的全路径，但是不包含拓展名。
+    raw_project_dir_half_name = file_name.replace("AST_json", "raw").replace(".json", "")
     # 这时候说明才存在模型，可以用来生成三个基本文件。
-    if config.create_corpus_mode == "update":
+    if config.create_corpus_mode == "generate_all":
         # 先根据节点id进行排序。
         project_node_list.sort(key=lambda node: node.node_id)
         # 在数组中节点一开始的节点id——正确对应的元素的id应该是多少
@@ -19,23 +24,24 @@ def built_vector_dataset(project_node_list, graph_dataset_dir_path, data_sol_sou
         for index, node in enumerate(project_node_list):
             id_mapping_id[node.node_id] = index + 1
         # 首先，判断对应的文件夹是否存在
-        if not os.path.exists(graph_dataset_dir_path):
-            os.makedirs(graph_dataset_dir_path)
+        if not os.path.exists(raw_project_dir_path):
+            os.makedirs(raw_project_dir_path)
         # 下面这三个函数都增加了节点的映射，这样子既能获取正确的节点间关系，还能获取正确的节点id，删除空白。
         # 传入所有的节点信息，生成对应的节点特征文件。
-        create_node_feature_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
+        create_node_feature_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
         # 传入所有的节点信息，生成抽象语法树的边文件。
-        create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
+        create_ast_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
         # 传入所有的节点信息，生成控制流边的边文件。
-        create_cfg_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id)
-        print(f"{data_sol_source_project_dir_path}节点和边文件已经构建完毕。")
+        create_cfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
+        print(f"{file_name}节点和边文件已经构建完毕。")
 
 
 # 创建保存节点信息的json文件,注意，这里保存的结果点进去看只有一行，主要是为了减少保存的空间，如果想要好看，可以复制的json格式化的在线网站上看。
-def create_node_feature_json(project_node_list, graph_dataset_dir_path, id_mapping_id):
+def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_mapping_id):
     # 先创建对应的节点特征的json文件,node.json
-    node_feature_file_name = f'{graph_dataset_dir_path}/node.json'
+    node_feature_file_name = f'{raw_project_dir_half_name}_node.json'
     # 用来保存文件的句柄
+    utils.create_file(node_feature_file_name)
     node_feature_handle = open(node_feature_file_name, 'w', encoding="UTF-8")
     # 保存到json文件中的节点列表
     node_feature_list = []
@@ -55,10 +61,11 @@ def create_node_feature_json(project_node_list, graph_dataset_dir_path, id_mappi
 
 
 # 创建抽象语法树的边文件。
-def create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id):
+def create_ast_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id):
     # 先创建对应的抽象语法树边信息的json文件,ast_edge.json
-    ast_edge_file_name = f'{graph_dataset_dir_path}/ast_edge.json'
+    ast_edge_file_name = f'{raw_project_dir_half_name}_ast_edge.json'
     # 用来保存文件的句柄
+    utils.create_file(ast_edge_file_name)
     ast_edge_handle = open(ast_edge_file_name, 'w', encoding="UTF-8")
     # 保存到抽象语法树边信息中的节点列表
     ast_edge_list = []
@@ -77,10 +84,11 @@ def create_ast_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_i
 
 
 # 创建控制流图的边文件。
-def create_cfg_edge_json(project_node_list, graph_dataset_dir_path, id_mapping_id):
+def create_cfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id):
     # 先创建对应的控制流图边信息的json文件,cfg_edge.json
-    cfg_edge_file_name = f'{graph_dataset_dir_path}/cfg_edge.json'
+    cfg_edge_file_name = f'{raw_project_dir_half_name}_cfg_edge.json'
     # 用来保存文件的句柄
+    utils.create_file(cfg_edge_file_name)
     cfg_edge_handle = open(cfg_edge_file_name, 'w', encoding="UTF-8")
     # 保存到控制流图边信息中的节点列表
     cfg_edge_list = []

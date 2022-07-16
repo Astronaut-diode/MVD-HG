@@ -26,9 +26,6 @@ if __name__ == '__main__':
         utils.dir_exists(config.data_ast_json_dir_path)
         utils.dir_exists(config.data_complete_dir_path)
         utils.dir_exists(config.data_raw_dir_path)
-        # 先获取原始标签的json，然后根据json中的内容，可以得到一个列表，其中是没有空隙的，我可以直接获取对应的下标的标签。上面操作的project_name就是对应的下标。
-        if config.create_corpus_mode == "update":
-            label_in_memory = utils.get_label()
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
         for project_name in tqdm(os.listdir(config.data_sol_source_dir_path)):
             # sol_source中遍历到的工程文件夹的全路径。
@@ -38,34 +35,33 @@ if __name__ == '__main__':
             remove_comments(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
             # 如果当前工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):
-                os.rmdir(data_sol_source_project_dir_path)
                 continue
             # 编译文件夹内所有的文件,同时在AST_json中生成对应的文件夹，如果发现编译失败，删除对应的源文件。
             compile_files(data_sol_source_project_dir_path=data_sol_source_project_dir_path, data_ast_json_project_dir_path=data_ast_json_project_dir_path)
             # 如果当前工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):
-                os.rmdir(data_sol_source_project_dir_path)
                 continue
-            # 读取工程文件夹对应的AST_JSON中的文件内容。同时要返回节点列表和节点字典。
-            project_node_list, project_node_dict = read_compile(data_sol_source_project_dir_path=data_sol_source_project_dir_path, data_ast_json_project_dir_path=data_ast_json_project_dir_path)
-            # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
-            append_method_message_by_dict(project_node_dict=project_node_dict, data_sol_source_project_dir_path=data_sol_source_project_dir_path)
-            # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
-            append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, data_sol_source_project_dir_path=data_sol_source_project_dir_path)
-            # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
-            built_corpus_bfs(project_node_list=project_node_list, data_sol_source_project_dir_path=data_sol_source_project_dir_path)
-            built_corpus_dfs(project_node_list=project_node_list, data_sol_source_project_dir_path=data_sol_source_project_dir_path)
-            # 创建数据集
-            built_vector_dataset(project_node_list=project_node_list, graph_dataset_dir_path=f'{config.data_raw_dir_path}/{project_name}/', data_sol_source_project_dir_path=data_sol_source_project_dir_path)
-            # 将一个新的节点传进去，然后更新到数据集中。
-            utils.update_sol_to_label({f'{project_name}.sol': label_in_memory[int(project_name)][project_name]})
-            # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。
+            # 遍历AST_json中的某一个工程文件夹
+            for now_dir, child_dirs, child_files in os.walk(data_ast_json_project_dir_path):
+                # 遍历工程项目中的每一个文件
+                for ast_json_file_name in child_files:
+                    project_node_list, project_node_dict = read_compile(now_dir=now_dir, ast_json_file_name=ast_json_file_name)
+                    # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
+                    append_method_message_by_dict(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
+                    append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
+                    built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                    built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                    # 创建数据集
+                    built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                    print_tree(project_node_list)
+            # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
             if config.frozen == "frozen":
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
             # 打印树的样子。
-            print_tree(project_node_list)
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
-        if config.create_corpus_mode == "create":
+        if config.create_corpus_mode == "create_corpus_txt":
             sentences = []
             # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
             with open(config.corpus_txt_path, 'r', encoding="utf-8") as corpus_file:
@@ -76,8 +72,6 @@ if __name__ == '__main__':
             # 保存训练以后的模型。
             w2v.save(config.corpus_file_path)
             print("word2Vec模型已经构建完毕.")
-    elif config.run_mode == "train":
-        train()
     elif config.run_mode == "truncated":
         sentences = []
         # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
@@ -89,6 +83,8 @@ if __name__ == '__main__':
         # 保存训练以后的模型。
         w2v.save(config.corpus_file_path)
         print("word2Vec模型已经构建完毕.")
+    elif config.run_mode == "train":
+        train()
     end = datetime.datetime.now()
     print(f"开始时间:{start}")
     print(f"结束时间:{end}")

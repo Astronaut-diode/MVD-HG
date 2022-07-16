@@ -5,7 +5,7 @@ from bean.Node import Node
 
 # 在工程文件夹内容全部读取完毕以后，传入生成的节点列表和节点字典，来为所有的节点添加控制流的边，此时的FunctionDefinition节点已经拥有了自己的method_name和params的参数。
 # 第一趟：直接将所有的整句的句子先连接起来，因为Block中一定不会含有FunctionCall节点。
-def append_control_flow_information(project_node_list, project_node_dict, data_sol_source_project_dir_path):
+def append_control_flow_information(project_node_list, project_node_dict, file_name):
     # 设定待会进行遍历的容器。
     stack = LifoQueue(maxsize=0)
     # 记录哪些节点是已经连接好了的，不需要再发生变动的。
@@ -158,7 +158,7 @@ def append_control_flow_information(project_node_list, project_node_dict, data_s
                         command.append_control_child(control_child)
                     # 删除ModifierDefinition和FunctionDefinition连接的边。
                     modifier_definition_node.control_childes.remove(control_child)
-    print(f"{data_sol_source_project_dir_path}节点控制流更新成功")
+    print(f"{file_name}节点控制流更新成功")
 
 
 # 找到block节点下面的第一句语句。

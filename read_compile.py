@@ -3,40 +3,42 @@ from queue import Queue
 from bean.Node import Node
 import os
 import json
+import utils
 
 
-def read_compile(data_sol_source_project_dir_path, data_ast_json_project_dir_path):
+def read_compile(now_dir, ast_json_file_name):
     project_node_list = []
-    tmp_file_name = f'{data_ast_json_project_dir_path}/w.json'
-    # 遍历工程项目中的每一个文件
-    for ast_json_file_name in os.listdir(data_ast_json_project_dir_path):
-        # 抽象语法树文件的完全路径,如""/home/xjj/AST-GNN/data/AST_json/project_name/file_name.json"
-        full_ast_json_path = f'{data_ast_json_project_dir_path}/{ast_json_file_name}'
-        # 为这个语法树文件删除前几行，因为生成的时候前面带上了一些不必要的信息
-        with open(full_ast_json_path, 'r') as read_file, open(tmp_file_name, 'w+') as write_file:
-            # 判断是否需要开始抄写的触发器
-            flag = False
-            for index, line in enumerate(read_file.readlines()):
-                # 如果已经需要开始记录了，开始抄写，把内容抄到w.json文件中
-                if flag:
-                    write_file.write(line)
-                    continue
-                # 如果发现已经到了这一行，那么说明从这里开始已经需要记录了。
-                # 使用了新的判断条件，原先的通用性不是很好
-                if line.replace("\n", "").__contains__("======="):
-                    flag = True
-        # 删除原始的json文件，同时将刚刚生成的w.json文件转化为正确的名字。
-        os.remove(full_ast_json_path)
-        os.rename(tmp_file_name, full_ast_json_path)
-        # 正式的开始读取json文件中的内容
-        with open(full_ast_json_path, 'r') as ast_json:
-            # 使用json的方式加载文件内容
-            # 现在如果有问题，在一开始生成json的时候就已经被发现了，会直接被删除掉，而不是等到现在，所以不再需要进行try/catch。
-            content = json.load(ast_json)
-            # 使用分而治之的方法，把里面的id属性全部加上len(project_node_list)
-            update_content(content, len(project_node_list))
-            # 将文件中的内容转化为图结构的数据，传入的内容有抽象语法树的内容，当前项目的所有节点列表，还有读入当前文件之前已经有多少个节点了，这个待会进去会变得，所以先记录下来。
-            create_graph(content, project_node_list, f'{data_sol_source_project_dir_path}/{ast_json_file_name.replace(".json", ".sol")}')
+    tmp_file_name = f'{now_dir}/w.json'
+    # 抽象语法树文件的完全路径,如""/home/xjj/AST-GNN/data/AST_json/project_name/file_name.json"
+    full_ast_json_path = f'{now_dir}/{ast_json_file_name}'
+    # 为这个语法树文件删除前几行，因为生成的时候前面带上了一些不必要的信息
+    utils.create_file(tmp_file_name)
+    with open(full_ast_json_path, 'r') as read_file, open(tmp_file_name, 'w+') as write_file:
+        # 判断是否需要开始抄写的触发器
+        flag = False
+        # 用来比对哪一行开始记录的语句。
+        pattern = f"======= {full_ast_json_path.replace('AST_json', 'sol_source').replace('.json', '.sol')} ======="
+        for index, line in enumerate(read_file.readlines()):
+            # 如果已经需要开始记录了，开始抄写，把内容抄到w.json文件中
+            if flag:
+                write_file.write(line)
+                continue
+            # 如果发现已经到了这一行，那么说明从这里开始已经需要记录了。
+            # 使用了新的判断条件，原先的通用性不是很好
+            if line.replace("\n", "").__contains__(pattern):
+                flag = True
+    # 删除原始的json文件，同时将刚刚生成的w.json文件转化为正确的名字。
+    os.remove(full_ast_json_path)
+    os.rename(tmp_file_name, full_ast_json_path)
+    # 正式的开始读取json文件中的内容
+    with open(full_ast_json_path, 'r') as ast_json:
+        # 使用json的方式加载文件内容
+        # 现在如果有问题，在一开始生成json的时候就已经被发现了，会直接被删除掉，而不是等到现在，所以不再需要进行try/catch。
+        content = json.load(ast_json)
+        # 使用分而治之的方法，把里面的id属性全部加上len(project_node_list)
+        update_content(content, len(project_node_list))
+        # 将文件中的内容转化为图结构的数据，传入的内容有抽象语法树的内容，当前项目的所有节点列表，还有读入当前文件之前已经有多少个节点了，这个待会进去会变得，所以先记录下来。
+        create_graph(content, project_node_list, f'{now_dir.replace("AST_json", "sol_source")}/{ast_json_file_name.replace(".json", ".sol")}')
     # 此时整个工程文件夹中的节点都已经构建完成，将这些节点按照节点类型分类，同时放到字典中，保存的格式{"nodeType1": [...], "nodeType2": [...]}
     project_node_dict = {}
     # 循环工程文件夹内所有的节点，为了将这些节点分类保存起来。
