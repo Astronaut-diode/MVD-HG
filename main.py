@@ -27,7 +27,8 @@ if __name__ == '__main__':
         utils.dir_exists(config.data_complete_dir_path)
         utils.dir_exists(config.data_raw_dir_path)
         # 先获取原始标签的json，然后根据json中的内容，可以得到一个列表，其中是没有空隙的，我可以直接获取对应的下标的标签。上面操作的project_name就是对应的下标。
-        label_in_memory = utils.get_label()
+        if config.create_corpus_mode == "update":
+            label_in_memory = utils.get_label()
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
         for project_name in tqdm(os.listdir(config.data_sol_source_dir_path)):
             # sol_source中遍历到的工程文件夹的全路径。
@@ -91,4 +92,4 @@ if __name__ == '__main__':
     end = datetime.datetime.now()
     print(f"开始时间:{start}")
     print(f"结束时间:{end}")
-    print(f"一共耗时:f{end - start}")
+    print(f"一共耗时:{end - start}")
