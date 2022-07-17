@@ -54,11 +54,11 @@ if __name__ == '__main__':
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 创建数据集
                     built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                    # 打印树的样子。
                     print_tree(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
             # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
             if config.frozen == "frozen":
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
-            # 打印树的样子。
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
         if config.create_corpus_mode == "create_corpus_txt":
             sentences = []
