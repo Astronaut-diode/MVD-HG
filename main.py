@@ -16,7 +16,6 @@ import utils
 import os
 import shutil
 
-
 if __name__ == '__main__':
     start = datetime.datetime.now()
     if config.run_mode == "create":
@@ -71,6 +70,9 @@ if __name__ == '__main__':
             w2v = Word2Vec(sentences=sentences, size=config.encode_dim, workers=16, sg=1, min_count=1)
             # 保存训练以后的模型。
             w2v.save(config.corpus_file_path)
+            # 第一次训练完以后先把complete中的内容都重新移动到sol_source目录当中。这样不就不需要手动重新移动了。
+            shutil.rmtree(config.data_sol_source_dir_path)
+            os.rename(config.data_complete_dir_path, config.data_sol_source_dir_path)
             print("word2Vec模型已经构建完毕.")
     elif config.run_mode == "truncated":
         sentences = []

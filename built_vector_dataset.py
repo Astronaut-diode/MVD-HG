@@ -10,9 +10,9 @@ import utils
 # project_node_list:代表所有的节点
 # graph_dataset_dir_path:代表当前记录的工程文件夹的路径
 def built_vector_dataset(project_node_list, file_name):
-    # 对应的raw文件夹路径
-    raw_project_dir_path = os.path.dirname(file_name).replace("AST_json", "raw").replace(".json", "")
-    # 文件夹里面文件的全路径，但是不包含拓展名。
+    # 对应的raw文件夹路径，因为传入的是AST_json中的部分，所以需要转化为raw的部分。
+    raw_project_dir_path = os.path.dirname(file_name).replace("AST_json", "raw")
+    # 文件夹里面文件的全路径，但是不包含拓展名。这里映射到了raw文件夹中，是为了待会用来创建三个基本文件。
     raw_project_dir_half_name = file_name.replace("AST_json", "raw").replace(".json", "")
     # 这时候说明才存在模型，可以用来生成三个基本文件。
     if config.create_corpus_mode == "generate_all":
@@ -24,8 +24,7 @@ def built_vector_dataset(project_node_list, file_name):
         for index, node in enumerate(project_node_list):
             id_mapping_id[node.node_id] = index + 1
         # 首先，判断对应的文件夹是否存在
-        if not os.path.exists(raw_project_dir_path):
-            os.makedirs(raw_project_dir_path)
+        utils.dir_exists(raw_project_dir_path)
         # 下面这三个函数都增加了节点的映射，这样子既能获取正确的节点间关系，还能获取正确的节点id，删除空白。
         # 传入所有的节点信息，生成对应的节点特征文件。
         create_node_feature_json(project_node_list, raw_project_dir_half_name, id_mapping_id)

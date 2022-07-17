@@ -4,6 +4,7 @@ import re
 import shutil
 import utils
 
+
 # 删除project_name文件夹中的每一个文件的注释，如果内容不正常直接删除。
 def remove_comments(data_sol_source_project_dir_path):
     # 临时文件的存放位置
