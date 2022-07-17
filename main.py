@@ -30,14 +30,14 @@ if __name__ == '__main__':
             # sol_source中遍历到的工程文件夹的全路径。
             data_sol_source_project_dir_path = f'{config.data_sol_source_dir_path}/{project_name}'
             data_ast_json_project_dir_path = f'{config.data_ast_json_dir_path}/{project_name}'
-            # 删除对应工程文件夹中的注释。
+            # 删除对应sol_source下工程文件夹中的注释。
             remove_comments(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
-            # 如果当前工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
+            # 如果当前sol_source下工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):
                 continue
-            # 编译文件夹内所有的文件,同时在AST_json中生成对应的文件夹，如果发现编译失败，删除对应的源文件。
+            # 编译sol_source下工程文件夹内所有的文件,同时在AST_json中生成对应的文件夹，如果发现编译失败，删除对应的源文件。
             compile_files(data_sol_source_project_dir_path=data_sol_source_project_dir_path, data_ast_json_project_dir_path=data_ast_json_project_dir_path)
-            # 如果当前工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
+            # 如果当前sol_source下工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):
                 continue
             # 遍历AST_json中的某一个工程文件夹
