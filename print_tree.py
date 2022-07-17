@@ -3,13 +3,15 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import datetime
 import config
+import os
+import utils
 
 # 设置生成的图片的尺寸，单位是inches
 plt.rcParams['figure.figsize'] = (config.img_width, config.img_height)
 
 
 # 以图的形式绘制出树，方便检查是否正确
-def print_tree(project_node_list):
+def print_tree(project_node_list, file_name):
     if not config.show_plt:
         return
     g = nx.MultiDiGraph()  # 无多重边有向图
@@ -62,11 +64,16 @@ def print_tree(project_node_list):
                 # 如果一条边的两个节点都存在，才允许绘制。
                 if node in g.nodes and control_child in g.nodes:
                     nx.draw_networkx_edges(g, pos, edgelist=[(node, control_child)], width=2, edge_color="brown", style="-.", arrowsize=20)
+    # 先获取json文件对应的img的文件夹路径。
+    img_path = file_name.replace("AST_json", "img")
+    img_dir = os.path.dirname(img_path)
+    img_name = os.path.basename(img_path).replace(".json", ".png")
+    utils.dir_exists(img_dir)
     # 获取当前系统时间
     time = datetime.datetime.now()
-    time.strftime("%Y-%m-%d %H:%M")
-    # 文件的名字：/home/xjj/AST-GNN/img/时间.png
-    png_name = "./img/" + str(time) + str(len(project_node_list)) + ".png"
+    time = time.strftime("%Y-%m-%d %H-%M")
+    # 文件的名字：/home/xjj/AST-GNN/img/项目路径/时间-节点个数-文件名字.png
+    png_name = f"{img_dir}/{time}-{len(project_node_list)}-{img_name}"
     # 保存为图片
     plt.savefig(png_name)
     # 回显一下。

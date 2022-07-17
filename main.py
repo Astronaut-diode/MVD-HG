@@ -54,7 +54,7 @@ if __name__ == '__main__':
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 创建数据集
                     built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
-                    print_tree(project_node_list)
+                    print_tree(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
             # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
             if config.frozen == "frozen":
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
