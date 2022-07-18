@@ -151,7 +151,7 @@ def get_versions(pragma):
             for i in config.versions[floor_index - 1::-1]:
                 version_hash[i] += 1
     # 这个hash表中，第一个满足条件的可以直接拿来用,注意，一定要从0.4.12开始,因为0.4.0到0.4.10没有编译器，而0.4.11又不能用某一个命令。
-    for item in list(version_hash.keys())[12:]:
+    for item in list(version_hash.keys())[::-1]:
         if version_hash[item] == flag:
             return item
 
