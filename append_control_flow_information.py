@@ -96,7 +96,7 @@ def append_control_flow_information(project_node_list, project_node_dict, file_n
                     del for_statement_node.childes[index]
                     # 删除这个虚拟节点的下游边
                     del node.control_childes[0]
-    # 如果确实存在FunctionDefinition键。
+    # 下面两部分是为了找出函数和修饰符的最后一句话。
     if 'FunctionDefinition' in project_node_dict.keys():
         # 如何获取每一个functionDefinition节点下面的最后一句话
         for function_definition_node in project_node_dict['FunctionDefinition']:
@@ -108,7 +108,6 @@ def append_control_flow_information(project_node_list, project_node_dict, file_n
             # 否则，说明该函数极有可能是空函数，默认使用函数名作为最后一句话。
             else:
                 pass
-    # 如果确实存在修饰符的键。
     if 'ModifierDefinition' in project_node_dict.keys():
         # 获取每个modifierDefinition节点下的最后一句话。
         for modifier_definition_node in project_node_dict['ModifierDefinition']:
@@ -141,7 +140,7 @@ def append_control_flow_information(project_node_list, project_node_dict, file_n
                             for command in last_command:
                                 command.append_control_child(node)
                             break
-    # 如果确实有ModifierDefinition字段，才有可能进行后续操作。
+    # 对所有的ModifierDefinition节点的连接情况做改变，因为在这之前连接的部分都是FunctionDefinition节点和ModifierDefinition节点直接相连。
     if "ModifierDefinition" in project_node_dict.keys():
         # 循环其中每一个修饰符函数
         for modifier_definition_node in project_node_dict["ModifierDefinition"]:
@@ -199,7 +198,7 @@ def get_next_command_at_now(node, ban_node_list):
     # 返回的结果。
     next_expression = None
     # 忽略操作的几类节点。这里的最前的两种类型是为了避免for循环的最后一句话会连接到初始条件或者判断条件上。
-    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UnaryOperation', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'EventDefinition', 'ArrayTypeName', 'Literal', 'Mapping', 'ContractDefinition']
+    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'EventDefinition', 'ArrayTypeName', 'Literal', 'Mapping', 'ContractDefinition']
     has_find_flag = False
     # 只要在父亲节点的子节点中找到当前节点，然后继续往后循环一个元素，如果该元素的类型还不是上面的忽略类型，那就说明那就是下一句。
     for child in parent.childes:
@@ -408,6 +407,7 @@ def if_statement_type_link_next_node(if_statement_node, stack, already_connected
             condition_node = child_of_if_statement_node
             # if连上binary，后面用binary代替if连剩下的部分即可。
             if_statement_node.append_control_child(condition_node)
+            link_function_call_list_at_now_now(condition_node)
         # 如果上面的都不是，那就说明有可能是block里面的内容，但是没有写block
         else:
             if next_expression_1 is None:
@@ -577,6 +577,9 @@ def for_statement_link_next_node(for_statement_node, stack, already_connected_no
         else:
             next_expression = node
     # 下面不管节点是否存在，因为创建了虚拟节点进行代替，所以可以直接使用。
+    link_function_call_list_at_now_now(initialization_expression_node)
+    link_function_call_list_at_now_now(loop_expression_node)
+    link_function_call_list_at_now_now(condition_node)
     # 1.连接for循环和第一句初始化句子
     for_statement_node.append_control_child(initialization_expression_node)
     # 2.连接第一句初始化句子和判断语句。
@@ -654,6 +657,8 @@ def while_statement_link_next_node(while_statement_node, stack, already_connecte
             block_node = node
         else:
             next_expression = node
+    # 条件语句如果是函数调用，是需要连接的。
+    link_function_call_list_at_now_now(condition_node)
     # 1.while->condition
     while_statement_node.append_control_child(condition_node)
     # 2.condition->block第一句
@@ -705,6 +710,8 @@ def do_while_statement_link_next_node(do_while_statement_node, stack, already_co
         stack.put(next_expression)
     # 3.loop连接到外面的第一句
     next_expression = get_next_command_at_now(do_while_statement_node, ban_node_list)
+    # 如果里面含有函数调用节点，是需要连接的。
+    link_function_call_list_at_now_now(condition_node)
     if next_expression is not None:
         condition_node.append_control_child(next_expression)
         stack.put(next_expression)
