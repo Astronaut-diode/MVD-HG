@@ -4,6 +4,7 @@ from queue import Queue, LifoQueue
 import re
 import config
 from gensim.models.word2vec import Word2Vec
+import utils
 
 
 # 通过广度遍历的方式构建语料库，其中如果遇见某些节点带有name，literal，value这几种的attribute属性，可以直接取出来一起作为语料。
@@ -38,6 +39,8 @@ def built_corpus_bfs(project_node_list, file_name):
                 for child in parent.childes:
                     bfs_queue.put(child)
     if config.create_corpus_mode == "create_corpus_txt":
+        # 一定要先创建，否则有可能会因为源文件都被删除光了，没有内容写入，导致文件不创建。
+        utils.create_file(config.corpus_txt_path)
         f = open(config.corpus_txt_path, 'a', encoding="utf-8")
         string = ""
         for sentence in sentences:
