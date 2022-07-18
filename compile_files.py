@@ -120,9 +120,12 @@ def get_versions(pragma):
         floor_version = re.findall("[\\w\\.]+", up_re[0])[0]
         # 将这个版本号作为最低的版本号。
         floor_index = config.versions.index(floor_version)
+        # 匹配大版本的模式串
+        pattern = "..."
         # 因为是^所以可以一直往后取。
         for i in config.versions[floor_index:]:
-            version_hash[i] += 1
+            if re.search(pattern, i)[0] == re.search(pattern, floor_version)[0]:
+                version_hash[i] += 1
     big_re = re.findall(">[\\w\\.=]*", pragma)
     if len(big_re) != 0:
         flag += 1
@@ -147,8 +150,8 @@ def get_versions(pragma):
         else:
             for i in config.versions[floor_index - 1::-1]:
                 version_hash[i] += 1
-    # 这个hash表中，第一个满足条件的可以直接拿来用。
-    for item in version_hash.keys():
+    # 这个hash表中，第一个满足条件的可以直接拿来用,注意，一定要从0.4.12开始,因为0.4.0到0.4.10没有编译器，而0.4.11又不能用某一个命令。
+    for item in list(version_hash.keys())[12:]:
         if version_hash[item] == flag:
             return item
 
