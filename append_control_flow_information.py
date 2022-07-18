@@ -1,6 +1,7 @@
 # coding=UTF-8
 from queue import LifoQueue, Queue
 from bean.Node import Node
+import re
 
 
 # 在工程文件夹内容全部读取完毕以后，传入生成的节点列表和节点字典，来为所有的节点添加控制流的边，此时的FunctionDefinition节点已经拥有了自己的method_name和params的参数。
@@ -121,8 +122,31 @@ def append_control_flow_information(project_node_list, project_node_dict, file_n
                 pass
     # 如果确实存在FunctionCall这个字段，说明才有可能可以连接。
     if "FunctionCall" in project_node_dict.keys():
+        # 判断是否含有call.value的函数调用的正则表达式。
+        have_call_value_pattern = re.compile(r"\.call\.value\((?P<param_name>.+?)\)")
         # 实现FunctionCall和FunctionDefinition的连接。
         for node in project_node_dict['FunctionCall']:
+            # 判断当前循环的节点的代码是否含有call.value
+            if re.search(have_call_value_pattern, node.attribute['src_code'][0]):
+                # 如果目前还没有这个键，就可以先创建一个withdraw节点，同时将这个节点添加到节点的列表和字典中。
+                if not "WithdrawFunction" in project_node_dict.keys():
+                    withdraw_node = Node(len(project_node_list), "WithdrawFunction", None)
+                    # 记录下当前的节点
+                    project_node_list.append(withdraw_node)
+                    project_node_dict["WithdrawFunction"] = [withdraw_node]
+                # 如果已经存在这个键了，直接取出这个节点连接就行了。
+                else:
+                    withdraw_node = project_node_dict['WithdrawFunction'][0]
+                node.append_control_child(withdraw_node)
+                # 查询当前文件中所有的函数，利用函数的可见性，判断withdraw函数可以连接哪些节点。
+                for method in project_node_dict['FunctionDefinition']:
+                    flag = True
+                    # 取出函数上所有的可见性修饰符，如果可见性是internal或者private，那就说明不能连接。
+                    if len(method.attribute['visibility']) != 0 and (method.attribute['visibility'][0] == "internal" or method.attribute['visibility'][0] == "private"):
+                        flag = False
+                    # 说明没有使用两种内部函数才能调用的修饰符
+                    if flag and method not in withdraw_node.control_childes:
+                        withdraw_node.append_control_child(method)
             # 如果没有这个字段，说明是外部调用的函数，不需要连接。
             if 'referencedDeclaration' in node.attribute['expression'][0]:
                 # 这个id就是对应的FunctionDefinition节点的id
