@@ -131,13 +131,19 @@ def get_versions(pragma):
         flag += 1
         floor_version = re.findall("[\\w\\.]+", big_re[0])[0]
         floor_index = config.versions.index(floor_version)
+        # 匹配大版本的模式串
+        pattern = "..."
         # 如果含有等号，那等号的版本需要带上。
         if big_re[0].__contains__("="):
+            # 因为是>所以可以一直往后取。
             for i in config.versions[floor_index:]:
-                version_hash[i] += 1
+                if re.search(pattern, i)[0] == re.search(pattern, floor_version)[0]:
+                    version_hash[i] += 1
         else:
+            # 因为是>所以可以一直往后取。
             for i in config.versions[floor_index + 1:]:
-                version_hash[i] += 1
+                if re.search(pattern, i)[0] == re.search(pattern, floor_version)[0]:
+                    version_hash[i] += 1
     small_re = re.findall("<[\\w\\.=]*", pragma)
     if len(small_re) != 0:
         flag += 1
@@ -150,6 +156,9 @@ def get_versions(pragma):
         else:
             for i in config.versions[floor_index - 1::-1]:
                 version_hash[i] += 1
+    # 如果一个标签都没有，说明是固定版本的，直接使用对应版本。
+    if flag == 0:
+        return pragma.replace("pragma", "").replace("solidity", "").replace(" ", "").replace(";", "")
     # 这个hash表中，第一个满足条件的可以直接拿来用,注意，一定要从0.4.12开始,因为0.4.0到0.4.10没有编译器，而0.4.11又不能用某一个命令。
     for item in list(version_hash.keys())[::-1]:
         if version_hash[item] == flag:
