@@ -222,7 +222,7 @@ def get_next_command_at_now(node, ban_node_list):
     # 返回的结果。
     next_expression = None
     # 忽略操作的几类节点。这里的最前的两种类型是为了避免for循环的最后一句话会连接到初始条件或者判断条件上。
-    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'EventDefinition', 'ArrayTypeName', 'Literal', 'Mapping', 'ContractDefinition']
+    ignore_node_type_list = ['ParameterList', 'TryCatchClause', 'TryStatement', 'TupleExpression', 'UncheckedBlock', 'UserDefinedTypeName', 'UsingForDirective', 'VariableDeclaration', 'SourceUnit', 'StructDefinition', 'PragmaDirective', 'InlineAssembly', 'OverrideSpecifier', 'EnumDefinition', 'EnumValue', 'ElementaryTypeName', 'ElementaryTypeNameExpression', 'EmitStatement', 'EventDefinition', 'ArrayTypeName', 'Mapping', 'ContractDefinition']
     has_find_flag = False
     # 只要在父亲节点的子节点中找到当前节点，然后继续往后循环一个元素，如果该元素的类型还不是上面的忽略类型，那就说明那就是下一句。
     for child in parent.childes:
