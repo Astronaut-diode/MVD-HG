@@ -64,6 +64,15 @@ def print_tree(project_node_list, file_name):
                 # 如果一条边的两个节点都存在，才允许绘制。
                 if node in g.nodes and control_child in g.nodes:
                     nx.draw_networkx_edges(g, pos, edgelist=[(node, control_child)], width=2, edge_color="brown", style="-.", arrowsize=20)
+    # 下面是关于CFG的图绘制，如果需要绘制CFG边。
+    if config.show_DFG_plt:
+        # 循环图上的所有节点。
+        for node in project_node_list:
+            # 循环其中的每一个子节点
+            for data_child in node.data_childes:
+                # 如果一条边的两个节点都存在，才允许绘制。
+                if node in g.nodes and data_child in g.nodes:
+                    nx.draw_networkx_edges(g, pos, edgelist=[(node, data_child)], width=2, edge_color="blue", style=":", arrowsize=20)
     # 先获取json文件对应的img的文件夹路径。
     img_path = file_name.replace("AST_json", "img")
     img_dir = os.path.dirname(img_path)
