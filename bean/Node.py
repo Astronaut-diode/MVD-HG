@@ -28,10 +28,12 @@ class Node:
         self.childes.append(node)
 
     def append_data_child(self, node):
-        self.data_childes.append(node)
+        if node not in self.data_childes:
+            self.data_childes.append(node)
 
     def append_control_child(self, node):
-        self.control_childes.append(node)
+        if node not in self.control_childes:
+            self.control_childes.append(node)
 
     def append_attribute(self, key, value):
         if self.attribute.__contains__(key):
