@@ -123,13 +123,13 @@ def append_control_flow_information(project_node_list, project_node_dict, file_n
     # 如果确实存在FunctionCall这个字段，说明才有可能可以连接。
     if "FunctionCall" in project_node_dict.keys():
         # 判断是否含有call.value的函数调用的正则表达式。
-        have_call_value_pattern = re.compile(r"\.call\.value\((?P<param_name>.+?)\)")
+        have_call_value_pattern = re.compile(r"\.call\.value\((?P<param_name>.+)\)")
         # 实现FunctionCall和FunctionDefinition的连接。
         for node in project_node_dict['FunctionCall']:
             # 判断当前循环的节点的代码是否含有call.value
-            if re.search(have_call_value_pattern, node.attribute['src_code'][0]):
+            if re.search(have_call_value_pattern, node.attribute['src_code'][0]) and node.attribute['src_code'][0][-2:] != "()":
                 # 如果目前还没有这个键，就可以先创建一个withdraw节点，同时将这个节点添加到节点的列表和字典中。
-                if not "WithdrawFunction" in project_node_dict.keys():
+                if "WithdrawFunction" not in project_node_dict.keys():
                     withdraw_node = Node(len(project_node_list), "WithdrawFunction", None)
                     # 记录下当前的节点
                     project_node_list.append(withdraw_node)
