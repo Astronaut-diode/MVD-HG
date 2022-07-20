@@ -10,6 +10,7 @@ from print_tree import print_tree
 from train import train
 from gensim.models.word2vec import Word2Vec
 from append_data_flow_information import append_data_flow_information
+from make_tag import make_tag
 from tqdm import tqdm
 import datetime
 import config
@@ -51,6 +52,8 @@ if __name__ == '__main__':
                     # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
                     append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    # 添加了打标签的功能
+                    make_tag(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
                     built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
