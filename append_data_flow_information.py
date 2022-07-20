@@ -55,7 +55,9 @@ def traverse_function_definition_node(function_definition_node, pre_variable_nod
             expression_statement_data_flow(pop_node, method_params, method_returns, stack, pre_variable_node)
         elif pop_node['node'].node_type == "Return":
             return_data_flow(pop_node, method_params, method_returns, stack, pre_variable_node)
-        elif pop_node['node'].node_type != "FunctionCall":
+        elif pop_node['node'].node_type == "FunctionCall":
+            function_call_data_flow(pop_node, method_params, method_returns, stack, pre_variable_node)
+        else:
             for child in pop_node['node'].control_childes:
                 put_stack(child, method_params, method_returns, stack)
     # 代表这个函数已经经过操作了，不需要重复操作。
@@ -171,6 +173,17 @@ def return_data_flow(pop_node, method_params, method_returns, stack, pre_variabl
     # 为了继续深度遍历，所以需要传入控制流子节点。
     for child_of_return_node in return_node.control_childes:
         put_stack(child_of_return_node, method_params, method_returns, stack)
+
+
+def function_call_data_flow(pop_node, method_params, method_returns, stack, pre_variable_node):
+    function_call_node = pop_node["node"]
+    get_return(function_call_node)
+    res = get_all_literal_or_identifier_at_now(function_call_node)
+    for node in res:
+        if "name" in node.attribute.keys():
+            link_pre_node(method_params, node, node.attribute['name'], pre_variable_node)
+    for control_child_of_function_call_node in function_call_node.control_childes:
+        put_stack(control_child_of_function_call_node, method_params, method_returns, stack)
 
 
 # 将一个节点以及该节点所处位置对应的参数压入栈中。
@@ -393,5 +406,4 @@ def get_return(initial_node):
                 for return_param in method_returns:
                     return_param.append_data_child(expression_node)
         expression_node.append_data_child(function_call_node)
-        # 直接返回这个函数信息节点作为返回值。
         return function_call_node
