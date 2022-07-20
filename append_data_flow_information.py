@@ -42,7 +42,7 @@ def traverse_function_definition_node(function_definition_node, pre_variable_nod
         if pop_node in already_gone_node_list:
             continue
         # 如果不是一开始的函数定义节点不需要操作，后面自然会操作的。
-        if pop_node is not function_definition_node:
+        if pop_node["node"].node_type == "FunctionDefinition" and pop_node["node"] is not function_definition_node:
             continue
         # 记录当前节点为已经走过的，避免重复
         already_gone_node_list.append(pop_node)
@@ -240,7 +240,7 @@ def get_method_message_at_function_definition_node(function_definition_node):
 
 # 获取以传入的节点为根的树的返回节点应该是谁。
 def get_return(initial_node):
-    if initial_node.node_type == "Identifier" or initial_node.node_type == "Literal" or "ElementaryTypeNameExpression":
+    if initial_node.node_type == "Identifier" or initial_node.node_type == "Literal" or initial_node.node_type == "ElementaryTypeNameExpression":
         return initial_node
     need_recursion_types = ["Assignment", "BinaryOperation", "UnaryOperation", "FunctionCall", "TupleExpression", "IndexAccess", "MemberAccess", "Conditional"]
     # 如果是三目运算符，将两种结果连接到条件上，然后返回条件。
