@@ -130,7 +130,9 @@ def append_control_flow_information(project_node_list, project_node_dict, file_n
             if re.search(have_call_value_pattern, node.attribute['src_code'][0]) and not node.attribute['src_code'][0].__contains__(")("):
                 # 如果目前还没有这个键，就可以先创建一个withdraw节点，同时将这个节点添加到节点的列表和字典中。
                 if "WithdrawFunction" not in project_node_dict.keys():
+                    # 这里记得需要设定为node的抽象语法树子节点，因为在后面记录词频的时候需要遍历抽象语法树，所以withdraw节点需要和当前的树产生关联。只有withdraw需要，别的是不需要的，比如virtue_node，因为虚拟节点会被删除的。
                     withdraw_node = Node(len(project_node_list), "WithdrawFunction", None)
+                    node.append_child(withdraw_node)
                     # 记录下当前的节点
                     project_node_list.append(withdraw_node)
                     project_node_dict["WithdrawFunction"] = [withdraw_node]
