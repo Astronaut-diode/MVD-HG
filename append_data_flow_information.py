@@ -42,7 +42,7 @@ def traverse_function_definition_node(function_definition_node, pre_variable_nod
         if pop_node in already_gone_node_list:
             continue
         # 如果不是一开始的函数定义节点不需要操作，后面自然会操作的。
-        if pop_node["node"].node_type == "FunctionDefinition" and pop_node["node"] is not function_definition_node:
+        if (pop_node["node"].node_type == "FunctionDefinition" and pop_node["node"] is not function_definition_node) or not is_child_of_function_definition_node(pop_node, function_definition_node):
             continue
         # 记录当前节点为已经走过的，避免重复
         already_gone_node_list.append(pop_node)
@@ -142,24 +142,27 @@ def return_data_flow(pop_node, method_params, method_returns, stack, pre_variabl
     if return_node.childes:
         # 找出所有在return中返回的组件,这种情况代表的是使用了多返回值。
         if "components" in return_node.attribute["expression"][0].keys():
+            # 代表所有可以直接连接出参的组件部分。
             components = []
             # 获取这个子树下所有的内容，用来查询谁连接返回值使用。
             node_list = []
             stack = LifoQueue(maxsize=0)
             stack.put(return_node)
             node_list.append(return_node)
+            # 经过深度遍历，获取了return下面每一个子节点
             while not stack.empty():
                 pop_node = stack.get()
                 for child in pop_node.childes:
                     node_list.append(child)
                     stack.put(child)
+            # 通过遍历每一个出参，获取出参的详细信息，这样就能知道刚刚遍历出来的结果，哪些是可以直接连接到出参上的。
             for component_dict in return_node.attribute["expression"][0]["components"]:
                 component_node_id = component_dict["id"]
                 component_node_type = component_dict["nodeType"]
                 for node in node_list:
                     if node.node_id == component_node_id and node.node_type == component_node_type:
                         components.append({"node": node, "node_id": component_node_id, "node_type": component_node_type})
-            # 为每一个返回的元素添加到返回值上的边。
+            # 按照两个列表中的顺序，一起连接。
             for return_param, component in zip(method_returns, components):
                 component["node"].append_data_child(return_param)
         else:
@@ -253,7 +256,7 @@ def get_method_message_at_function_definition_node(function_definition_node):
 
 # 获取以传入的节点为根的树的返回节点应该是谁。
 def get_return(initial_node):
-    if initial_node.node_type == "Identifier" or initial_node.node_type == "Literal" or initial_node.node_type == "ElementaryTypeNameExpression":
+    if initial_node.node_type in ["Identifier", "Literal", "ElementaryTypeNameExpression", "NewExpression"]:
         return initial_node
     need_recursion_types = ["Assignment", "BinaryOperation", "UnaryOperation", "FunctionCall", "TupleExpression", "IndexAccess", "MemberAccess", "Conditional"]
     # 如果是三目运算符，将两种结果连接到条件上，然后返回条件。
@@ -273,16 +276,16 @@ def get_return(initial_node):
             if child_of_conditional_node.node_type in need_recursion_types:
                 if child_of_conditional_node.node_id == condition_node_node_id and child_of_conditional_node.node_type == condition_node_node_type:
                     condition_node = get_return(child_of_conditional_node)
-                elif false_expression_node_id == condition_node_node_id and false_expression_node_type == condition_node_node_type:
+                elif child_of_conditional_node.node_id == false_expression_node_id and child_of_conditional_node.node_type == false_expression_node_type:
                     false_expression_node = get_return(child_of_conditional_node)
-                elif true_expression_node_id == condition_node_node_id and true_expression_node_type == condition_node_node_type:
+                elif child_of_conditional_node.node_id == true_expression_node_id and child_of_conditional_node.node_type == true_expression_node_type:
                     true_expression_node = get_return(child_of_conditional_node)
             else:
                 if child_of_conditional_node.node_id == condition_node_node_id and child_of_conditional_node.node_type == condition_node_node_type:
                     condition_node = child_of_conditional_node
-                elif false_expression_node_id == condition_node_node_id and false_expression_node_type == condition_node_node_type:
+                elif child_of_conditional_node.node_id == false_expression_node_id and child_of_conditional_node.node_type == false_expression_node_type:
                     false_expression_node = child_of_conditional_node
-                elif true_expression_node_id == condition_node_node_id and true_expression_node_type == condition_node_node_type:
+                elif child_of_conditional_node.node_id == true_expression_node_id and child_of_conditional_node.node_type == true_expression_node_type:
                     true_expression_node = child_of_conditional_node
         false_expression_node.append_data_child(condition_node)
         true_expression_node.append_data_child(condition_node)
@@ -319,7 +322,10 @@ def get_return(initial_node):
     elif initial_node.node_type == "TupleExpression":
         tuple_expression_node = initial_node
         # 传入tuple的子节点，然后直接返回，这样就不会连接到tuple上。
-        return get_return(tuple_expression_node.childes[0])
+        if tuple_expression_node.childes:
+            return get_return(tuple_expression_node.childes[0])
+        else:
+            return None
     # 如果是这种情况，需要获取两个不需要递归计算的返回值，将两个返回值连接到BinaryOperation节点上，同时返回BinaryOperation节点。
     elif initial_node.node_type == "BinaryOperation":
         binary_operation_node = initial_node
@@ -407,3 +413,15 @@ def get_return(initial_node):
                     return_param.append_data_child(expression_node)
         expression_node.append_data_child(function_call_node)
         return function_call_node
+
+
+# 判断节点node，是不是functionDefinition节点的子节点。
+def is_child_of_function_definition_node(node, function_definition_node):
+    # 先设定parent，然后不断的往上迭代,判断是不是合理的函数定义节点的效果范围内。
+    parent = node['node']
+    while parent is not None:
+        if parent is function_definition_node:
+            return True
+        else:
+            parent = parent.parent
+    return False
