@@ -66,36 +66,36 @@ def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_pa
     utils.is_blank_now_dir(data_ast_json_project_dir_path)
 
 
-# 获取数组中最大的版本号
-def get_max_version(versions):
-    # 最大的大版本号
-    big_version = 0
-    # 遍历所有的版本号，找到其中最大的一个大版本
-    for version in versions:
-        # 取出对应的大版本
-        big = version.split(".")[1]
-        # 如果取出的大版本大于当前的最大记录，那就记录下来
-        if int(big) >= int(big_version):
-            big_version = big
-    # 最大的大版本下最大的小版本
-    small_version = 0
-    # 遍历其中的版本，为了获取小版本
-    for version in versions:
-        # 先拆分字符串，是为了同时获取大版本和小版本
-        res = version.split(".")
-        big = res[1]
-        # 如果取出的大版本和刚刚记录的最大的大版本一致，才能进去判断谁是最大的小版本。
-        if int(big) == int(big_version):
-            # 取出小版本。
-            small = res[2]
-            # 如果小版本的内容大于最大的小版本，记录下来。
-            if int(small) >= int(small_version):
-                small_version = small
-    # 最终返回构造好的最大版本号。
-    return "0." + str(big_version) + "." + str(small_version)
+# 获取当前文件的适用编译版本。
+def get_file_version(full_compile_file_path):
+    # 保存所有的版本号
+    versions = []
+    # 读取当前这个文件的版本号，判断是否含有对应的编译器
+    with open(full_compile_file_path, 'r') as file_content:
+        # 对源文件中的每一行进行循环遍历，因为一个文件中可能包含有多个编译器版本。比如在/home/xjj/AST-GNN/sol_example/multi_compile.sol
+        for line in file_content.readlines():
+            # 判断当前行是否是代表版本号码的一行。
+            ans = re.search(config.version_match_rule, line)
+            # 如果有匹配上的，那就需要取出其中的版本号，也就是说当前行是pragma solidity ^xxx等。
+            if ans:
+                # 根据这一行pragma中的代码，判断可以用的版本号有哪些，待会一股脑进行计算谁可以使用。
+                versions.append(get_versions(ans.group()))
+            # 进行引用匹配，查看是否有引用其他文件。
+            pattern = "import \'?\"?[@.\\/\\w]*\'?\"?;"
+            import_re = re.findall(pattern, line)
+            # 说明确实存在引用的情况。
+            if len(import_re) > 0:
+                # 取出其中的地址。
+                address = import_re[0].replace("import", "").replace("'", "").replace("\"", "").replace(";", "").replace(" ", "")
+                if address[0] != ".":
+                    address = f"./{address}"
+                # 获取调用文件的最大编译版本。
+                versions.append(get_file_version(os.path.join(os.path.dirname(full_compile_file_path), address)))
+    # 返回所有的编译版本中最大的一个，是因为一个文件中可能会有多个最大版本。
+    return get_max_version(versions)
 
 
-# 获取pragma中应该使用的版本号。
+# 获取pragma中应该使用的版本号,返回的是列表，代表针对这个pragma语句来说，这个列表中的版本都可以使用。
 def get_versions(pragma):
     # 用来记录的哪个版本出现了多少次的hash表
     version_hash = {"0.4.0": 0, "0.4.1": 0, "0.4.2": 0, "0.4.3": 0, "0.4.4": 0, "0.4.5": 0, "0.4.6": 0, "0.4.7": 0, "0.4.8": 0, "0.4.9": 0, "0.4.10": 0,
@@ -118,6 +118,13 @@ def get_versions(pragma):
         flag += 1
         # 获取之前查询出来的版本号。
         floor_version = re.findall("[\\w\\.]+", up_re[0])[0]
+        # 有的版本号会写成0.5.01,0.5.00这种，所以需要特殊处理
+        tmp = floor_version.split(".")
+        res = f"{tmp[0]}.{tmp[1]}."
+        if len(tmp[2]) == 2 and tmp[2][0] == "0":
+            floor_version = f"{res}{tmp[2][1]}"
+        else:
+            floor_version = f"{res}{tmp[2]}"
         # 将这个版本号作为最低的版本号。
         floor_index = config.versions.index(floor_version)
         # 匹配大版本的模式串
@@ -150,7 +157,7 @@ def get_versions(pragma):
         floor_version = re.findall("[\\w\\.]+", small_re[0])[0]
         floor_index = config.versions.index(floor_version)
         # 如果含有等号，那等号的版本需要带上。
-        if big_re[0].__contains__("="):
+        if small_re[0].__contains__("="):
             for i in config.versions[floor_index::-1]:
                 version_hash[i] += 1
         else:
@@ -158,37 +165,30 @@ def get_versions(pragma):
                 version_hash[i] += 1
     # 如果一个标签都没有，说明是固定版本的，直接使用对应版本。
     if flag == 0:
-        return pragma.replace("pragma", "").replace("solidity", "").replace(" ", "").replace(";", "")
+        return [pragma.replace("pragma", "").replace("solidity", "").replace(" ", "").replace(";", "")]
+    res = []
     # 这个hash表中，第一个满足条件的可以直接拿来用,注意，一定要从0.4.12开始,因为0.4.0到0.4.10没有编译器，而0.4.11又不能用某一个命令。
     for item in list(version_hash.keys())[::-1]:
         if version_hash[item] == flag:
+            res.append(item)
+    return res
+
+
+# 获取数组中最大的版本号，这里的versions是一个二维数组，[[0.4.0, 0.4.1], [0.5.0, 0.5.1, 0.5.2,...]]这样，需要求出公共部分
+def get_max_version(versions):
+    version_hash = {"0.4.0": 0, "0.4.1": 0, "0.4.2": 0, "0.4.3": 0, "0.4.4": 0, "0.4.5": 0, "0.4.6": 0, "0.4.7": 0, "0.4.8": 0, "0.4.9": 0, "0.4.10": 0,
+                    "0.4.11": 0, "0.4.12": 0, "0.4.13": 0, "0.4.14": 0, "0.4.15": 0, "0.4.16": 0, "0.4.17": 0, "0.4.18": 0, "0.4.19": 0, "0.4.20": 0,
+                    "0.4.21": 0, "0.4.22": 0, "0.4.23": 0, "0.4.24": 0, "0.4.25": 0, "0.4.26": 0, "0.5.0": 0, "0.5.1": 0, "0.5.2": 0, "0.5.3": 0, "0.5.4": 0,
+                    "0.5.5": 0, "0.5.6": 0, "0.5.7": 0, "0.5.8": 0, "0.5.9": 0, "0.5.10": 0, "0.5.11": 0, "0.5.12": 0, "0.5.13": 0, "0.5.14": 0, "0.5.15": 0,
+                    "0.5.16": 0, "0.5.17": 0, "0.6.0": 0, "0.6.1": 0, "0.6.2": 0, "0.6.3": 0, "0.6.4": 0, "0.6.5": 0, "0.6.6": 0, "0.6.7": 0, "0.6.8": 0, "0.6.9": 0,
+                    "0.6.10": 0, "0.6.11": 0, "0.6.12": 0, "0.7.0": 0, "0.7.1": 0, "0.7.2": 0, "0.7.3": 0, "0.7.4": 0, "0.7.5": 0, "0.7.6": 0, "0.8.0": 0, "0.8.1": 0,
+                    "0.8.2": 0, "0.8.3": 0, "0.8.4": 0, "0.8.5": 0, "0.8.6": 0, "0.8.7": 0, "0.8.8": 0, "0.8.9": 0, "0.8.10": 0, "0.8.11": 0, "0.8.12": 0, "0.8.13": 0,
+                    "0.8.14": 0, "0.8.15": 0}
+    # 遍历每一行pragma计算出来的结果，然后修改hash表
+    for version_list in versions:
+        for version in version_list:
+            version_hash[version] += 1
+    # 统计hash表中最符合的版本号是谁即可。
+    for item in list(version_hash.keys())[::-1]:
+        if version_hash[item] == len(versions):
             return item
-
-
-# 获取当前文件的适用编译版本。
-def get_file_version(full_compile_file_path):
-    # 保存所有的版本号
-    versions = []
-    # 读取当前这个文件的版本号，判断是否含有对应的编译器
-    with open(full_compile_file_path, 'r') as file_content:
-        # 对源文件中的每一行进行循环遍历，因为一个文件中可能包含有多个编译器版本。比如在/home/xjj/AST-GNN/sol_example/multi_compile.sol
-        for line in file_content.readlines():
-            # 对其中的每一行使用正则语句进行匹配
-            ans = re.findall(config.version_match_rule, line)
-            # 如果有匹配上的，那就需要取出其中的版本号，也就是说当前行是pragma solidity ^xxx等。
-            if len(ans) > 0:
-                # 获取这一行中的版本，然后添加到列表中，待会求出其中的最大版本即可。
-                versions.append(get_versions(ans[0]))
-            # 进行引用匹配，查看是否有引用其他文件。
-            pattern = "import \'?\"?[@.\\/\\w]*\'?\"?;"
-            import_re = re.findall(pattern, line)
-            # 说明确实存在引用的情况。
-            if len(import_re) > 0:
-                # 取出其中的地址。
-                address = import_re[0].replace("import", "").replace("'", "").replace("\"", "").replace(";", "").replace(" ", "")
-                if address[0] != ".":
-                    address = f"./{address}"
-                # 获取调用文件的最大编译版本。
-                versions.append(get_file_version(os.path.join(os.path.dirname(full_compile_file_path), address)))
-    # 返回所有的编译版本中最大的一个。
-    return get_max_version(versions)
