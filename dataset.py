@@ -17,6 +17,8 @@ class ASTGNNDataset(Dataset):
             self.data = torch.load(self.processed_file_names[0])
         elif graph_type == "CFG":
             self.data = torch.load(self.processed_file_names[1])
+        elif graph_type == "DFG":
+            self.data = torch.load(self.processed_file_names[2])
 
     # 1.先判断原始文件是否已经存在了，如果存在了那就没有关系，否则是需要提醒报错的。
     @property
@@ -32,7 +34,7 @@ class ASTGNNDataset(Dataset):
     # 3.获取处理以后文件的名字
     @property
     def processed_file_names(self) -> Union[str, List[str], Tuple]:
-        return [f"{self.root}/processed/ast_graph_train.pt", f"{self.root}/processed/cfg_graph_train.pt"]
+        return [f"{self.root}/processed/ast_graph_train.pt", f"{self.root}/processed/cfg_graph_train.pt", f"{self.root}/processed/dfg_graph_train.pt"]
 
     # 2.如果原始文件不存在，说明无法生成数据集。
     def download(self):
@@ -45,12 +47,12 @@ class ASTGNNDataset(Dataset):
         # 保存到数据集文件中的容器。
         ast_graph_data_list = []
         cfg_graph_data_list = []
+        dfg_graph_data_list = []
         for project_full_path in self.raw_file_names:
             # 这里replace成AST_json是因为目前来说只有AST_json里面的文件夹是完整的，sol_source里面已经被删除了。
             for now_dir, child_dirs, child_files in os.walk(project_full_path.replace("raw", "AST_json")):
                 for file_name in child_files:
-                    # 这里要变回sol_source，因为标签文件中是写的sol作为key。
-                    file_name_key = f"{now_dir}/{file_name}".replace(".json", ".sol").replace("AST_json", "sol_source")
+                    file_name_key = f"{now_dir}/{file_name}"
                     # 通过文件的全路径获取其标签。
                     label = torch.as_tensor(data=np.array([[label_in_memory[file_name_key]]], dtype=np.int64))
                     # 转化为独热编码
@@ -64,12 +66,18 @@ class ASTGNNDataset(Dataset):
                     ast_graph_train_data = Data(x=x, edge_index=ast_edge_index, y=y)
                     # 添加到列表中，待会可以直接一次性保存。
                     ast_graph_data_list.append(ast_graph_train_data)
+                    # 下边是关于控制流边的内容
                     cfg_edge_index = self.get_cfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
                     cfg_graph_train_data = Data(x=x, edge_index=cfg_edge_index, y=y)
                     cfg_graph_data_list.append(cfg_graph_train_data)
+                    # 下面是关于数据流的内容。
+                    dfg_edge_index = self.get_dfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
+                    dfg_graph_train_data = Data(x=x, edge_index=dfg_edge_index, y=y)
+                    dfg_graph_data_list.append(dfg_graph_train_data)
         # 数据构造完毕以后，直接保存到对应文件中即可。
         torch.save(ast_graph_data_list, self.processed_file_names[0])
         torch.save(cfg_graph_data_list, self.processed_file_names[1])
+        torch.save(dfg_graph_data_list, self.processed_file_names[2])
 
     def len(self) -> int:
         return len(self.data)
@@ -120,3 +128,16 @@ class ASTGNNDataset(Dataset):
         cfg_edge_index = torch.as_tensor(data=np.array(cfg_edge_index, dtype=np.int64))
         cfg_edge_file_handle.close()
         return cfg_edge_index.T
+
+    # 获取dfg_edge.json中的文件内容。
+    def get_dfg_edge(self, project):
+        dfg_edge_file_path = f"{project}_dfg_edge.json"
+        dfg_edge_file_handle = open(dfg_edge_file_path, 'r')
+        dfg_edge_content = json.load(dfg_edge_file_handle)
+        dfg_edge_index = []
+        for index, content in enumerate(dfg_edge_content):
+            # 因为一开始写在json里面的时候是从1开始计算的，但是如果送到模型里面，需要从0开始。
+            dfg_edge_index.append([content['source_node_node_id'] - 1, content['target_node_node_id'] - 1])
+        dfg_edge_index = torch.as_tensor(data=np.array(dfg_edge_index, dtype=np.int64))
+        dfg_edge_file_handle.close()
+        return dfg_edge_index.T
