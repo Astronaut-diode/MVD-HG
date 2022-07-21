@@ -10,15 +10,9 @@ import utils
 
 
 class ASTGNNDataset(Dataset):
-    def __init__(self, root_dir, graph_type):
+    def __init__(self, root_dir):
         super().__init__(root_dir)
-        # 根据输入的不同选择，获取不同类型的训练图。
-        if graph_type == "AST":
-            self.data = torch.load(self.processed_file_names[0])
-        elif graph_type == "CFG":
-            self.data = torch.load(self.processed_file_names[1])
-        elif graph_type == "DFG":
-            self.data = torch.load(self.processed_file_names[2])
+        self.data = torch.load(self.processed_file_names[0])
 
     # 1.先判断原始文件是否已经存在了，如果存在了那就没有关系，否则是需要提醒报错的。
     @property
@@ -34,7 +28,7 @@ class ASTGNNDataset(Dataset):
     # 3.获取处理以后文件的名字
     @property
     def processed_file_names(self) -> Union[str, List[str], Tuple]:
-        return [f"{self.root}/processed/ast_graph_train.pt", f"{self.root}/processed/cfg_graph_train.pt", f"{self.root}/processed/dfg_graph_train.pt"]
+        return [f"{self.root}/processed/graph_train.pt"]
 
     # 2.如果原始文件不存在，说明无法生成数据集。
     def download(self):
@@ -45,9 +39,7 @@ class ASTGNNDataset(Dataset):
     def process(self):
         label_in_memory = utils.get_label()
         # 保存到数据集文件中的容器。
-        ast_graph_data_list = []
-        cfg_graph_data_list = []
-        dfg_graph_data_list = []
+        graph_data_list = []
         for project_full_path in self.raw_file_names:
             # 这里replace成AST_json是因为目前来说只有AST_json里面的文件夹是完整的，sol_source里面已经被删除了。
             for now_dir, child_dirs, child_files in os.walk(project_full_path.replace("raw", "AST_json")):
@@ -62,22 +54,14 @@ class ASTGNNDataset(Dataset):
                     x = self.get_x(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
                     # 获取抽象语法树边的信息
                     ast_edge_index = self.get_ast_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    # 通过x和ast_edge_index一起构造图数据
-                    ast_graph_train_data = Data(x=x, edge_index=ast_edge_index, y=y)
-                    # 添加到列表中，待会可以直接一次性保存。
-                    ast_graph_data_list.append(ast_graph_train_data)
-                    # 下边是关于控制流边的内容
                     cfg_edge_index = self.get_cfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    cfg_graph_train_data = Data(x=x, edge_index=cfg_edge_index, y=y)
-                    cfg_graph_data_list.append(cfg_graph_train_data)
-                    # 下面是关于数据流的内容。
                     dfg_edge_index = self.get_dfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    dfg_graph_train_data = Data(x=x, edge_index=dfg_edge_index, y=y)
-                    dfg_graph_data_list.append(dfg_graph_train_data)
+                    # 通过x和ast_edge_index一起构造图数据
+                    graph_train_data = Data(x=x, edge_index=[ast_edge_index, cfg_edge_index, dfg_edge_index], y=y)
+                    # 添加到列表中，待会可以直接一次性保存。
+                    graph_data_list.append(graph_train_data)
         # 数据构造完毕以后，直接保存到对应文件中即可。
-        torch.save(ast_graph_data_list, self.processed_file_names[0])
-        torch.save(cfg_graph_data_list, self.processed_file_names[1])
-        torch.save(dfg_graph_data_list, self.processed_file_names[2])
+        torch.save(graph_data_list, self.processed_file_names[0])
 
     def len(self) -> int:
         return len(self.data)
