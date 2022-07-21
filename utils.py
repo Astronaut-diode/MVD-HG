@@ -40,5 +40,5 @@ def create_file(file_path):
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
     # 这里要使用a的模式，否则会导致文件原始内容会被第二次打开而删除。
-    f = open(file_path, 'a')
+    f = open(file_path, 'a', encoding="utf-8")
     f.close()
