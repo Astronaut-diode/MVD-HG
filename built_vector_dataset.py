@@ -32,6 +32,8 @@ def built_vector_dataset(project_node_list, file_name):
         create_ast_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
         # 传入所有的节点信息，生成控制流边的边文件。
         create_cfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
+        # 传入所有的节点信息，生成数据流边的边文件。
+        create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
         print(f"{file_name}节点和边文件已经构建完毕。")
 
 
@@ -103,3 +105,26 @@ def create_cfg_edge_json(project_node_list, raw_project_dir_half_name, id_mappin
     # 关闭句柄文件。
     cfg_edge_handle.close()
     print(f"{cfg_edge_file_name}控制流图边文件已经构建完毕")
+
+
+# 创建数据流图的边文件。
+def create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id):
+    # 先创建对应的控制流图边信息的json文件,cfg_edge.json
+    dfg_edge_file_name = f'{raw_project_dir_half_name}_dfg_edge.json'
+    # 用来保存文件的句柄
+    utils.create_file(dfg_edge_file_name)
+    dfg_edge_handle = open(dfg_edge_file_name, 'w', encoding="UTF-8")
+    # 保存到数据流图边信息中的节点列表
+    dfg_edge_list = []
+    # 遍历所有的节点，待会一一操作，保存到dfg_edge_list中去。
+    for node in project_node_list:
+        # 循环添加边
+        for child in node.data_childes:
+            obj = {"source_node_node_id": id_mapping_id[node.node_id], "target_node_node_id": id_mapping_id[child.node_id]}
+            # 添加到数组中，循环结束直接录入到数据流边文件当中。
+            dfg_edge_list.append(obj)
+    # 将节点信息保存到文件当中去。
+    json.dump(dfg_edge_list, dfg_edge_handle, ensure_ascii=False)
+    # 关闭句柄文件。
+    dfg_edge_handle.close()
+    print(f"{dfg_edge_file_name}数据流图边文件已经构建完毕")
