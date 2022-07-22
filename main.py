@@ -6,7 +6,7 @@ from append_method_message_by_dict import append_method_message_by_dict
 from append_control_flow_information import append_control_flow_information
 from built_corpus import built_corpus_bfs, built_corpus_dfs
 from built_vector_dataset import built_vector_dataset
-from print_tree import print_tree, generate_svg
+from print_tree import generate_svg
 from train import train
 from gensim.models.word2vec import Word2Vec
 from append_data_flow_information import append_data_flow_information
