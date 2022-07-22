@@ -6,7 +6,7 @@ from append_method_message_by_dict import append_method_message_by_dict
 from append_control_flow_information import append_control_flow_information
 from built_corpus import built_corpus_bfs, built_corpus_dfs
 from built_vector_dataset import built_vector_dataset
-from print_tree import print_tree
+from print_tree import print_tree, generate_svg
 from train import train
 from gensim.models.word2vec import Word2Vec
 from append_data_flow_information import append_data_flow_information
@@ -60,7 +60,7 @@ if __name__ == '__main__':
                     # 创建数据集
                     built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 打印树的样子。
-                    print_tree(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                    generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
             # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
             if config.frozen == "frozen":
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
