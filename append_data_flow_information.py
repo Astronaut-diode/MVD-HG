@@ -67,12 +67,13 @@ def traverse_function_definition_node(function_definition_node, pre_variable_nod
 # 针对VariableDeclarationStatement节点的处理方法
 def variable_declaration_statement_data_flow(variable_declaration_statement, method_param, method_return, stack, pre_variable_node):
     variable_declaration_statement_node = variable_declaration_statement['node']
-    # 左边量的字典值
-    declarations_dict = variable_declaration_statement_node.attribute['declarations'][0][0]
-    target_node_id = declarations_dict['id']
-    target_node_type = declarations_dict['nodeType']
-    target_node_name = declarations_dict['name']
-    target_node = None
+    # 左边量的字典值,如果是调用的函数有多返回值的时候，就会有多个，所以需要用列表包装。
+    declarations_dict_list = []
+    for declarations_dict in variable_declaration_statement_node.attribute['declarations'][0]:
+        # 如果是None代表返回值是_，不需要接受，直接略过就行。
+        # 所以保存在列表中的内容是字典的列表，每一个元素含有的键分别有node, node_id, node_type, name
+        if declarations_dict is not None:
+            declarations_dict_list.append({"node": None, "node_id": declarations_dict["id"], "node_type": declarations_dict["nodeType"], "name": declarations_dict["name"]})
     # 右边等式的内容字典
     if variable_declaration_statement_node.attribute['initialValue'][0] is not None:
         initial_value_dict = variable_declaration_statement_node.attribute['initialValue'][0]
@@ -87,24 +88,35 @@ def variable_declaration_statement_data_flow(variable_declaration_statement, met
     for child in variable_declaration_statement_node.childes:
         node_id = child.node_id
         node_type = child.node_type
-        if node_id == target_node_id and node_type == target_node_type:
-            target_node = child
-        elif node_id == initial_node_id and node_type == initial_node_type:
+        # 因为有多个返回值需要识别，所以需要套一层循环，所以需要使用一个flag来识别，内层循环是否找到了对应的节点。
+        have_node_flag = False
+        # 遍历所有的返回值节点，看看有没有符合条件的
+        for node_in_declarations_dict_list in declarations_dict_list:
+            # 如果符合条件，就将node字段记录为当前的这个节点，同时设定flag为True，这样子就不会和下面进行匹配了。
+            if node_id == node_in_declarations_dict_list['node_id'] and node_type == node_in_declarations_dict_list['node_type']:
+                node_in_declarations_dict_list['node'] = child
+                have_node_flag = True
+                break
+        # 只要返回值没有匹配上的时候，才有可能是去匹配参数值。
+        if have_node_flag is False and (node_id == initial_node_id and node_type == initial_node_type):
             initial_node = child
-    # 将target_node连接到之前出现的过参数上。
-    link_pre_node(method_param, target_node, target_node_name, pre_variable_node)
+    # 将所有的返回值连接到之前出现的过参数上。
+    for node_in_declarations_dict_list in declarations_dict_list:
+        link_pre_node(method_param, node_in_declarations_dict_list['node'], node_in_declarations_dict_list['name'], pre_variable_node)
     # 如果右半部分确实是存在的
     if initial_node:
         # 获取右半边的返回值是谁，并连接到target上。
         res = get_return(initial_node)
-        res.append_data_child(target_node)
+        for node_in_declarations_dict_list in declarations_dict_list:
+            res.append_data_child(node_in_declarations_dict_list['node'])
         # 将之前所有的点与这一批点相连接。
         res = get_all_literal_or_identifier_at_now(initial_node)
         for node in res:
             if "name" in node.attribute.keys():
                 link_pre_node(method_param, node, node.attribute['name'], pre_variable_node)
     # 将当前的这个参数添加到method_param中
-    method_param.append(target_node)
+    for node_in_declarations_dict_list in declarations_dict_list:
+        method_param.append(node_in_declarations_dict_list['node'])
     # 压入控制流的后续节点。
     for control_child in variable_declaration_statement_node.control_childes:
         put_stack(control_child, method_param, method_return, stack)
