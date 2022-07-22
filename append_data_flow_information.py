@@ -305,7 +305,9 @@ def get_return(initial_node):
     # 如果是成员变量,只有一个子，直接获取子并返回。
     elif initial_node.node_type == "MemberAccess":
         member_access_node = initial_node
-        return get_return(member_access_node.childes[0])
+        res = get_return(member_access_node.childes[0])
+        res.append_data_child(member_access_node)
+        return member_access_node
     # 如果是数组类型，下面的数组元素和下标元素都连接IndexAccess节点，然后返回IndexAccess
     elif initial_node.node_type == "IndexAccess":
         index_access_node = initial_node
