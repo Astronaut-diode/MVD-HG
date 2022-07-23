@@ -503,7 +503,7 @@ def expression_statement_link_next_node(expression_statement_node, stack, alread
         # 如果里面还含有name字段，那说明是函数调用的概率更大了。
         if 'name' in expression_statement_node.attribute['expression'][0]['expression'].keys():
             # 如果使用的是这几类函数，需要创建新的节点类型。
-            if expression_statement_node.attribute['expression'][0]['expression']['name'] in ['revert', 'require']:
+            if expression_statement_node.attribute['expression'][0]['expression']['name'] in ['revert', 'require', 'assert']:
                 # 修改节点类型
                 expression_statement_node.node_type = expression_statement_node.attribute['expression'][0]['expression']['name']
                 # 修改在节点类型字典中的存在。
