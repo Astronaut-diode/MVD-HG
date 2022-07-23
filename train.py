@@ -4,6 +4,7 @@ from model import ASTGNNModel
 from torch_geometric.loader import DataLoader
 import torch
 import config
+from metric import metric
 
 device = torch.device(config.device)
 
@@ -28,10 +29,11 @@ def train():
             # 经典的五步计算
             optimizer.zero_grad()
             # 将两个batch的节点，边还有batch信息都传进去
-            output = model(batch.x, batch.edge_index[0], batch.batch, batch.x, batch.edge_index[1], batch.batch, batch.x, batch.edge_index[2], batch.batch)
+            predict = model(batch.x, batch.edge_index[0], batch.batch, batch.x, batch.edge_index[1], batch.batch, batch.x, batch.edge_index[2], batch.batch)
             # 计算准确率计算一次就行了，因为两个人的结果是一样的，而且本来就是两个模型合并起来计算。
-            loss = criterion(output, batch.y)
+            loss = criterion(predict, batch.y)
             loss.backward()
             optimizer.step()
             # 进行准确率计算。
-            print(f"\repoch:{epoch}, index:{index}, 当前阶段的loss为{loss}", end="")
+            print(f"epoch:{epoch}, index:{index}, 当前阶段的loss为{loss}", end="")
+            metric(predict, batch.y)
