@@ -6,16 +6,16 @@ import os
 
 # 为当前的文件打上是否含有漏洞的标签。
 def make_tag(project_node_list, project_node_dict, file_name):
-    flag = reentry_attack(project_node_list, project_node_dict, file_name)
-    if flag:
-        update_label_file(file_name, 1)
+    if reentry_attack(project_node_list, project_node_dict, file_name):
+        reentry_flag = 1
     else:
-        update_label_file(file_name, 0)
-    flag = timestamp_attack(project_node_list, project_node_dict, file_name)
-    if flag:
-        update_label_file(file_name, 2)
+        reentry_flag = 0
+    if timestamp_attack(project_node_list, project_node_dict, file_name):
+        timestamp_flag = 1
     else:
-        update_label_file(file_name, 0)
+        timestamp_flag = 0
+    label = [reentry_flag, timestamp_flag]
+    update_label_file(file_name, label)
     print(f"{file_name}标签已经打上了。")
 
 
