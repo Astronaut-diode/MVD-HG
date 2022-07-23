@@ -46,10 +46,7 @@ class ASTGNNDataset(Dataset):
                 for file_name in child_files:
                     file_name_key = f"{now_dir}/{file_name}"
                     # 通过文件的全路径获取其标签。
-                    label = torch.as_tensor(data=np.array([[label_in_memory[file_name_key]]], dtype=np.int64))
-                    # 转化为独热编码
-                    one_hot = torch.zeros(1, config.classes).scatter_(1, label, 1)
-                    y = torch.as_tensor(data=np.array(one_hot, dtype=np.float32))
+                    y = torch.as_tensor(data=np.array([label_in_memory[file_name_key]], dtype=np.float64))
                     # 获取对应raw工程文件夹下的原始文件名_node.json文件中的内容。
                     x = self.get_x(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
                     # 获取抽象语法树边的信息

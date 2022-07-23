@@ -2,7 +2,6 @@
 from dataset import ASTGNNDataset
 from model import ASTGNNModel
 from torch_geometric.loader import DataLoader
-import os
 import torch
 import config
 
@@ -19,13 +18,10 @@ def train():
     model = model.to(device)
     # 创建优化器和反向传播函数。
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.BCEWithLogitsLoss()
     # 进行epoch个时代的训练
     model.train()
     for epoch in range(config.epoch_size):
-        train_correct = 0
-        train_total = 0
-        # 使用zip对他们两个进行并行循环，因为长度是一样的，所以完全可以使用。
         for index, batch in enumerate(data_loader):
             # 将数据转化为指定设备上运行
             batch = batch.to(device)
@@ -38,8 +34,4 @@ def train():
             loss.backward()
             optimizer.step()
             # 进行准确率计算。
-            pred = output.argmax(dim=1)
-            train_correct = train_correct + (pred == batch.y.argmax(dim=1)).sum()
-            train_total = train_total + batch.num_graphs
-            print("\r", epoch, index, "当前阶段的loss为{:.4f}, 正确率为{:.2f}%".format(loss, (train_correct / train_total) * 100),
-                  end="")
+            print(f"\repoch:{epoch}, index:{index}, 当前阶段的loss为{loss}", end="")
