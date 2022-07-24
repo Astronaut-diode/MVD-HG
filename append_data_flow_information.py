@@ -75,7 +75,7 @@ def variable_declaration_statement_data_flow(variable_declaration_statement, met
         if declarations_dict is not None:
             declarations_dict_list.append({"node": None, "node_id": declarations_dict["id"], "node_type": declarations_dict["nodeType"], "name": declarations_dict["name"]})
     # 右边等式的内容字典
-    if variable_declaration_statement_node.attribute['initialValue'][0] is not None:
+    if "initialValue" in variable_declaration_statement_node.attribute.keys() and variable_declaration_statement_node.attribute['initialValue'][0] is not None:
         initial_value_dict = variable_declaration_statement_node.attribute['initialValue'][0]
         initial_node_id = initial_value_dict['id']
         initial_node_type = initial_value_dict['nodeType']
