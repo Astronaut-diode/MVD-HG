@@ -77,9 +77,9 @@ def get_data_flow_downstream(node):
     while not stack.empty():
         pop_node = stack.get()
         # 如果已经走过了，需要退出。
-        if node in res:
+        if pop_node in res:
             continue
-        res.append(node)
+        res.append(pop_node)
         for child_node in pop_node.data_childes:
             stack.put(child_node)
     return res
@@ -181,10 +181,30 @@ def reentry_attack(project_node_list, project_node_dict, file_name):
                 # 找到了对应的参数节点。
                 if child_of_function_call_node.node_id == argument_node_node_id and child_of_function_call_node.node_type == argument_node_node_type:
                     argument_node = child_of_function_call_node
+                    if argument_node.attribute["src_code"] == "0":
+                        return False
                     # 代码所处的位置，如果发现后面辐射的位置有比这个大的，那就说明是有重入的危险。
                     code_index = argument_node.attribute["src"][0].split(":")[0]
+                    # 记录这个常数在之前是否使用过。
+                    have_use_number_flag = False
+                    # 代表是常数，那就直接去判断是否在后面使用过即可。
+                    if argument_node.node_type == "Literal":
+                        for node in project_node_dict["Literal"]:
+                            # 说明这个常数在后面使用过。
+                            if int(node.attribute["src"][0].split(":")[0]) > int(code_index):
+                                return True
+                            elif int(node.attribute["src"][0].split(":")[0]) < int(code_index):
+                                have_use_number_flag = True
+                        # 如果之前没有使用过，后面也没有使用过，那可以认为是白白转钱的操作，肯定有漏洞。
+                        if not have_use_number_flag:
+                            return True
                     # 代表和当前的这个参数等同效力的参数列表。
-                    equal_list = [argument_node]
+                    equal_list = []
+                    if argument_node.node_type == "MemberAccess":
+                        for member_access_node in project_node_dict["MemberAccess"]:
+                            equal_list.append(member_access_node)
+                    else:
+                        equal_list.append(argument_node)
                     now_node = argument_node
                     while True:
                         # 根据当前节点，去寻找数据流的父节点是谁。
@@ -230,8 +250,25 @@ def reentry_attack(project_node_list, project_node_dict, file_name):
                         # 判断代码出现的位置是否大于原始call.value中参数出现的位置。
                         tmp_code_index = pop_node.attribute["src"][0].split(":")[0]
                         # 如果确定是大于的，那就直接返回True，否则记录当前节点已经被访问过了，而且要将所有的数据流子节点压入栈中，以进行下次循环。
-                        if tmp_code_index > code_index:
-                            return True
+                        if int(tmp_code_index) > int(code_index):
+                            binary_operate_node = pop_node
+                            while True:
+                                # 判断是不是用了二元减号
+                                if binary_operate_node.node_type == "BinaryOperation" and binary_operate_node.attribute["operator"][0] == "-":
+                                    # 判断是不是在他的右变量中。
+                                    if in_right_hand_side(binary_operate_node, pop_node):
+                                        return True
+                                elif binary_operate_node.node_type == "Assignment":
+                                    # 判断pop_node是不是在他的右变量中。
+                                    if binary_operate_node.attribute["operator"][0] == "-=" and in_right_hand_side(binary_operate_node, pop_node):
+                                        return True
+                                    #  如果是等号，必须要出现=0.
+                                    elif binary_operate_node.attribute["operator"][0] == "=":
+                                        if binary_operate_node.attribute["src_code"][0].replace(" ", "").__contains__("=0"):
+                                            return True
+                                binary_operate_node = binary_operate_node.parent
+                                if binary_operate_node is None:
+                                    break
                         else:
                             already_dfs_list.append(pop_node)
                             for child_of_pop_node in pop_node.data_childes:
@@ -397,4 +434,25 @@ def timestamp_attack(project_node_list, project_node_dict, file_name):
                     if recursion_node is None:
                         break
     # 遍历完所有的节点，都没有发现可能还有时间戳漏洞的模式。
+    return False
+
+
+def in_right_hand_side(binary_operate_node, target_node):
+    if "rightHandSide" in binary_operate_node.attribute.keys():
+        right_hand_side_node_id = binary_operate_node.attribute["rightHandSide"][0]["id"]
+        right_hand_side_node_type = binary_operate_node.attribute["rightHandSide"][0]["nodeType"]
+    else:
+        right_hand_side_node_id = binary_operate_node.attribute["rightExpression"][0]["id"]
+        right_hand_side_node_type = binary_operate_node.attribute["rightExpression"][0]["nodeType"]
+    for child in binary_operate_node.childes:
+        if child.node_id == right_hand_side_node_id and child.node_type == right_hand_side_node_type:
+            right_hand_side_node = child
+    stack = LifoQueue(maxsize=0)
+    stack.put(right_hand_side_node)
+    while not stack.empty():
+        pop_node = stack.get()
+        if pop_node == target_node:
+            return True
+        for child in pop_node.childes:
+            stack.put(child)
     return False
