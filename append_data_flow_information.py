@@ -184,7 +184,9 @@ def return_data_flow(pop_node, method_params, method_returns, stack, pre_variabl
             for node in return_node.childes:
                 if node.node_id == expression_node_id and node.node_type == expression_node_type:
                     expression_node = node
-            expression_node.append_data_child(method_returns[0])
+            # 这是一种特殊情况，当return test()，但是这个函数如果没有返回值的时候，其实是连不上的。因为当前的本身没有返回值去接收。
+            if method_returns:
+                expression_node.append_data_child(method_returns[0])
     # 为了继续深度遍历，所以需要传入控制流子节点。
     for child_of_return_node in return_node.control_childes:
         put_stack(child_of_return_node, method_params, method_returns, stack)
