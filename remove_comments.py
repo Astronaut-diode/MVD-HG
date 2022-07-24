@@ -3,10 +3,14 @@ import os
 import re
 import shutil
 import utils
+import config
 
 
 # 删除project_name文件夹中的每一个文件的注释，如果内容不正常直接删除。
 def remove_comments(data_sol_source_project_dir_path):
+    # 如果是generate_all，可以不走这个函数了，因为一开始create_corpus_txt的时候已经走过了。
+    if config.create_corpus_mode == "generate_all":
+        return
     # 临时文件的存放位置
     tmp_file_name = os.path.join(data_sol_source_project_dir_path, "tmp.sol")
     # 对当前的工程文件夹进行遍历操作。

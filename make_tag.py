@@ -6,6 +6,9 @@ import os
 
 # 为当前的文件打上是否含有漏洞的标签。
 def make_tag(project_node_list, project_node_dict, file_name):
+    # 如果是generate_all，可以不走这个函数了，因为一开始create_corpus_txt的时候已经走过了。
+    if config.create_corpus_mode == "generate_all":
+        return
     if reentry_attack(project_node_list, project_node_dict, file_name):
         reentry_flag = 1
     else:

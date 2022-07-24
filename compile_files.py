@@ -6,6 +6,9 @@ import utils
 
 
 def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_path):
+    # 如果是generate_all，可以不走这个函数了，因为一开始create_corpus_txt的时候已经走过了。
+    if config.create_corpus_mode == "generate_all":
+        return
     # 遍历工程文件夹下面的每一个文件。
     for now_dir, child_dirs, child_files in os.walk(data_sol_source_project_dir_path):
         # 遍历项目文件夹中的每一个文件
