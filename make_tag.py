@@ -17,7 +17,12 @@ def make_tag(project_node_list, project_node_dict, file_name):
         timestamp_flag = 1
     else:
         timestamp_flag = 0
-    label = [reentry_flag, timestamp_flag]
+    if dangerous_delegate_call_attack(project_node_list, project_node_dict):
+        delegate_call_flag = 1
+    else:
+        delegate_call_flag = 0
+
+    label = [reentry_flag, timestamp_flag, delegate_call_flag]
     update_label_file(file_name, label)
     print(f"{file_name}标签已经打上了。")
 
@@ -456,3 +461,33 @@ def in_right_hand_side(binary_operate_node, target_node):
         for child in pop_node.childes:
             stack.put(child)
     return False
+
+
+def dangerous_delegate_call_attack(project_node_list, project_node_dict):
+    if "FunctionCall" in project_node_dict.keys():
+        for function_call_node in project_node_dict["FunctionCall"]:
+            # 获取调用的函数的名字
+            member_name = function_call_node.attribute["expression"][0]["memberName"]
+            # 如果是delegatecall，满足了第一个条件。
+            if member_name == "delegatecall":
+                # 获取函数的调用者。
+                for child in function_call_node.childes:
+                    # 如果节点的值是符合条件的，那就说明这个节点是调用者，需要找到这个调用者的来源。
+                    if child.attribute["memberName"][0] == "delegatecall":
+                        # 找出所有的上级数据流节点
+                        origin_list = []
+                        stack = LifoQueue(maxsize=0)
+                        stack.put(child)
+                        while not stack.empty():
+                            pop_node = stack.get()
+                            if pop_node in origin_list:
+                                continue
+                            res = get_node_by_child_and_node_type_of_target(project_node_list, project_node_dict, pop_node, None, 3)
+                            for origin_node in res:
+                                stack.put(origin_node)
+                                origin_list.append(origin_node)
+                        for node in origin_list:
+                            if node.parent.node_type == "ParameterList":
+                                return True
+
+
