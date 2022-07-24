@@ -253,16 +253,34 @@ def timestamp_attack(project_node_list, project_node_dict, file_name):
                 while True:
                     # 1.找到了赋值的地方，这里代表的是完全创建新的变量，如uint a = 10;
                     # 2.这里是代表已经创建好的变量，新接受内容的情况,比如a = 10,a是一开始就创建好的。
-                    if recursion_node.node_type == "VariableDeclarationStatement" or recursion_node.node_type == "Assignment":
-                        # 赋值的对象就是当前节点的数据流下一个节点
-                        variable_node = probability_node_of_timestamp.data_childes[0]
-                        # 然后通过判断这个赋值对象是否在后面被用过，就能判断出来有没有时间戳漏洞。
-                        use_list = get_data_flow_downstream(variable_node)
-                        # 根本不需要记录下标，因为能在后面出现的，肯定是已经在当前行下面了。
-                        for use_node in use_list:
-                            # 如果发现其中的某一个节点不是在require或者assert中，那就说明有可能存在问题。
-                            if use_not_require_or_assert(use_node):
-                                return True
+                    if recursion_node.node_type == "VariableDeclarationStatement":
+                        declarations_id = recursion_node.attribute['declarations'][0][0]['id']
+                        declarations_node_type = recursion_node.attribute['declarations'][0][0]['nodeType']
+                        for declarations_node in recursion_node.childes:
+                            if declarations_node.node_id == declarations_id and declarations_node.node_type == declarations_node_type:
+                                # 赋值的对象就是当前节点的数据流下一个节点
+                                variable_node = declarations_node
+                                # 然后通过判断这个赋值对象是否在后面被用过，就能判断出来有没有时间戳漏洞。
+                                use_list = get_data_flow_downstream(variable_node)
+                                # 根本不需要记录下标，因为能在后面出现的，肯定是已经在当前行下面了。
+                                for use_node in use_list:
+                                    # 如果发现其中的某一个节点不是在require或者assert中，那就说明有可能存在问题。
+                                    if use_not_require_or_assert(use_node):
+                                        return True
+                    if recursion_node.node_type == "Assignment":
+                        left_hand_side_id = recursion_node.attribute['leftHandSide'][0]['id']
+                        left_hand_side_node_type = recursion_node.attribute['leftHandSide'][0]['nodeType']
+                        for left_hand_side_node in recursion_node.childes:
+                            if left_hand_side_node.node_id == left_hand_side_id and left_hand_side_node.node_type == left_hand_side_node_type:
+                                # 赋值的对象就是该值，也就是赋值左边的部分。
+                                variable_node = left_hand_side_node
+                                # 然后通过判断这个赋值对象是否在后面被用过，就能判断出来有没有时间戳漏洞。
+                                use_list = get_data_flow_downstream(variable_node)
+                                # 根本不需要记录下标，因为能在后面出现的，肯定是已经在当前行下面了。
+                                for use_node in use_list:
+                                    # 如果发现其中的某一个节点不是在require或者assert中，那就说明有可能存在问题。
+                                    if use_not_require_or_assert(use_node):
+                                        return True
                     recursion_node = recursion_node.parent
                     # 如果一直到结束都发现是None，那就可以排除赋值语句的情况,除了赋值语句的情况，还有直接使用的情况需要去继续判断。
                     if recursion_node is None:
@@ -311,18 +329,34 @@ def timestamp_attack(project_node_list, project_node_dict, file_name):
                 recursion_node = probability_node_of_timestamp
                 # 先判断当前当前的这个节点是不是用来赋值，进入while循环去判断。如果不是赋值语句，再去后面找是不是有直接使用的地方。
                 while True:
-                    # 1.找到了赋值的地方，这里代表的是完全创建新的变量，如uint a = 10;
-                    # 2.这里是代表已经创建好的变量，新接受内容的情况,比如a = 10,a是一开始就创建好的。
-                    if recursion_node.node_type == "VariableDeclarationStatement" or recursion_node.node_type == "Assignment":
-                        # 赋值的对象就是当前节点的数据流下一个节点
-                        variable_node = probability_node_of_timestamp.data_childes[0]
-                        # 然后通过判断这个赋值对象是否在后面被用过，就能判断出来有没有时间戳漏洞。
-                        use_list = get_data_flow_downstream(variable_node)
-                        # 根本不需要记录下标，因为能在后面出现的，肯定是已经在当前行下面了。
-                        for use_node in use_list:
-                            # 如果发现其中的某一个节点不是在require或者assert中，那就说明有可能存在问题。
-                            if use_not_require_or_assert(use_node):
-                                return True
+                    if recursion_node.node_type == "VariableDeclarationStatement":
+                        declarations_id = recursion_node.attribute['declarations'][0][0]['id']
+                        declarations_node_type = recursion_node.attribute['declarations'][0][0]['nodeType']
+                        for declarations_node in recursion_node.childes:
+                            if declarations_node.node_id == declarations_id and declarations_node.node_type == declarations_node_type:
+                                # 赋值的对象就是当前节点的数据流下一个节点
+                                variable_node = declarations_node
+                                # 然后通过判断这个赋值对象是否在后面被用过，就能判断出来有没有时间戳漏洞。
+                                use_list = get_data_flow_downstream(variable_node)
+                                # 根本不需要记录下标，因为能在后面出现的，肯定是已经在当前行下面了。
+                                for use_node in use_list:
+                                    # 如果发现其中的某一个节点不是在require或者assert中，那就说明有可能存在问题。
+                                    if use_not_require_or_assert(use_node):
+                                        return True
+                    if recursion_node.node_type == "Assignment":
+                        left_hand_side_id = recursion_node.attribute['leftHandSide'][0]['id']
+                        left_hand_side_node_type = recursion_node.attribute['leftHandSide'][0]['nodeType']
+                        for left_hand_side_node in recursion_node.childes:
+                            if left_hand_side_node.node_id == left_hand_side_id and left_hand_side_node.node_type == left_hand_side_node_type:
+                                # 赋值的对象就是该值，也就是赋值左边的部分。
+                                variable_node = left_hand_side_node
+                                # 然后通过判断这个赋值对象是否在后面被用过，就能判断出来有没有时间戳漏洞。
+                                use_list = get_data_flow_downstream(variable_node)
+                                # 根本不需要记录下标，因为能在后面出现的，肯定是已经在当前行下面了。
+                                for use_node in use_list:
+                                    # 如果发现其中的某一个节点不是在require或者assert中，那就说明有可能存在问题。
+                                    if use_not_require_or_assert(use_node):
+                                        return True
                     recursion_node = recursion_node.parent
                     # 如果一直到结束都发现是None，那就可以排除赋值语句的情况,除了赋值语句的情况，还有直接使用的情况需要去继续判断。
                     if recursion_node is None:
