@@ -57,6 +57,10 @@ def traverse_function_definition_node(function_definition_node, pre_variable_nod
             return_data_flow(pop_node, method_params, method_returns, stack, pre_variable_node)
         elif pop_node['node'].node_type == "FunctionCall":
             function_call_data_flow(pop_node, method_params, method_returns, stack, pre_variable_node)
+        elif pop_node['node'].node_type == "BinaryOperation":
+            get_return(pop_node["node"])
+            for child in pop_node['node'].control_childes:
+                put_stack(child, method_params, method_returns, stack)
         else:
             for child in pop_node['node'].control_childes:
                 put_stack(child, method_params, method_returns, stack)
