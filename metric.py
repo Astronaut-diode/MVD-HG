@@ -48,6 +48,14 @@ def _label_quantity(label, predict):
     return np.stack([tp, fp, tn, fn], axis=0).astype("float")
 
 
+def cal_base_metric(label, predict, beta=1):
+    quantity = _label_quantity(label, predict)
+    print(f"\nAccuracy:{(quantity[0] + quantity[2]) / (quantity[0] + quantity[1] + quantity[2] + quantity[3])}")
+    print(f"Precision:{quantity[0] / (quantity[0] + quantity[1])}")
+    print(f"Recall:{quantity[0] / (quantity[0] + quantity[3])}")
+    print(f"F-Score:{(1 + beta ** 2) * quantity[0] / ((1 + beta ** 2) * quantity[0] + beta ** 2 * quantity[3] + quantity[1] + epsilon)}")
+
+
 def label_accuracy_macro(label, predict):
     quantity = _label_quantity(label, predict)
     tp_tn = np.add(quantity[0], quantity[2])
@@ -123,18 +131,17 @@ def metric(predict, label):
     lab_recall_mi = label_recall_micro(label, predict)
     lab_f1_ma = label_f1_macro(label, predict)
     lab_f1_mi = label_f1_micro(label, predict)
-
-    print("subset acc:        %.4f" % subset_acc)
-    print("example acc:       %.4f" % ex_acc)
-    print("example precision: %.4f" % ex_precision)
-    print("example recall:    %.4f" % ex_recall)
-    print("example f1:        %.4f" % ex_f1)
-    #
-    # print("label acc macro:   %.4f" % lab_acc_ma)
-    # print("label acc micro:   %.4f" % lab_acc_mi)
-    # print("label prec macro:  %.4f" % lab_precision_ma)
-    # print("label prec micro:  %.4f" % lab_precision_mi)
-    # print("label rec macro:   %.4f" % lab_recall_ma)
-    # print("label rec micro:   %.4f" % lab_recall_mi)
-    # print("label f1 macro:    %.4f" % lab_f1_ma)
-    # print("label f1 micro:    %.4f" % lab_f1_mi)
+    cal_base_metric(label, predict)
+    # print("subset acc:        %.4f" % subset_acc)
+    # print("example acc:       %.4f" % ex_acc)
+    # print("example precision: %.4f" % ex_precision)
+    # print("example recall:    %.4f" % ex_recall)
+    # print("example f1:        %.4f" % ex_f1)
+    print("label acc macro:   %.4f" % lab_acc_ma)
+    print("label acc micro:   %.4f" % lab_acc_mi)
+    print("label prec macro:  %.4f" % lab_precision_ma)
+    print("label prec micro:  %.4f" % lab_precision_mi)
+    print("label rec macro:   %.4f" % lab_recall_ma)
+    print("label rec micro:   %.4f" % lab_recall_mi)
+    print("label f1 macro:    %.4f" % lab_f1_ma)
+    print("label f1 micro:    %.4f" % lab_f1_mi)
