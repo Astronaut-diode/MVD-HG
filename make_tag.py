@@ -120,7 +120,7 @@ def get_child_list_have_return_or_transfer(node):
                         is_method = False
                         break
                 # 如果不是参数节点，而且是其中的某一种函数，说明是符合存在漏洞的模式的。
-                if is_method and child.attribute["src_code"] in ["transfer", "send", "call.value"]:
+                if is_method and "src_code" in child.attribute.keys() and child.attribute["src_code"] in ["transfer", "send", "call.value"]:
                     return True
         # 将当前的节点记录为已经访问过，这样子下次就不会再次进入。
         node_list.append(pop_node)
