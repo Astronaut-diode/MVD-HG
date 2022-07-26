@@ -9,20 +9,23 @@ def make_tag(project_node_list, project_node_dict, file_name):
     # 如果是generate_all，可以不走这个函数了，因为一开始create_corpus_txt的时候已经走过了。
     if config.create_corpus_mode == "generate_all":
         return
-    if reentry_attack(project_node_list, project_node_dict, file_name):
+    if reentry_attack(project_node_list):
         reentry_flag = 1
     else:
         reentry_flag = 0
-    if timestamp_attack(project_node_list, project_node_dict, file_name):
+    if timestamp_attack(project_node_dict):
         timestamp_flag = 1
     else:
         timestamp_flag = 0
-    if dangerous_delegate_call_attack(project_node_list, project_node_dict):
+    if arithmetic_attack(project_node_dict):
+        arithmetic_flag = 1
+    else:
+        arithmetic_flag = 0
+    if dangerous_delegate_call_attack(project_node_dict):
         delegate_call_flag = 1
     else:
         delegate_call_flag = 0
-
-    label = [reentry_flag, timestamp_flag, delegate_call_flag]
+    label = [reentry_flag, timestamp_flag, arithmetic_flag, delegate_call_flag]
     update_label_file(file_name, label)
     print(f"{file_name}标签已经打上了。")
 
@@ -30,7 +33,7 @@ def make_tag(project_node_list, project_node_dict, file_name):
 # 通过目标节点的节点类型以及子节点,但是还需要判断属于哪种子节点，来找到目标节点,根据这两个条件，找到的节点，依然可能是多个，需要继续筛选，所以用list。
 # 注意，如果用的是数据流，那节点类型就不用了，直接用默认的参数。
 # type_flag:1代表是抽象语法树子节点，2代表是控制流子节点，3代表是数据流子节点
-def get_node_by_child_and_node_type_of_target(project_node_list, project_node_dict, child, node_type, type_flag):
+def get_node_by_child_and_node_type_of_target(project_node_dict, child, node_type, type_flag):
     res = []
     if type_flag == 1:
         # 从字典中取出对应于这种属性的所有节点进行遍历
@@ -170,12 +173,12 @@ def update_label_file(file_name, label):
 
 
 # 判断当前的文件中是否含有重入攻击，如果有那么返回True，否则返回False。
-def reentry_attack(project_node_list, project_node_dict, file_name):
+def reentry_attack(project_node_dict):
     # 一个文件中只会含有一个WithdrawFunction用来代表外部合约中的Withdraw函数，如果有，说明当前的合约中含有call.value的部分，否则不会含有。
     if "WithdrawFunction" in project_node_dict.keys():
         withdraw_function_node = project_node_dict["WithdrawFunction"][0]
         # 找到对应的call.value语句，因为是他导致了withdraw节点。
-        function_call_node = get_node_by_child_and_node_type_of_target(project_node_list, project_node_dict, withdraw_function_node, "FunctionCall", 2)
+        function_call_node = get_node_by_child_and_node_type_of_target(project_node_dict, withdraw_function_node, "FunctionCall", 2)
         # 这里取出来的结果是一个list，代表了整个文件中所有用到了call.value的地方，所以每一个call.value节点都需要遍历，如果其中含有重入攻击，可以直接返回True
         for tmp_node in function_call_node:
             # 去获取他使用的参数的详细信息
@@ -213,7 +216,7 @@ def reentry_attack(project_node_list, project_node_dict, file_name):
                     now_node = argument_node
                     while True:
                         # 根据当前节点，去寻找数据流的父节点是谁。
-                        res = get_node_by_child_and_node_type_of_target(project_node_list, project_node_dict, now_node, None, 3)
+                        res = get_node_by_child_and_node_type_of_target(project_node_dict, now_node, None, 3)
                         # 如果找得到内容,就继续循环，否则直接退出，因为已经找到最前面了。
                         if res:
                             # 如果当前是IndexAccess，一般来说找到的结果会有两个，要清楚谁是主体。
@@ -284,7 +287,7 @@ def reentry_attack(project_node_list, project_node_dict, file_name):
     return False
 
 
-def timestamp_attack(project_node_list, project_node_dict, file_name):
+def timestamp_attack(project_node_dict):
     if "MemberAccess" in project_node_dict.keys():
         # 在所有的节点中先查询，是否存在timestamp的调用。
         for probability_node_of_timestamp in project_node_dict['MemberAccess']:
@@ -452,20 +455,23 @@ def in_right_hand_side(binary_operate_node, target_node):
     for child in binary_operate_node.childes:
         if child.node_id == right_hand_side_node_id and child.node_type == right_hand_side_node_type:
             right_hand_side_node = child
-    stack = LifoQueue(maxsize=0)
-    stack.put(right_hand_side_node)
-    while not stack.empty():
-        pop_node = stack.get()
-        if pop_node == target_node:
-            return True
-        for child in pop_node.childes:
-            stack.put(child)
+            stack = LifoQueue(maxsize=0)
+            stack.put(right_hand_side_node)
+            while not stack.empty():
+                pop_node = stack.get()
+                if pop_node == target_node:
+                    return True
+                for tmp_child in pop_node.childes:
+                    stack.put(tmp_child)
     return False
 
 
-def dangerous_delegate_call_attack(project_node_list, project_node_dict):
+def dangerous_delegate_call_attack(project_node_dict):
     if "FunctionCall" in project_node_dict.keys():
         for function_call_node in project_node_dict["FunctionCall"]:
+            # 如果这个键都不存在，直接跳过。
+            if "memberName" not in function_call_node.attribute["expression"][0].keys():
+                continue
             # 获取调用的函数的名字
             member_name = function_call_node.attribute["expression"][0]["memberName"]
             # 如果是delegatecall，满足了第一个条件。
@@ -482,7 +488,7 @@ def dangerous_delegate_call_attack(project_node_list, project_node_dict):
                             pop_node = stack.get()
                             if pop_node in origin_list:
                                 continue
-                            res = get_node_by_child_and_node_type_of_target(project_node_list, project_node_dict, pop_node, None, 3)
+                            res = get_node_by_child_and_node_type_of_target(project_node_dict, pop_node, None, 3)
                             for origin_node in res:
                                 stack.put(origin_node)
                                 origin_list.append(origin_node)
@@ -491,3 +497,187 @@ def dangerous_delegate_call_attack(project_node_list, project_node_dict):
                                 return True
 
 
+def arithmetic_attack(project_node_dict):
+    # 仅仅出现加减乘除
+    if "BinaryOperation" in project_node_dict.keys():
+        for binary_operation_node in project_node_dict["BinaryOperation"]:
+            # 取出操作符号
+            operator = binary_operation_node.attribute["operator"][0]
+            if operator == "+":
+                # 先取出加号的两端的内容,保存在res[0]和res[1]中，是数组形式，方便含有多个元素的时候进行操作。
+                operation_obj_list = get_the_action_list_by_operation_node(binary_operation_node)
+                # 如果两个操作列表中，有一个是含有变量的，那就说明是可能含有溢出漏洞的，所以需要进一步处理。
+                if has_variable(operation_obj_list[0]) or has_variable(operation_obj_list[1]):
+                    # 根据操作符获取赋值的对象以及控制流的节点
+                    assignment_node, control_node = gets_the_assignment_object_and_the_control_flow_node(binary_operation_node)
+                    # 如果上述的两个节点都不是None，那就说明可以直接判定为赋值操作。
+                    if assignment_node is not None and control_node is not None:
+                        # 注意，这里的时候是control_node当作控制流节点，不是赋值操作的话会将BinaryOperationNode当作控制流节点。
+                        if the_value_has_been_updated_without_an_assertion(operation_obj_list, assignment_node, control_node):
+                            return True
+                    # 不是赋值操作。
+                    else:
+                        pass
+            elif operator == "-":
+                pass
+            elif operator == "*":
+                pass
+    if "Assignment" in project_node_dict.keys():
+        for assignment_node in project_node_dict["Assignment"]:
+            operator = assignment_node.attribute["operator"][0]
+            print(operator)
+            pass
+
+
+# 获取操作符号的所有参与计算的子节点，包含Identifier，Literal，MemberAccess
+def get_the_action_list_by_operation_node(binary_operation_node):
+    # 先获取左边的子节点。
+    left_expression_node_id = binary_operation_node.attribute["leftExpression"][0]["id"]
+    left_expression_node_type = binary_operation_node.attribute["leftExpression"][0]["nodeType"]
+    left_expression_node_list = []
+    right_expression_node_id = binary_operation_node.attribute["rightExpression"][0]["id"]
+    right_expression_node_type = binary_operation_node.attribute["rightExpression"][0]["nodeType"]
+    right_expression_node_list = []
+    for child in binary_operation_node.childes:
+        # 如果找到了左边的节点，遍历整个树，获取其中所有的变量。
+        if child.node_id == left_expression_node_id and child.node_type == left_expression_node_type:
+            stack = LifoQueue()
+            stack.put(child)
+            while not stack.empty():
+                pop_node = stack.get()
+                # 如果是这几种类型的节点，记录下来。
+                if pop_node.node_type == "Identifier" or pop_node.node_type == "Literal" or pop_node.node_type == "MemberAccess":
+                    left_expression_node_list.append(pop_node)
+                # 将这里的子节点压入栈中继续遍历。
+                for child_of_pop_node in pop_node.childes:
+                    stack.put(child_of_pop_node)
+        if child.node_id == right_expression_node_id and child.node_type == right_expression_node_type:
+            stack = LifoQueue()
+            stack.put(child)
+            while not stack.empty():
+                pop_node = stack.get()
+                # 如果是这几种类型的节点，记录下来。
+                if pop_node.node_type == "Identifier" or pop_node.node_type == "Literal" or pop_node.node_type == "MemberAccess":
+                    right_expression_node_list.append(pop_node)
+                # 将这里的子节点压入栈中继续遍历。
+                for child_of_pop_node in pop_node.childes:
+                    stack.put(child_of_pop_node)
+    return [left_expression_node_list, right_expression_node_list]
+
+
+# 判断一个res中是否含有变量，如果含有变量，返回True。
+def has_variable(variable_list):
+    for variable in variable_list:
+        if variable.node_type != "Literal":
+            return True
+    return False
+
+
+# 判断是不是用于赋值语句,如果是赋值语句，返回用来赋值的对象的节点和上级的控制流子节点。
+def gets_the_assignment_object_and_the_control_flow_node(binary_operation_node):
+    parent = binary_operation_node.parent
+    if parent.node_type == "VariableDeclarationStatement":
+        # 循环遍历其中的每一个子节点
+        for child in parent.childes:
+            # 如果子节点不是二元操作符，那就是我们的目标，也就是赋值点。
+            if child is not binary_operation_node:
+                return child, parent
+    elif parent.node_type == "Assignment":
+        for child in parent.childes:
+            if child is not binary_operation_node:
+                return child, parent
+    else:
+        return None, None
+
+
+# 根据目标的控制流节点，去判断在每一条控制流的路上，是否都存在断言语句，如果是那就返回False，一旦发现不存在断言，就返回True。
+def the_value_has_been_updated_without_an_assertion(res, assignment_node, control_node):
+    # 开始遍历控制流,这里使用遍历是因为为了避免有分岔路。
+    for start_control_path in control_node.control_childes:
+        # 每一条控制流路线上的标记都得刷新,代表在断言之前是否被更新过。
+        the_left_argument_updates_the_flag = False
+        the_right_argument_updates_the_flag = False
+        the_target_updates_the_flag = False
+        # 判断左边的参数是不是有未出现的，一开始是False，如果查到了有，那就是True。
+        the_left_parameter_has_unused_content = False
+        the_right_parameter_has_unused_content = False
+        the_target_has_unused_content = False
+        # 一条控制流路线上的是否有符合条件的require已经被找到了。
+        pass_flag = False
+        # 对这条路进行深度遍历，找出其中不合理的位置。
+        stack = LifoQueue(maxsize=0)
+        stack.put(start_control_path)
+        while not stack.empty():
+            pop_node = stack.get()
+            # 判断当前节点的子节点中是否含有Assignment节点，也就是判断这个节点是不是用于赋值操作。
+            for child in pop_node.childes:
+                if child.node_type == "Assignment":
+                    left_hand_side_name = child.attribute['leftHandSide'][0]["name"]
+                    # 如果左边还没有被使用过。
+                    if not the_left_argument_updates_the_flag:
+                        for var in res[0]:
+                            if "name" in var.attribute.keys():
+                                var_name = var.attribute["name"][0]
+                                # 如果两个名字相同，说明被重新赋值了，而此时还没有进行断言操作所以是有问题的。
+                                if left_hand_side_name == var_name:
+                                    the_left_argument_updates_the_flag = True
+                    # 如果右边还没有被使用过。
+                    if not the_right_argument_updates_the_flag:
+                        for var in res[1]:
+                            if "name" in var.attribute.keys():
+                                var_name = var.attribute["name"][0]
+                                # 如果两个名字相同，说明被重新赋值了，而此时还没有进行断言操作所以是有问题的。
+                                if left_hand_side_name == var_name:
+                                    the_right_argument_updates_the_flag = True
+                    # 如果赋值目标还没有被使用过
+                    if not the_target_updates_the_flag:
+                        var_name = assignment_node.attribute["name"][0]
+                        if var_name == left_hand_side_name:
+                            the_target_updates_the_flag = True
+            # 说明左右的内容都已经被重新赋值了，或者是目标被赋值了,肯定是有问题的。
+            if (the_left_argument_updates_the_flag and the_right_argument_updates_the_flag) or the_target_updates_the_flag:
+                return True
+            # 如果是require或者assert类型,那就说明是断言语句了。
+            if pop_node.node_type == "require" or pop_node.node_type == "assert":
+                # 如果左边确实没有重新赋值过。
+                if the_left_argument_updates_the_flag is False:
+                    # 1.判断左边是不是都出现了,先判断所有的参数是不是都在。
+                    expression = pop_node.attribute['src_code'][0]
+                    for child_of_res in res[0]:
+                        # 如果是有名字的
+                        if "name" in child_of_res.attribute.keys():
+                            # 如果这个变量没有出现过，那就能跳出循环了，同时修改变量。
+                            if not child_of_res.attribute["name"][0] in expression:
+                                the_left_parameter_has_unused_content = True
+                                break
+                # 如果左边确实没有重新赋值过。
+                if the_right_argument_updates_the_flag is False:
+                    expression = pop_node.attribute['src_code'][0]
+                    for child_of_res in res[1]:
+                        # 如果是有名字的
+                        if "name" in child_of_res.attribute.keys():
+                            # 如果这个变量没有出现过，那就能跳出循环了，同时修改变量。
+                            if not child_of_res.attribute["name"][0] in expression:
+                                the_right_parameter_has_unused_content = True
+                                break
+                # 如果目标确实没有重新赋值过
+                if the_target_updates_the_flag is False:
+                    expression = pop_node.attribute['src_code'][0]
+                    if "name" in assignment_node.attribute.keys():
+                        if assignment_node.attribute["name"][0] in expression:
+                            the_target_has_unused_content = True
+                # 如果左边没有被更新过，同时也没有未出现的单词，才能进行target的判断。右边同理。
+                if (the_left_argument_updates_the_flag is False and the_left_parameter_has_unused_content is False) or (the_left_argument_updates_the_flag is False and the_right_parameter_has_unused_content is False):
+                    # 如果assignment的内容也出现在了expression中，说明这种情况是合理的，是符合条件的，所以暂时略过，而不返回值，进行下一个控制流的循环。
+                    if the_target_updates_the_flag is False and the_target_has_unused_content is False:
+                        pass_flag = True
+                    else:
+                        return True
+                else:
+                    return True
+            # 如果还没有找到目标断言，那就继续往后找。
+            if pass_flag is False:
+                for control_child in pop_node.control_childes:
+                    stack.put(control_child)
+    # 如果在上面的控制流路线中都已经找到了对应的require，那就直接返回False。
+    return False
