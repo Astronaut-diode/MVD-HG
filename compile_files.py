@@ -114,13 +114,13 @@ def get_versions(pragma):
     # 记录特殊符号一共出现了几次，也就是有几种判定条件。
     flag = 0
     # 先查询是否存在^
-    up_re = re.findall("\\^[\\w\\.]*", pragma)
+    up_re = re.findall(r"\^[\w\\.]*", pragma)
     # 如果^确实存在，对其进行操作，获取其版本号，然后修改上面的hash表。
     if len(up_re) != 0:
         # 增加判定条件的数量。
         flag += 1
         # 获取之前查询出来的版本号。
-        floor_version = re.findall("[\\w\\.]+", up_re[0])[0]
+        floor_version = re.findall(r"[\w\\.]+", up_re[0])[0]
         # 有的版本号会写成0.5.01,0.5.00这种，所以需要特殊处理
         tmp = floor_version.split(".")
         res = f"{tmp[0]}.{tmp[1]}."
@@ -136,10 +136,10 @@ def get_versions(pragma):
         for i in config.versions[floor_index:]:
             if re.search(pattern, i)[0] == re.search(pattern, floor_version)[0]:
                 version_hash[i] += 1
-    big_re = re.findall(">[\\w\\.=]*", pragma)
+    big_re = re.findall(r">[\w\\.=]*", pragma)
     if len(big_re) != 0:
         flag += 1
-        floor_version = re.findall("[\\w\\.]+", big_re[0])[0]
+        floor_version = re.findall(r"[\w\\.]+", big_re[0])[0]
         floor_index = config.versions.index(floor_version)
         # 匹配大版本的模式串
         pattern = "..."
@@ -154,10 +154,10 @@ def get_versions(pragma):
             for i in config.versions[floor_index + 1:]:
                 if re.search(pattern, i)[0] == re.search(pattern, floor_version)[0]:
                     version_hash[i] += 1
-    small_re = re.findall("<[\\w\\.=]*", pragma)
+    small_re = re.findall(r"<[\w\\.=]*", pragma)
     if len(small_re) != 0:
         flag += 1
-        floor_version = re.findall("[\\w\\.]+", small_re[0])[0]
+        floor_version = re.findall(r"[\w\\.]+", small_re[0])[0]
         floor_index = config.versions.index(floor_version)
         # 如果含有等号，那等号的版本需要带上。
         if small_re[0].__contains__("="):

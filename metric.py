@@ -118,11 +118,11 @@ def metric(predict, label):
     label = label.data.cpu().numpy()
     predict[predict >= config.valid_threshold] = 1
     predict[predict < config.valid_threshold] = 0
-    subset_acc = example_subset_accuracy(label, predict)
-    ex_acc = example_accuracy(label, predict)
-    ex_precision = example_precision(label, predict)
-    ex_recall = example_recall(label, predict)
-    ex_f1 = example_f1(label, predict)
+    # subset_acc = example_subset_accuracy(label, predict)
+    # ex_acc = example_accuracy(label, predict)
+    # ex_precision = example_precision(label, predict)
+    # ex_recall = example_recall(label, predict)
+    # ex_f1 = example_f1(label, predict)
 
     lab_acc_ma = label_accuracy_macro(label, predict)
     lab_acc_mi = label_accuracy_micro(label, predict)

@@ -2,7 +2,7 @@ from queue import LifoQueue
 
 
 # 给出所有的节点列表，为图上增加数据流信息
-def append_data_flow_information(project_node_list, project_node_dict, file_name):
+def append_data_flow_information(project_node_dict, file_name):
     # 1.首先找出构造函数以及预定义的内容，是为了和下面函数中的内容进行联动,注意是先执行预定义，再执行构造函数。
     pre_variable_node_list = []
     constructor_node = None

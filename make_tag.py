@@ -5,7 +5,7 @@ import os
 
 
 # 为当前的文件打上是否含有漏洞的标签。
-def make_tag(project_node_list, project_node_dict, file_name):
+def make_tag(project_node_dict, file_name):
     # 如果是generate_all，可以不走这个函数了，因为一开始create_corpus_txt的时候已经走过了。
     if config.create_corpus_mode == "generate_all":
         return
@@ -509,11 +509,11 @@ def arithmetic_attack(project_node_dict):
                 # 如果两个操作列表中，有一个是含有变量的，那就说明是可能含有溢出漏洞的，所以需要进一步处理。
                 if has_variable(operation_obj_list[0]) or has_variable(operation_obj_list[1]):
                     # 根据操作符获取赋值的对象以及控制流的节点
-                    assignment_node, control_node = gets_the_assignment_object_and_the_control_flow_node(binary_operation_node)
+                    assignment_node_list, control_node = gets_the_assignment_object_and_the_control_flow_node(binary_operation_node)
                     # 如果上述的两个节点都不是None，那就说明可以直接判定为赋值操作。
-                    if assignment_node is not None and control_node is not None:
+                    if len(assignment_node_list) != 0 and control_node is not None:
                         # 注意，这里的时候是control_node当作控制流节点，不是赋值操作的话会将BinaryOperationNode当作控制流节点。
-                        if the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assignment_node, control_node):
+                        if the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assignment_node_list, control_node):
                             return True
                     # 不是赋值操作。
                     else:
@@ -525,9 +525,9 @@ def arithmetic_attack(project_node_dict):
                 # 如果两个操作列表中，有一个是含有变量的，那就说明是可能含有溢出漏洞的，所以需要进一步处理。
                 if has_variable(operation_obj_list[0]) or has_variable(operation_obj_list[1]):
                     # 根据操作符获取赋值的对象以及控制流的节点
-                    assignment_node, control_node = gets_the_assignment_object_and_the_control_flow_node(binary_operation_node)
+                    assignment_node_list, control_node = gets_the_assignment_object_and_the_control_flow_node(binary_operation_node)
                     # 如果上述的两个节点都不是None，那就说明可以直接判定为赋值操作。
-                    if assignment_node is not None and control_node is not None:
+                    if len(assignment_node_list) != 0 and control_node is not None:
                         # 减法的判断方式。
                         if the_value_has_been_updated_without_an_assertion_sub(operation_obj_list, control_node):
                             return True
@@ -536,7 +536,21 @@ def arithmetic_attack(project_node_dict):
                         print("不是赋值操作的，先简单的略过。")
                         pass
             elif operator == "*":
-                pass
+                # 先取出乘号的两端的内容,保存在res[0]和res[1]中，是数组形式，方便含有多个元素的时候进行操作。
+                operation_obj_list = get_the_action_list_by_operation_node(binary_operation_node)
+                # 如果两个操作列表中，有一个是含有变量的，那就说明是可能含有溢出漏洞的，所以需要进一步处理。
+                if has_variable(operation_obj_list[0]) or has_variable(operation_obj_list[1]):
+                    # 根据操作符获取赋值的对象以及控制流的节点
+                    assignment_node_list, control_node = gets_the_assignment_object_and_the_control_flow_node(binary_operation_node)
+                    # 如果上述的两个节点都不是None，那就说明可以直接判定为赋值操作。
+                    if len(assignment_node_list) > 0 and control_node is not None:
+                        # 乘法的判断方式。
+                        if the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assignment_node_list, control_node):
+                            return True
+                    # 不是赋值操作。
+                    else:
+                        print("不是赋值操作的，先简单的略过。")
+                        pass
     if "Assignment" in project_node_dict.keys():
         for assignment_node in project_node_dict["Assignment"]:
             operator = assignment_node.attribute["operator"][0]
@@ -596,17 +610,17 @@ def gets_the_assignment_object_and_the_control_flow_node(binary_operation_node):
         for child in parent.childes:
             # 如果子节点不是二元操作符，那就是我们的目标，也就是赋值点。
             if child is not binary_operation_node:
-                return child, parent
+                return [child], parent
     elif parent.node_type == "Assignment":
         for child in parent.childes:
             if child is not binary_operation_node:
-                return child, parent
+                return [child], parent
     else:
         return None, None
 
 
 # 根据目标的控制流节点，去判断在每一条控制流的路上，是否都存在断言语句，如果是那就返回False，一旦发现不存在断言，就返回True。
-def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assignment_node, control_node):
+def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assignment_node_list, control_node):
     # 开始遍历控制流,这里使用遍历是因为为了避免有分岔路。
     for start_control_path in control_node.control_childes:
         # 每一条控制流路线上的标记都得刷新,代表在断言之前是否被更新过。
@@ -628,8 +642,9 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
             for child in pop_node.childes:
                 if child.node_type == "Assignment":
                     left_hand_side_name = child.attribute['leftHandSide'][0]["name"]
-                    # 如果左边还没有被使用过。
-                    if not the_left_argument_updates_the_flag:
+                    # 如果左边还没有被更新过。
+                    if the_left_argument_updates_the_flag is False:
+                        # 遍历操作符下所有的参数的名字，看看是否和left_hand_side_name重名，如果重名了，就代表是更新了。
                         for var in operation_obj_list[0]:
                             if "name" in var.attribute.keys():
                                 var_name = var.attribute["name"][0]
@@ -646,9 +661,11 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
                                     the_right_argument_updates_the_flag = True
                     # 如果赋值目标还没有被使用过
                     if not the_target_updates_the_flag:
-                        var_name = assignment_node.attribute["name"][0]
-                        if var_name == left_hand_side_name:
-                            the_target_updates_the_flag = True
+                        for var in assignment_node_list:
+                            if "name" in var.attribute.keys():
+                                var_name = var.attribute["name"][0]
+                                if var_name == left_hand_side_name:
+                                    the_target_updates_the_flag = True
             # 说明左右的内容都已经被重新赋值了，或者是目标被赋值了,肯定是有问题的。
             if (the_left_argument_updates_the_flag and the_right_argument_updates_the_flag) or the_target_updates_the_flag:
                 return True
@@ -672,15 +689,18 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
                         # 如果是有名字的
                         if "name" in child_of_res.attribute.keys():
                             # 如果这个变量没有出现过，那就能跳出循环了，同时修改变量。
-                            if not child_of_res.attribute["name"][0] in expression:
+                            if child_of_res.attribute["name"][0] not in expression:
                                 the_right_parameter_has_unused_content = True
                                 break
                 # 如果目标确实没有重新赋值过
                 if the_target_updates_the_flag is False:
                     expression = pop_node.attribute['src_code'][0]
-                    if "name" in assignment_node.attribute.keys():
-                        if assignment_node.attribute["name"][0] in expression:
-                            the_target_has_unused_content = True
+                    for child_of_assignment_node_list in assignment_node_list:
+                        if "name" in child_of_assignment_node_list.attribute.keys():
+                            # 如果目标名字确实没有出现过。
+                            if child_of_assignment_node_list.attribute["name"][0] not in expression:
+                                the_target_has_unused_content = True
+                                break
                 # 如果左边没有被更新过，同时也没有未出现的单词，才能进行target的判断。右边同理。
                 if (the_left_argument_updates_the_flag is False and the_left_parameter_has_unused_content is False) or (the_left_argument_updates_the_flag is False and the_right_parameter_has_unused_content is False):
                     # 如果assignment的内容也出现在了expression中，说明这种情况是合理的，是符合条件的，所以暂时略过，而不返回值，进行下一个控制流的循环。
@@ -708,14 +728,14 @@ def the_value_has_been_updated_without_an_assertion_sub(operation_obj_list, cont
     now_paths = []
     get_all_control_flow_routes_based_on_function_definition_nodes(control_node, function_definition_node, routes, now_paths)
     for route in routes:
+        # 每一条控制流路线上的标记都得刷新,代表在断言之前是否被更新过。
+        the_left_argument_updates_the_flag = False
+        the_right_argument_updates_the_flag = False
+        # 判断左边的参数是不是有未出现的，一开始是False，如果查到了有，那就是True。
+        the_left_parameter_has_unused_content = False
+        the_right_parameter_has_unused_content = False
         # 沿着逆着的方向进行遍历。
         for pop_node in route[::-1]:
-            # 每一条控制流路线上的标记都得刷新,代表在断言之前是否被更新过。
-            the_left_argument_updates_the_flag = False
-            the_right_argument_updates_the_flag = False
-            # 判断左边的参数是不是有未出现的，一开始是False，如果查到了有，那就是True。
-            the_left_parameter_has_unused_content = False
-            the_right_parameter_has_unused_content = False
             # 遍历当前节点子节点，以判断是不是赋值节点。
             for child in pop_node.childes:
                 if child.node_type == "Assignment":
@@ -795,3 +815,179 @@ def get_all_control_flow_routes_based_on_function_definition_nodes(control_node,
             get_all_control_flow_routes_based_on_function_definition_nodes(control_node, control_child, routes, now_paths)
             # 回退一步，弹出新节点。
             now_paths.pop(-1)
+
+
+# 根据目标的控制流节点，获取倒退的控制流路线，判断路线上是否存在断言语句，这里有一个简单的地方，就是只能有一条路线。
+def the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assignment_node_list, control_node):
+    tmp_node = control_node
+    while tmp_node.node_type != "FunctionDefinition":
+        tmp_node = tmp_node.parent
+    function_definition_node = tmp_node
+    routes = []
+    now_paths = []
+    get_all_control_flow_routes_based_on_function_definition_nodes(control_node, function_definition_node, routes, now_paths)
+    for route in routes:
+        # 每一条控制流路线上的标记都得刷新,代表在断言之前是否被更新过。
+        the_left_argument_updates_the_flag = False
+        the_right_argument_updates_the_flag = False
+        # 判断左边的参数是不是有未出现的，一开始是False，如果查到了有，那就是True。
+        the_left_parameter_has_unused_content = False
+        the_right_parameter_has_unused_content = False
+        already_has_an_assertion_that_equals_zero = False
+        # 沿着逆着的方向进行遍历。
+        for pop_node in route[::-1]:
+            # 遍历当前节点子节点，以判断是不是赋值节点。
+            for child in pop_node.childes:
+                if child.node_type == "Assignment":
+                    left_hand_side_name = child.attribute['leftHandSide'][0]["name"]
+                    # 如果左边还没有被使用过。
+                    if not the_left_argument_updates_the_flag:
+                        for var in operation_obj_list[0]:
+                            if "name" in var.attribute.keys():
+                                var_name = var.attribute["name"][0]
+                                # 如果两个名字相同，说明被重新赋值了，而此时还没有进行断言操作所以是有问题的。
+                                if left_hand_side_name == var_name:
+                                    the_left_argument_updates_the_flag = True
+                    # 如果右边还没有被使用过。
+                    if not the_right_argument_updates_the_flag:
+                        for var in operation_obj_list[1]:
+                            if "name" in var.attribute.keys():
+                                var_name = var.attribute["name"][0]
+                                # 如果两个名字相同，说明被重新赋值了，而此时还没有进行断言操作所以是有问题的。
+                                if left_hand_side_name == var_name:
+                                    the_right_argument_updates_the_flag = True
+            # 只有左右都被赋值过才有异常
+            if the_left_argument_updates_the_flag and the_right_argument_updates_the_flag:
+                return True
+            # 如果是require或者assert类型,那就说明是断言语句了。
+            if pop_node.node_type == "require" or pop_node.node_type == "assert":
+                # 如果左边确实没有重新赋值过。
+                if the_left_argument_updates_the_flag is False:
+                    # 1.判断左边是不是都出现了,先判断所有的参数是不是都在。
+                    expression = pop_node.attribute['src_code'][0]
+                    for child_of_res in operation_obj_list[0]:
+                        # 如果是有名字的
+                        if "name" in child_of_res.attribute.keys():
+                            # 如果这个变量没有出现过，那就能跳出循环了，同时修改变量。
+                            if not child_of_res.attribute["name"][0] in expression:
+                                the_left_parameter_has_unused_content = True
+                                break
+                # 如果右边确实没有重新赋值过。
+                if the_right_argument_updates_the_flag is False:
+                    expression = pop_node.attribute['src_code'][0]
+                    for child_of_res in operation_obj_list[1]:
+                        # 如果是有名字的
+                        if "name" in child_of_res.attribute.keys():
+                            # 如果这个变量没有出现过，那就能跳出循环了，同时修改变量。
+                            if not child_of_res.attribute["name"][0] in expression:
+                                the_right_parameter_has_unused_content = True
+                                break
+                # 如果左边没有被更新过，同时也没有未出现的单词，才能进行target的判断。右边同理。
+                if (the_left_argument_updates_the_flag is False and the_left_parameter_has_unused_content is False) or (the_left_argument_updates_the_flag is False and the_right_parameter_has_unused_content is False):
+                    expression = pop_node.attribute['src_code'][0]
+                    # 如果这一行代码还包含了==0，那就说明是预判断是不是含有0的断言了。
+                    if expression.replace(" ", "").__contains__("==0"):
+                        already_has_an_assertion_that_equals_zero = True
+                        break
+                    else:
+                        return True
+                else:
+                    return True
+        # 接下来开始下游的判断。
+        # 开始遍历控制流,这里使用遍历是因为为了避免有分岔路。
+        for start_control_path in control_node.control_childes:
+            # 每一条控制流路线上的标记都得刷新,代表在断言之前是否被更新过。
+            the_left_argument_updates_the_flag = False
+            the_right_argument_updates_the_flag = False
+            the_target_updates_the_flag = False
+            # 判断左边的参数是不是有未出现的，一开始是False，如果查到了有，那就是True。
+            the_left_parameter_has_unused_content = False
+            the_right_parameter_has_unused_content = False
+            the_target_has_unused_content = False
+            # 一条控制流路线上的是否有符合条件的require已经被找到了。
+            pass_flag = False
+            # 对这条路进行深度遍历，找出其中不合理的位置。
+            stack = LifoQueue(maxsize=0)
+            stack.put(start_control_path)
+            while not stack.empty():
+                pop_node = stack.get()
+                # 判断当前节点的子节点中是否含有Assignment节点，也就是判断这个节点是不是用于赋值操作。
+                for child in pop_node.childes:
+                    if child.node_type == "Assignment":
+                        left_hand_side_name = child.attribute['leftHandSide'][0]["name"]
+                        # 如果左边还没有被使用过。
+                        if not the_left_argument_updates_the_flag:
+                            for var in operation_obj_list[0]:
+                                if "name" in var.attribute.keys():
+                                    var_name = var.attribute["name"][0]
+                                    # 如果两个名字相同，说明被重新赋值了，而此时还没有进行断言操作所以是有问题的。
+                                    if left_hand_side_name == var_name:
+                                        the_left_argument_updates_the_flag = True
+                        # 如果右边还没有被使用过。
+                        if not the_right_argument_updates_the_flag:
+                            for var in operation_obj_list[1]:
+                                if "name" in var.attribute.keys():
+                                    var_name = var.attribute["name"][0]
+                                    # 如果两个名字相同，说明被重新赋值了，而此时还没有进行断言操作所以是有问题的。
+                                    if left_hand_side_name == var_name:
+                                        the_right_argument_updates_the_flag = True
+                        # 如果赋值目标还没有被使用过
+                        if not the_target_updates_the_flag:
+                            for var in assignment_node_list:
+                                if "name" in var.attribute.keys():
+                                    var_name = var.attribute["name"][0]
+                                    if var_name == left_hand_side_name:
+                                        the_target_updates_the_flag = True
+                # 说明左右的内容都已经被重新赋值了，或者是目标被赋值了,肯定是有问题的。
+                if the_left_argument_updates_the_flag or the_right_argument_updates_the_flag or the_target_updates_the_flag:
+                    return True
+                # 如果是require或者assert类型,那就说明是断言语句了。
+                if pop_node.node_type == "require" or pop_node.node_type == "assert":
+                    # 如果左边确实没有重新赋值过。
+                    if the_left_argument_updates_the_flag is False:
+                        # 1.判断左边是不是都出现了,先判断所有的参数是不是都在。
+                        expression = pop_node.attribute['src_code'][0]
+                        for child_of_res in operation_obj_list[0]:
+                            # 如果是有名字的
+                            if "name" in child_of_res.attribute.keys():
+                                # 如果这个变量没有出现过，那就能跳出循环了，同时修改变量。
+                                if not child_of_res.attribute["name"][0] in expression:
+                                    the_left_parameter_has_unused_content = True
+                                    break
+                    # 如果右边确实没有重新赋值过。
+                    if the_right_argument_updates_the_flag is False:
+                        expression = pop_node.attribute['src_code'][0]
+                        for child_of_res in operation_obj_list[1]:
+                            # 如果是有名字的
+                            if "name" in child_of_res.attribute.keys():
+                                # 如果这个变量没有出现过，那就能跳出循环了，同时修改变量。
+                                if not child_of_res.attribute["name"][0] in expression:
+                                    the_right_parameter_has_unused_content = True
+                                    break
+                    # 如果目标确实没有重新赋值过
+                    if the_target_updates_the_flag is False:
+                        expression = pop_node.attribute['src_code'][0]
+                        for child_of_assignment_node_list in assignment_node_list.keys():
+                            if "name" in child_of_assignment_node_list.attribute.keys():
+                                if child_of_assignment_node_list.attribute["name"][0] not in expression:
+                                    the_target_has_unused_content = True
+                                    break
+                    # 只有两种参数还有赋值都没有被更新过，而且都在require中使用了，才有资格进行下一步操作。
+                    if (the_left_argument_updates_the_flag is False and the_left_parameter_has_unused_content is False) and (the_left_argument_updates_the_flag is False and the_right_parameter_has_unused_content is False) and (the_target_updates_the_flag is False and the_target_has_unused_content is False):
+                        # 如果已经有了==0的判断，那么这里就已经充分了，可以直接令pass_flag = True
+                        if already_has_an_assertion_that_equals_zero:
+                            pass_flag = True
+                        else:
+                            # 如果没有==0的判断，那就在当前行进行判断。
+                            expression = pop_node.attribute['src_code'][0]
+                            if expression.replace(" ", "").__contains__("==0"):
+                                pass_flag = True
+                            else:
+                                return True
+                    else:
+                        return True
+                # 如果还没有找到目标断言，那就继续往后找。
+                if pass_flag is False:
+                    for control_child in pop_node.control_childes:
+                        stack.put(control_child)
+    return False
