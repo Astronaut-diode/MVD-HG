@@ -576,11 +576,39 @@ def arithmetic_attack(project_node_dict):
                         control_node = tmp_node
                         if the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assignment_node_list, control_node):
                             return True
-    if "Assignment" in project_node_dict.keys():
+    if "Assignment" in project_node_dict.keys():  # 这里有一个好处，不需要处理没有用在赋值情况下的条件，也就是不会用在函数的参数中，或者判断条件中。
         for assignment_node in project_node_dict["Assignment"]:
             operator = assignment_node.attribute["operator"][0]
-            print(operator)
-            pass
+            if operator == "+=":
+                # 取出一端的内容，保存在数组中,原始的方法返回值一致
+                operation_obj_list, assignment_node_list = get_the_action_list_by_assignment_node(assignment_node)
+                # 如果两个操作列表中，有一个是含有变量的，那就说明是可能含有溢出漏洞的，所以需要进一步处理。
+                if has_variable(operation_obj_list[0]) or has_variable(operation_obj_list[1]):
+                    # 根据操作符获取控制流的节点
+                    control_node = assignment_node.parent
+                    # 因为是使用了Assignment，所以一定是赋值语句。
+                    if the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assignment_node_list, control_node):
+                        return True
+            elif operator == "-=":
+                # 取出一端的内容，保存在数组中,原始的方法返回值一致
+                operation_obj_list, assignment_node_list = get_the_action_list_by_assignment_node(assignment_node)
+                # 如果两个操作列表中，有一个是含有变量的，那就说明是可能含有溢出漏洞的，所以需要进一步处理。
+                if has_variable(operation_obj_list[0]) or has_variable(operation_obj_list[1]):
+                    # 根据操作符获取控制流的节点
+                    control_node = assignment_node.parent
+                    # 因为是使用了Assignment，所以一定是赋值语句。
+                    if the_value_has_been_updated_without_an_assertion_sub(operation_obj_list, control_node):
+                        return True
+            elif operator == "*=":
+                # 取出一端的内容，保存在数组中,原始的方法返回值一致
+                operation_obj_list, assignment_node_list = get_the_action_list_by_assignment_node(assignment_node)
+                # 如果两个操作列表中，有一个是含有变量的，那就说明是可能含有溢出漏洞的，所以需要进一步处理。
+                if has_variable(operation_obj_list[0]) or has_variable(operation_obj_list[1]):
+                    # 根据操作符获取控制流的节点
+                    control_node = assignment_node.parent
+                    # 因为是使用了Assignment，所以一定是赋值语句。
+                    if the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assignment_node_list, control_node):
+                        return True
 
 
 # 获取操作符号的所有参与计算的子节点，包含Identifier，Literal，MemberAccess
@@ -619,6 +647,41 @@ def get_the_action_list_by_operation_node(binary_operation_node):
     return [left_expression_node_list, right_expression_node_list]
 
 
+# 获取操作符号的所有参与计算的子节点，包含Identifier，Literal，MemberAccess
+def get_the_action_list_by_assignment_node(assignment_node):
+    left_hand_side_node_id = assignment_node.attribute["leftHandSide"][0]["id"]
+    left_hand_side_node_type = assignment_node.attribute["leftHandSide"][0]["nodeType"]
+    left_hand_side_node_list = []
+    right_hand_side_node_id = assignment_node.attribute["rightHandSide"][0]["id"]
+    right_hand_side_node_type = assignment_node.attribute["rightHandSide"][0]["nodeType"]
+    right_hand_side_node_list = []
+    for child in assignment_node.childes:
+        if child.node_id == left_hand_side_node_id and child.node_type == left_hand_side_node_type:
+            stack = LifoQueue()
+            stack.put(child)
+            while not stack.empty():
+                pop_node = stack.get()
+                # 如果是这几种类型的节点，记录下来。
+                if pop_node.node_type == "Identifier" or pop_node.node_type == "Literal" or pop_node.node_type == "MemberAccess":
+                    left_hand_side_node_list.append(pop_node)
+                # 将这里的子节点压入栈中继续遍历。
+                for child_of_pop_node in pop_node.childes:
+                    stack.put(child_of_pop_node)
+        if child.node_id == right_hand_side_node_id and child.node_type == right_hand_side_node_type:
+            stack = LifoQueue()
+            stack.put(child)
+            while not stack.empty():
+                pop_node = stack.get()
+                # 如果是这几种类型的节点，记录下来。
+                if pop_node.node_type == "Identifier" or pop_node.node_type == "Literal" or pop_node.node_type == "MemberAccess":
+                    right_hand_side_node_list.append(pop_node)
+                # 将这里的子节点压入栈中继续遍历。
+                for child_of_pop_node in pop_node.childes:
+                    stack.put(child_of_pop_node)
+    # 返回的内容是[右边的参数, 结果变量的列表]，[结果的变量]
+    return [right_hand_side_node_list, left_hand_side_node_list], left_hand_side_node_list
+
+
 # 判断一个res中是否含有变量，如果含有变量，返回True。
 def has_variable(variable_list):
     for variable in variable_list:
@@ -646,6 +709,7 @@ def gets_the_assignment_object_and_the_control_flow_node(binary_operation_node):
 
 # 根据目标的控制流节点，去判断在每一条控制流的路上，是否都存在断言语句，如果是那就返回False，一旦发现不存在断言，就返回True。
 def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assignment_node_list, control_node):
+    pass_flag_count = 0
     # 开始遍历控制流,这里使用遍历是因为为了避免有分岔路。
     for start_control_path in control_node.control_childes:
         # 每一条控制流路线上的标记都得刷新,代表在断言之前是否被更新过。
@@ -743,6 +807,7 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
                     # 如果assignment的内容也出现在了expression中，说明这种情况是合理的，是符合条件的，所以暂时略过，而不返回值，进行下一个控制流的循环。
                     if the_target_updates_the_flag is False and the_target_has_unused_content is False:
                         pass_flag = True
+                        pass_flag_count += 1
                     else:
                         return True
                 else:
@@ -758,11 +823,15 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
         if pass_flag is False:
             return True
     # 如果在上面的控制流路线中都已经找到了对应的require，那就直接返回False。
-    return False
+    if pass_flag_count == len(control_node.control_childes) and pass_flag_count > 0:
+        return False
+    else:
+        return True
 
 
 # 根据目标的控制流节点，获取倒退的控制流路线，判断路线上是否存在断言语句，这里有一个简单的地方，就是只能有一条路线。
 def the_value_has_been_updated_without_an_assertion_sub(operation_obj_list, control_node):
+    pass_flag_count = 0
     tmp_node = control_node
     while tmp_node.node_type != "FunctionDefinition":
         tmp_node = tmp_node.parent
@@ -828,11 +897,17 @@ def the_value_has_been_updated_without_an_assertion_sub(operation_obj_list, cont
                 # 如果左边没有被更新过，同时也没有未出现的单词，才能进行target的判断。右边同理。
                 if (the_left_argument_updates_the_flag is False and the_left_parameter_has_unused_content is False) and (the_left_argument_updates_the_flag is False and the_right_parameter_has_unused_content is False):
                     # 那就是说这条路上是安全的，可以直接跳过后面的判断了。
+                    # 计算有几条路是ok了。
+                    pass_flag_count += 1
                     break
                 else:
                     return True
     # 遍历了所有的路线，都没有发现有在require之后更新的地方，那就返回False代表没有漏洞。
-    return False
+    if pass_flag_count == len(routes):
+        return False
+    # 返回True，代表存在漏洞，因为其中某些路径没有找到断言。
+    else:
+        return True
 
 
 # 获取从函数定义节点一直到control_node的所有路线
@@ -863,6 +938,7 @@ def get_all_control_flow_routes_based_on_function_definition_nodes(control_node,
 
 # 根据目标的控制流节点，获取倒退的控制流路线，判断路线上是否存在断言语句，这里有一个简单的地方，就是只能有一条路线。
 def the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assignment_node_list, control_node):
+    pass_flag_count = 0
     tmp_node = control_node
     while tmp_node.node_type != "FunctionDefinition":
         tmp_node = tmp_node.parent
@@ -1023,7 +1099,7 @@ def the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assi
                     # 如果目标确实没有重新赋值过
                     if the_target_updates_the_flag is False:
                         expression = pop_node.attribute['src_code'][0]
-                        for child_of_assignment_node_list in assignment_node_list.keys():
+                        for child_of_assignment_node_list in assignment_node_list:
                             if "name" in child_of_assignment_node_list.attribute.keys():
                                 if child_of_assignment_node_list.attribute["name"][0] not in expression:
                                     the_target_has_unused_content = True
@@ -1032,11 +1108,13 @@ def the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assi
                     if (the_left_argument_updates_the_flag is False and the_left_parameter_has_unused_content is False) and (the_left_argument_updates_the_flag is False and the_right_parameter_has_unused_content is False) and (the_target_updates_the_flag is False and the_target_has_unused_content is False):
                         # 如果已经有了==0的判断，那么这里就已经充分了，可以直接令pass_flag = True
                         if already_has_an_assertion_that_equals_zero:
+                            pass_flag_count += 1
                             pass_flag = True
                         else:
                             # 如果没有==0的判断，那就在当前行进行判断。
                             expression = pop_node.attribute['src_code'][0]
                             if expression.replace(" ", "").__contains__("==0"):
+                                pass_flag_count += 1
                                 pass_flag = True
                             else:
                                 return True
@@ -1051,4 +1129,8 @@ def the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assi
             # 说明在本条路上没有找到乱赋值，断言中变量不足的情况，但是也不代表找到了合适的断言，所以就是错误的。
             if pass_flag is False:
                 return True
-    return False
+    # 需要里面每一条路线都是符合条件的，才能证明是安全的，注意这里用上游而不是下游。
+    if pass_flag_count == len(routes):
+        return False
+    else:
+        return True
