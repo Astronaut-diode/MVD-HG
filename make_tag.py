@@ -517,8 +517,18 @@ def arithmetic_attack(project_node_dict):
                             return True
                     # 不是赋值操作。
                     else:
-                        print("不是赋值操作的，先简单的略过。")
-                        pass
+                        # 获取操作符号两边使用的所有的变量，添加到目标中。
+                        assignment_node_list = []
+                        # 将左右的所有参数添加到赋值目标中。
+                        for operation_list in operation_obj_list:
+                            for operation_obj in operation_list:
+                                assignment_node_list.append(operation_obj)
+                        tmp_node = binary_operation_node
+                        while len(tmp_node.control_childes) == 0:
+                            tmp_node = tmp_node.parent
+                        control_node = tmp_node
+                        if the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assignment_node_list, control_node):
+                            return True
             elif operator == "-":
                 # 先取出减号的两端的内容,保存在res[0]和res[1]中，是数组形式，方便含有多个元素的时候进行操作。
                 operation_obj_list = get_the_action_list_by_operation_node(binary_operation_node)
@@ -531,10 +541,15 @@ def arithmetic_attack(project_node_dict):
                         # 减法的判断方式。
                         if the_value_has_been_updated_without_an_assertion_sub(operation_obj_list, control_node):
                             return True
-                    # 不是赋值操作。
+                    # 不是赋值操作
                     else:
-                        print("不是赋值操作的，先简单的略过。")
-                        pass
+                        # 找出控制流节点，因为参数列表不需要变化，所以只要修改控制流节点即可实现不是赋值的时候的操作。
+                        tmp_node = binary_operation_node
+                        while len(tmp_node.control_childes) == 0:
+                            tmp_node = tmp_node.parent
+                        control_node = tmp_node
+                        if the_value_has_been_updated_without_an_assertion_sub(operation_obj_list, control_node):
+                            return True
             elif operator == "*":
                 # 先取出乘号的两端的内容,保存在res[0]和res[1]中，是数组形式，方便含有多个元素的时候进行操作。
                 operation_obj_list = get_the_action_list_by_operation_node(binary_operation_node)
@@ -549,8 +564,18 @@ def arithmetic_attack(project_node_dict):
                             return True
                     # 不是赋值操作。
                     else:
-                        print("不是赋值操作的，先简单的略过。")
-                        pass
+                        # 获取操作符号两边使用的所有的变量，添加到目标中。
+                        assignment_node_list = []
+                        # 将左右的所有参数添加到赋值目标中。
+                        for operation_list in operation_obj_list:
+                            for operation_obj in operation_list:
+                                assignment_node_list.append(operation_obj)
+                        tmp_node = binary_operation_node
+                        while len(tmp_node.control_childes) == 0:
+                            tmp_node = tmp_node.parent
+                        control_node = tmp_node
+                        if the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assignment_node_list, control_node):
+                            return True
     if "Assignment" in project_node_dict.keys():
         for assignment_node in project_node_dict["Assignment"]:
             operator = assignment_node.attribute["operator"][0]
@@ -616,7 +641,7 @@ def gets_the_assignment_object_and_the_control_flow_node(binary_operation_node):
             if child is not binary_operation_node:
                 return [child], parent
     else:
-        return None, None
+        return [], None
 
 
 # 根据目标的控制流节点，去判断在每一条控制流的路上，是否都存在断言语句，如果是那就返回False，一旦发现不存在断言，就返回True。
@@ -636,8 +661,20 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
         # 对这条路进行深度遍历，找出其中不合理的位置。
         stack = LifoQueue(maxsize=0)
         stack.put(start_control_path)
+        route_already_taken = []
         while not stack.empty():
             pop_node = stack.get()
+            # 如果是FunctionCall节点是禁止的路线，因为这个方向肯定不需要执行溢出检验的。
+            if pop_node.node_type == "FunctionCall":
+                continue
+            count = 0
+            # 为了可以走循环的节点，但是又不会陷入死循环，设置可以出现的最大重复次数。
+            for route in route_already_taken:
+                if route == pop_node:
+                    count += 1
+            if count >= 2:
+                continue
+            route_already_taken.append(pop_node)
             # 判断当前节点的子节点中是否含有Assignment节点，也就是判断这个节点是不是用于赋值操作。
             for child in pop_node.childes:
                 if child.node_type == "Assignment":
@@ -714,6 +751,12 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
             if pass_flag is False:
                 for control_child in pop_node.control_childes:
                     stack.put(control_child)
+            # 都已经找到目标断言了，可以停下来了
+            else:
+                break
+        # 说明在本条路上没有找到乱赋值，断言中变量不足的情况，但是也不代表找到了合适的断言，所以就是错误的。
+        if pass_flag is False:
+            return True
     # 如果在上面的控制流路线中都已经找到了对应的require，那就直接返回False。
     return False
 
@@ -803,7 +846,8 @@ def get_all_control_flow_routes_based_on_function_definition_nodes(control_node,
         if now_node == path_node:
             flag += 1
     # 可以有一次重复，但是不能有第二次是为了有循环。
-    if flag == 2:
+    # 另外，如果是FunctionCall节点需要直接掉头，因为这个方向不可以走。
+    if flag == 2 or now_node.node_type == "FunctionCall":
         return
     if now_node == control_node:
         routes.append(list(now_paths))
@@ -909,8 +953,20 @@ def the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assi
             # 对这条路进行深度遍历，找出其中不合理的位置。
             stack = LifoQueue(maxsize=0)
             stack.put(start_control_path)
+            route_already_taken = []
             while not stack.empty():
                 pop_node = stack.get()
+                # 如果是FunctionCall节点，这个方向是禁止的方向，掉头。
+                if pop_node.node_type == "FunctionCall":
+                    continue
+                count = 0
+                # 为了可以走循环的节点，但是又不会陷入死循环，设置可以出现的最大重复次数。
+                for route_node in route_already_taken:
+                    if route_node == pop_node:
+                        count += 1
+                if count >= 2:
+                    continue
+                route_already_taken.append(pop_node)
                 # 判断当前节点的子节点中是否含有Assignment节点，也就是判断这个节点是不是用于赋值操作。
                 for child in pop_node.childes:
                     if child.node_type == "Assignment":
@@ -990,4 +1046,9 @@ def the_value_has_been_updated_without_an_assertion_mul(operation_obj_list, assi
                 if pass_flag is False:
                     for control_child in pop_node.control_childes:
                         stack.put(control_child)
+                else:
+                    break
+            # 说明在本条路上没有找到乱赋值，断言中变量不足的情况，但是也不代表找到了合适的断言，所以就是错误的。
+            if pass_flag is False:
+                return True
     return False
