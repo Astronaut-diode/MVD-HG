@@ -1,4 +1,5 @@
 import numpy as np
+import config
 
 # modified from https://github.com/yl2019lw/ImPloc/blob/revision/util/npmetrics.py
 
@@ -115,8 +116,8 @@ def label_f1_micro(label, predict, beta=1):
 def metric(predict, label):
     predict = predict.data.cpu().numpy()
     label = label.data.cpu().numpy()
-    predict[predict >= 0.5] = 1
-    predict[predict < 0.5] = 0
+    predict[predict >= config.valid_threshold] = 1
+    predict[predict < config.valid_threshold] = 0
     subset_acc = example_subset_accuracy(label, predict)
     ex_acc = example_accuracy(label, predict)
     ex_precision = example_precision(label, predict)
