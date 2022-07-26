@@ -67,7 +67,8 @@ class ASTGNNDataset(Dataset):
         return self.data[item]
 
     # 获取node.json中的节点特征，并排列为[节点个数, 节点特征]的二维数组
-    def get_x(self, project):
+    @staticmethod
+    def get_x(project):
         # 先获取节点文件的路径
         node_file_path = f"{project}_node.json"
         # 根据路径获取对应的句柄
@@ -85,7 +86,8 @@ class ASTGNNDataset(Dataset):
         return x
 
     # 获取ast_edge.json中的文件内容。
-    def get_ast_edge(self, project):
+    @staticmethod
+    def get_ast_edge(project):
         ast_edge_file_path = f"{project}_ast_edge.json"
         ast_edge_file_handle = open(ast_edge_file_path, 'r')
         ast_edge_content = json.load(ast_edge_file_handle)
@@ -98,7 +100,8 @@ class ASTGNNDataset(Dataset):
         return ast_edge_index.T
 
     # 获取cfg_edge.json中的文件内容。
-    def get_cfg_edge(self, project):
+    @staticmethod
+    def get_cfg_edge(project):
         cfg_edge_file_path = f"{project}_cfg_edge.json"
         cfg_edge_file_handle = open(cfg_edge_file_path, 'r')
         cfg_edge_content = json.load(cfg_edge_file_handle)
@@ -111,7 +114,8 @@ class ASTGNNDataset(Dataset):
         return cfg_edge_index.T
 
     # 获取dfg_edge.json中的文件内容。
-    def get_dfg_edge(self, project):
+    @staticmethod
+    def get_dfg_edge(project):
         dfg_edge_file_path = f"{project}_dfg_edge.json"
         dfg_edge_file_handle = open(dfg_edge_file_path, 'r')
         dfg_edge_content = json.load(dfg_edge_file_handle)
@@ -122,3 +126,6 @@ class ASTGNNDataset(Dataset):
         dfg_edge_index = torch.as_tensor(data=np.array(dfg_edge_index, dtype=np.int64))
         dfg_edge_file_handle.close()
         return dfg_edge_index.T
+
+    def get(self, idx: int) -> Data:
+        pass

@@ -3,6 +3,8 @@ from torch_geometric.nn import MessagePassing, GATConv, global_mean_pool, Linear
 from typing import Optional
 from torch import Tensor
 from torch.nn import ReLU
+from torch_sparse import SparseTensor
+
 import config
 import torch
 
@@ -65,4 +67,10 @@ class ASTGNNModel(MessagePassing):
         pass
 
     def update(self, inputs: Tensor) -> Tensor:
+        pass
+
+    def message_and_aggregate(self, adj_t: SparseTensor) -> Tensor:
+        pass
+
+    def edge_update(self) -> Tensor:
         pass
