@@ -13,6 +13,7 @@ from append_data_flow_information import append_data_flow_information
 from make_tag import make_tag
 from classification_of_documents import classification_of_documents
 from tqdm import tqdm
+from gets_command_line_arguments import gets_command_line_arguments
 import datetime
 import config
 import utils
@@ -20,6 +21,8 @@ import os
 import shutil
 
 if __name__ == '__main__':
+    # 先获取命令行参数，更新config配置。
+    gets_command_line_arguments()
     start = datetime.datetime.now()
     if config.run_mode == "create":
         # 先验证四个重要的文件夹是否存在，不存在则创建。
@@ -61,7 +64,6 @@ if __name__ == '__main__':
                     except Exception as e:
                         # 发现错误，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
-
                         continue
                     # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
                     append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
