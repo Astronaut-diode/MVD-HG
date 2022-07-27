@@ -19,6 +19,7 @@ import config
 import utils
 import os
 import shutil
+import sys
 
 if __name__ == '__main__':
     # 先获取命令行参数，更新config配置。
@@ -118,3 +119,4 @@ if __name__ == '__main__':
     print("以下是使用的参数")
     print(f"run_mode:{config.run_mode}")
     print(f"create_corpus_mode:{config.create_corpus_mode}")
+    sys.exit(47)
