@@ -28,10 +28,13 @@ if __name__ == '__main__':
         utils.dir_exists(config.data_ast_json_dir_path)
         utils.dir_exists(config.data_complete_dir_path)
         utils.dir_exists(config.data_raw_dir_path)
+        # 判断漏洞文件夹是否存在，不存在则创建
         utils.dir_exists(config.reentry_attack_fold)
         utils.dir_exists(config.timestamp_attack_fold)
         utils.dir_exists(config.arithmetic_attack_fold)
         utils.dir_exists(config.dangerous_delegate_call_attack_fold)
+        # 判断问题文件夹是否存在，不存在则创建。
+        utils.dir_exists(config.error_file_fold)
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
         for project_name in tqdm(os.listdir(config.data_sol_source_dir_path)):
             # sol_source中遍历到的工程文件夹的全路径。
@@ -52,8 +55,14 @@ if __name__ == '__main__':
                 # 遍历工程项目中的每一个文件
                 for ast_json_file_name in child_files:
                     project_node_list, project_node_dict = read_compile(now_dir=now_dir, ast_json_file_name=ast_json_file_name)
-                    # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
-                    append_method_message_by_dict(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    try:
+                        # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
+                        append_method_message_by_dict(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    except Exception as e:
+                        # 发现错误，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
+                        utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
+
+                        continue
                     # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
                     append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     append_data_flow_information(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
@@ -67,7 +76,8 @@ if __name__ == '__main__':
                     # 打印树的样子。
                     generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
             # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
-            if config.frozen == "frozen":
+            # 同时还要判断文件夹的是否存在的特性，因为上面的循环可能会删除文件。
+            if config.frozen == "frozen" and os.path.exists(data_sol_source_project_dir_path):
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
         if config.create_corpus_mode == "create_corpus_txt":

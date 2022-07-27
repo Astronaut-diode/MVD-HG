@@ -2,6 +2,7 @@
 import os
 import json
 import config
+import shutil
 
 
 # 判断文件夹是否已经存在，如果不存在就创建文件夹
@@ -42,3 +43,16 @@ def create_file(file_path):
     # 这里要使用a的模式，否则会导致文件原始内容会被第二次打开而删除。
     f = open(file_path, 'a', encoding="utf-8")
     f.close()
+
+
+# 将某些异常的文件移动到问题文件夹中。
+def remove_file(file_path):
+    # 先删除json文件
+    if file_path.__contains__(".json"):
+        shutil.rmtree(os.path.dirname(file_path))
+    # 将目标移动到智能合约源文件
+    file_path = file_path.replace("AST_json", "sol_source").replace(".json", ".sol")
+    # 获取源文件的项目名字路径
+    dir_name = os.path.dirname(file_path)
+    # 将这个源文件移动到错误文件夹中。
+    shutil.move(dir_name, config.error_file_fold)
