@@ -47,8 +47,8 @@ def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_pa
                 opcode = f.close()
                 # 有返回码，说明有问题，那就删除源文件和生成的json文件
                 if opcode is not None:
-                    os.remove(full_compile_file_path)
-                    os.remove(full_compile_target_path)
+                    utils.remove_file(full_compile_file_path)
+                    utils.remove_file(full_compile_target_path)
                     print(f"{full_compile_file_path}由于编译过程有问题删除")
                 else:
                     print(f"{full_compile_file_path}编译完成")
@@ -56,14 +56,14 @@ def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_pa
                 # 如果是这种版本，就说明没有找到对应的版本号，直接删除完事
                 not_exist_versions = ["0.0.0", "0.1.0", "0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.4.5", "0.4.6", "0.4.7", "0.4.8", "0.4.9", "0.4.10"]
                 if version in not_exist_versions:
-                    os.remove(full_compile_file_path)
+                    utils.remove_file(full_compile_file_path)
                     print(f"{full_compile_file_path}由于无效版本号被删除")
                 else:
                     # 将所有缺乏的版本的号码，输出到一个txt文件中，到时候方便一次性安装。
                     with open("/home/xjj/AST-GNN/data/absent_version_cmd.txt", 'a') as write_file:
                         write_file.write("solc-select install" + version + "\n")
                     write_file.close()
-                    os.remove(full_compile_file_path)
+                    utils.remove_file(full_compile_file_path)
                     print(f"{full_compile_file_path}====> 缺少编译器版本，请在对应的虚拟环境中安装，使用命令====> solc-select install {version} 但是我差不多都有了，现在就直接删除好了。")
     # 结束的时候对AST_json中的工程文件夹进行判断，如果里面含有空的文件夹，删除掉。
     utils.is_blank_now_dir(data_ast_json_project_dir_path)
