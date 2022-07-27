@@ -4,6 +4,7 @@ from bean.Node import Node
 import os
 import json
 import utils
+import config
 
 
 def read_compile(now_dir, ast_json_file_name):
@@ -11,26 +12,28 @@ def read_compile(now_dir, ast_json_file_name):
     tmp_file_name = f'{now_dir}/w.json'
     # 抽象语法树文件的完全路径,如""/home/xjj/AST-GNN/data/AST_json/project_name/file_name.json"
     full_ast_json_path = f'{now_dir}/{ast_json_file_name}'
-    # 为这个语法树文件删除前几行，因为生成的时候前面带上了一些不必要的信息
-    utils.create_file(tmp_file_name)
-    with open(full_ast_json_path, 'r') as read_file, open(tmp_file_name, 'w+') as write_file:
-        # 判断是否需要开始抄写的触发器
-        flag = False
-        # 用来比对哪一行开始记录的语句。
-        pattern = f"======= {full_ast_json_path.replace('AST_json', 'sol_source').replace('.json', '.sol')} ======="
-        pattern2 = pattern.replace("/home/xjj/AST-GNN/", "")
-        for index, line in enumerate(read_file.readlines()):
-            # 如果已经需要开始记录了，开始抄写，把内容抄到w.json文件中
-            if flag:
-                write_file.write(line)
-                continue
-            # 如果发现已经到了这一行，那么说明从这里开始已经需要记录了。
-            # 使用了新的判断条件，原先的通用性不是很好
-            if line.replace("\n", "").__contains__(pattern) or line.replace("\n", "").__contains__(pattern2):
-                flag = True
-    # 删除原始的json文件，同时将刚刚生成的w.json文件转化为正确的名字。
-    os.remove(full_ast_json_path)
-    os.rename(tmp_file_name, full_ast_json_path)
+    # 只有在create_corpus_txt的时候才需要创建临时文件
+    if config.create_corpus_mode == "create_corpus_txt":
+        # 为这个语法树文件删除前几行，因为生成的时候前面带上了一些不必要的信息
+        utils.create_file(tmp_file_name)
+        with open(full_ast_json_path, 'r') as read_file, open(tmp_file_name, 'w+') as write_file:
+            # 判断是否需要开始抄写的触发器
+            flag = False
+            # 用来比对哪一行开始记录的语句。
+            pattern = f"======= {full_ast_json_path.replace('AST_json', 'sol_source').replace('.json', '.sol')} ======="
+            pattern2 = pattern.replace("/home/xjj/AST-GNN/", "")
+            for index, line in enumerate(read_file.readlines()):
+                # 如果已经需要开始记录了，开始抄写，把内容抄到w.json文件中
+                if flag:
+                    write_file.write(line)
+                    continue
+                # 如果发现已经到了这一行，那么说明从这里开始已经需要记录了。
+                # 使用了新的判断条件，原先的通用性不是很好
+                if line.replace("\n", "").__contains__(pattern) or line.replace("\n", "").__contains__(pattern2):
+                    flag = True
+        # 删除原始的json文件，同时将刚刚生成的w.json文件转化为正确的名字。
+        os.remove(full_ast_json_path)
+        os.rename(tmp_file_name, full_ast_json_path)
     # 正式的开始读取json文件中的内容
     with open(full_ast_json_path, 'r') as ast_json:
         # 使用json的方式加载文件内容
