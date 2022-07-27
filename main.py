@@ -11,6 +11,7 @@ from train import train
 from gensim.models.word2vec import Word2Vec
 from append_data_flow_information import append_data_flow_information
 from make_tag import make_tag
+from classification_of_documents import classification_of_documents
 from tqdm import tqdm
 import datetime
 import config
@@ -27,6 +28,10 @@ if __name__ == '__main__':
         utils.dir_exists(config.data_ast_json_dir_path)
         utils.dir_exists(config.data_complete_dir_path)
         utils.dir_exists(config.data_raw_dir_path)
+        utils.dir_exists(config.reentry_attack_fold)
+        utils.dir_exists(config.timestamp_attack_fold)
+        utils.dir_exists(config.arithmetic_attack_fold)
+        utils.dir_exists(config.dangerous_delegate_call_attack_fold)
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
         for project_name in tqdm(os.listdir(config.data_sol_source_dir_path)):
             # sol_source中遍历到的工程文件夹的全路径。
@@ -66,6 +71,8 @@ if __name__ == '__main__':
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
         if config.create_corpus_mode == "create_corpus_txt":
+            # 同时，处理将这些漏洞文件处理一下，保存到不同文件夹中，方便下一次使用。
+            classification_of_documents()
             sentences = []
             # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
             with open(config.corpus_txt_path, 'r', encoding="utf-8") as corpus_file:
