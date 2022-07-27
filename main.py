@@ -115,3 +115,6 @@ if __name__ == '__main__':
     print(f"开始时间:{start}")
     print(f"结束时间:{end}")
     print(f"一共耗时:{end - start}")
+    print("以下是使用的参数")
+    print(f"run_mode:{config.run_mode}")
+    print(f"create_corpus_mode:{config.create_corpus_mode}")

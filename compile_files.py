@@ -47,7 +47,7 @@ def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_pa
                 opcode = f.close()
                 # 有返回码，说明有问题，那就删除源文件和生成的json文件
                 if opcode is not None:
-                    utils.remove_file(full_compile_file_path)
+                    # 只需要传入json的名字，就会连同sol一起删除。
                     utils.remove_file(full_compile_target_path)
                     print(f"{full_compile_file_path}由于编译过程有问题删除")
                 else:
