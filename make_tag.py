@@ -480,20 +480,25 @@ def dangerous_delegate_call_attack(project_node_dict):
                 for child in function_call_node.childes:
                     # 如果节点的值是符合条件的，那就说明这个节点是调用者，需要找到这个调用者的来源。
                     if "memberName" in child.attribute.keys() and child.attribute["memberName"][0] == "delegatecall":
+                        # 因为child代表的是MemberAccess这个节点，所以需要取出他的调用者，也就是他的抽象语法树的子节点
+                        identifier_call_node = child.childes[0]
                         # 找出所有的上级数据流节点
                         origin_list = []
                         stack = LifoQueue(maxsize=0)
-                        stack.put(child)
+                        stack.put(identifier_call_node)
                         while not stack.empty():
                             pop_node = stack.get()
+                            # 如果遍历过，那就跳过，否则判断该节点的父节点是不是来自于入参。
                             if pop_node in origin_list:
                                 continue
+                            origin_list.append(pop_node)
+                            # 获取该节点的数据流父节点
                             res = get_node_by_child_and_node_type_of_target(project_node_dict, pop_node, None, 3)
+                            # 将这些父节点压入到栈中，以进行深度遍历。
                             for origin_node in res:
                                 stack.put(origin_node)
-                                origin_list.append(origin_node)
-                        for node in origin_list:
-                            if node.parent.node_type == "ParameterList":
+                            # 如果当前循环的元素的父节点是ParameterList，代表这个参数是来源于入参的，也就是容易被攻击。
+                            if pop_node.parent.node_type == "ParameterList":
                                 return True
 
 
@@ -737,7 +742,7 @@ def the_value_has_been_updated_without_an_assertion_add(operation_obj_list, assi
         route_already_taken = []
         while not stack.empty():
             pop_node = stack.get()
-            # 如果是FunctionCall节点是禁止的路线，因为这个方向肯定不需要执行溢出检验的。todo:如果是走了修饰符到了别人，也可能不行。
+            # 如果是FunctionCall节点是禁止的路线，因为这个方向肯定不需要执行溢出检验的。
             if pop_node.node_type == "FunctionCall" or pop_node == "ModifierDefinition":
                 continue
             count = 0
