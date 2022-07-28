@@ -1,5 +1,6 @@
 import numpy as np
 import config
+import utils
 
 # modified from https://github.com/yl2019lw/ImPloc/blob/revision/util/npmetrics.py
 
@@ -113,7 +114,7 @@ def label_f1_micro(label, predict, beta=1):
     return (1 + beta ** 2) * tp / ((1 + beta ** 2) * tp + beta ** 2 * fn + fp + epsilon)
 
 
-def metric(predict, label):
+def metric(predict, label, count, writer):
     predict = predict.data.cpu().numpy()
     label = label.data.cpu().numpy()
     predict[predict >= config.valid_threshold] = 1
@@ -146,3 +147,12 @@ def metric(predict, label):
     print("label rec micro:   %.4f" % lab_recall_mi)
     print("label f1 macro:    %.4f" % lab_f1_ma)
     print("label f1 micro:    %.4f" % lab_f1_mi)
+    writer.add_scalar("label acc macro:", lab_acc_ma, count)
+    writer.add_scalar("label acc micro:", lab_acc_ma, count)
+    writer.add_scalar("label prec macro:", lab_acc_ma, count)
+    writer.add_scalar("label prec micro:", lab_acc_ma, count)
+    writer.add_scalar("label rec macro:", lab_acc_ma, count)
+    writer.add_scalar("label rec micro:", lab_acc_ma, count)
+    writer.add_scalar("label f1 macro:", lab_acc_ma, count)
+    writer.add_scalar("label f1 micro:", lab_acc_ma, count)
+
