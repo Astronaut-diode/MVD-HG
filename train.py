@@ -2,11 +2,13 @@
 from dataset import ASTGNNDataset
 from model import ASTGNNModel
 from torch_geometric.loader import DataLoader
+from metric import metric
+from torch.utils.tensorboard import SummaryWriter
 import torch
 import config
-from metric import metric
 
 device = torch.device(config.device)
+writer = SummaryWriter(config.tensor_board_position)
 
 
 def train():
@@ -22,6 +24,7 @@ def train():
     criterion = torch.nn.BCEWithLogitsLoss()
     # 进行epoch个时代的训练
     model.train()
+    count = 0
     for epoch in range(config.epoch_size):
         for index, batch in enumerate(data_loader):
             # 将数据转化为指定设备上运行
@@ -36,4 +39,7 @@ def train():
             optimizer.step()
             # 进行准确率计算。
             print(f"epoch:{epoch}, index:{index}, 当前阶段的loss为{loss}", end="")
-            metric(predict, batch.y)
+            writer.add_scalar("train_loss", loss, count)
+            metric(predict, batch.y, count, writer)
+            count = count + 1
+    writer.close()
