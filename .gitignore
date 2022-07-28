@@ -1,4 +1,4 @@
 # config文件可以忽略掉，因为平时开发的时候需要经常改变。
-config.py
+# config.py
 # data文件夹也可以先忽略掉
-/data
+# /data
