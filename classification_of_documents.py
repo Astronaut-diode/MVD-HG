@@ -26,7 +26,7 @@ def classification_of_documents():
             # 新文件的全路径
             target_file_path = f"{config.reentry_attack_fold}/{parent_dir}/{file_name}"
             # 复制文件到新目录中。
-            shutil.copyfile(key, target_file_path)
+            shutil.copyfile(key.replace("sol_source", "complete"), target_file_path)
         time += content[key][1]
         # 复制文件到重入文件夹
         if content[key][1] == 1:
@@ -35,7 +35,7 @@ def classification_of_documents():
             # 新文件的全路径
             target_file_path = f"{config.timestamp_attack_fold}/{parent_dir}/{file_name}"
             # 复制文件到新目录中。
-            shutil.copyfile(key, target_file_path)
+            shutil.copyfile(key.replace("sol_source", "complete"), target_file_path)
         arit += content[key][2]
         # 复制文件到重入文件夹
         if content[key][2] == 1:
@@ -44,7 +44,7 @@ def classification_of_documents():
             # 新文件的全路径
             target_file_path = f"{config.arithmetic_attack_fold}/{parent_dir}/{file_name}"
             # 复制文件到新目录中。
-            shutil.copyfile(key, target_file_path)
+            shutil.copyfile(key.replace("sol_source", "complete"), target_file_path)
         dele += content[key][3]
         # 复制文件到重入文件夹
         if content[key][3] == 1:
@@ -53,7 +53,7 @@ def classification_of_documents():
             # 新文件的全路径
             target_file_path = f"{config.dangerous_delegate_call_attack_fold}/{parent_dir}/{file_name}"
             # 复制文件到新目录中。
-            shutil.copyfile(key, target_file_path)
+            shutil.copyfile(key.replace("sol_source", "complete"), target_file_path)
     print(f"重入漏洞的数量为{reen}")
     print(f"时间戳漏洞的数量为{time}")
     print(f"溢出漏洞的数量为{arit}")

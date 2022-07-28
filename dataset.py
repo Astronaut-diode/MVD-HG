@@ -44,7 +44,7 @@ class ASTGNNDataset(Dataset):
             # 这里replace成AST_json是因为目前来说只有AST_json里面的文件夹是完整的，sol_source里面已经被删除了。
             for now_dir, child_dirs, child_files in os.walk(project_full_path.replace("raw", "AST_json")):
                 for file_name in child_files:
-                    file_name_key = f"{now_dir}/{file_name}"
+                    file_name_key = f"{now_dir.replace('AST_json', 'sol_source')}/{file_name.replace('.json', '.sol')}"
                     # 通过文件的全路径获取其标签。
                     y = torch.as_tensor(data=np.array([label_in_memory[file_name_key]], dtype=np.float64))
                     # 获取对应raw工程文件夹下的原始文件名_node.json文件中的内容。

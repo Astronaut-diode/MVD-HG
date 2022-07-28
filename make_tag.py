@@ -161,7 +161,7 @@ def update_label_file(file_name, label):
     # 先读取原始的内容
     origin_content = json.load(read_json)
     # 对原始的内容进行更新
-    origin_content.update({file_name: label})
+    origin_content.update({file_name.replace("AST_json", "sol_source").replace(".json", ".sol"): label})
     # 关闭读取的句柄
     read_json.close()
     # 重新打开一个写入的句柄
