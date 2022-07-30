@@ -564,5 +564,9 @@ def get_return(initial_node, pre_variable_node_list, method_params, is_src, is_a
                     param[0]["node"].append_data_child(param[1])
                 # 返回出参，供下一次使用。
                 return method_returns
+        # 能到达这里说明不是内部函数,那就直接将所有的入参全部连接到FunctionCallNode上.记得还要引用来自之前的部分.
+        for argument_node in arguments:
+            argument_node["node"].append_data_child(function_call_node)
+            get_return(argument_node["node"], pre_variable_node_list, method_params, False, False)
         # 如果不是内部函数，那就直接返回函数调用节点
-        return []
+        return [function_call_node]
