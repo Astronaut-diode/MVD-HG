@@ -1,12 +1,25 @@
 from queue import LifoQueue
+from bean.Node import Node
 
 
 # 为当前的项目图结构，增加数据流信息
-def append_data_flow_information(project_node_dict, file_name):
+def append_data_flow_information(project_node_list, project_node_dict, file_name):
     # 找出构造函数以及预定义的内容，是为了和下面函数中的内容进行联动.
     pre_variable_node_list = []
     # 遍历所有的ContractDefinition节点，因为一个文件中可能含有多个合约。
     for contract_node in project_node_dict['ContractDefinition']:
+        # 为当前的合约增加几个新的节点,即默认属性,比如说this,msg.
+        # 记得要增加抽线语法树的关系避免成为孤岛.并记录下当前的节点
+        msg_node = Node(len(project_node_list) + 1, "VariableDeclaration", contract_node)
+        msg_node.append_attribute("name", "msg")
+        contract_node.append_child(msg_node)
+        project_node_list.append(msg_node)
+        project_node_dict["VariableDeclaration"].append(msg_node)
+        this_node = Node(len(project_node_list) + 1, "VariableDeclaration", contract_node)
+        this_node.append_attribute("name", "this")
+        contract_node.append_child(this_node)
+        project_node_list.append(this_node)
+        project_node_dict["VariableDeclaration"].append(this_node)
         # 遍历ContractDefinition节点下面的子节点，这些子节点就是预定义参数的节点。
         for child_of_contract_node in contract_node.childes:
             # 当类型是VariableDeclaration的时候，才是参数预定义，注意，在这个位置不管有没有等号赋值都只会是VariableDeclaration。

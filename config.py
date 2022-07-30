@@ -42,7 +42,7 @@ corpus_txt_path = f"{data_dir_path}/corpus.txt"
 # 词库文件当中，保存的每个单词的维度向量
 encode_dim = 128
 # 是否要调用print_tree方法来显示图片
-show_plt = False
+show_plt = True
 # 是否要在print_tree方法中显示抽象语法树的边
 show_AST_plt = True
 # 是否要在print_tree方法中显示控制流图的边

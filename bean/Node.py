@@ -12,8 +12,12 @@ class Node:
     attribute = {}
     # 数据流的子节点
     data_childes = []
+    # 数据流的父节点
+    data_parents = []
     # 控制流的子节点
     control_childes = []
+    # 控制流的父节点
+    control_parents = []
 
     def __init__(self, node_id, node_type, parent):
         self.node_id = node_id
@@ -22,7 +26,9 @@ class Node:
         self.childes = []
         self.attribute = {}
         self.data_childes = []
+        self.data_parents = []
         self.control_childes = []
+        self.control_parents = []
 
     def append_child(self, node):
         self.childes.append(node)
@@ -30,10 +36,14 @@ class Node:
     def append_data_child(self, node):
         if node not in self.data_childes:
             self.data_childes.append(node)
+            # 反向增加数据流父节点
+            node.data_parents.append(self)
 
     def append_control_child(self, node):
         if node not in self.control_childes:
             self.control_childes.append(node)
+            # 反向增加控制流父节点
+            node.control_parents.append(self)
 
     def append_attribute(self, key, value):
         if self.attribute.__contains__(key):
