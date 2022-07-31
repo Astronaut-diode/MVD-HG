@@ -10,7 +10,7 @@ from print_tree import generate_svg
 from train import train
 from gensim.models.word2vec import Word2Vec
 from append_data_flow_information import append_data_flow_information
-from make_tag import make_tag
+from make_reentry_attack_label import make_reentry_attack_label
 from classification_of_documents import classification_of_documents
 from tqdm import tqdm
 from gets_command_line_arguments import gets_command_line_arguments
@@ -70,7 +70,8 @@ if __name__ == '__main__':
                     append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 添加了打标签的功能
-                    # make_tag(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, 0, 0, 0])
                     # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
                     built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
@@ -85,6 +86,7 @@ if __name__ == '__main__':
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
         if config.create_corpus_mode == "create_corpus_txt":
             # 同时，处理将这些漏洞文件处理一下，保存到不同文件夹中，方便下一次使用。
+            # todo:不能做到断点续传，重新构造一下。
             classification_of_documents()
             sentences = []
             # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
