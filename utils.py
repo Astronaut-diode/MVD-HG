@@ -56,3 +56,26 @@ def remove_file(file_path):
     dir_name = os.path.dirname(file_path)
     # 将这个源文件移动到错误文件夹中。
     shutil.move(dir_name, config.error_file_fold)
+
+
+# 更新标签文件
+def update_label_file(file_name, label):
+    # 先判断加工以后的json文件是否存在，如果不存在，先创建内容。
+    if not os.path.exists(config.idx_to_label_file):
+        write_json = open(config.idx_to_label_file, 'w')
+        json.dump({}, write_json)
+        write_json.close()
+    # 这时候一定会有的，所以可以开始更新内容了。更新以后的保存内容应该是{"文件的名字": 标签, "文件的名字": 标签....}
+    read_json = open(config.idx_to_label_file, 'r', encoding="utf-8")
+    # 先读取原始的内容
+    origin_content = json.load(read_json)
+    # 对原始的内容进行更新
+    origin_content.update({file_name.replace("AST_json", "sol_source").replace(".json", ".sol"): label})
+    # 关闭读取的句柄
+    read_json.close()
+    # 重新打开一个写入的句柄
+    write_json = open(config.idx_to_label_file, 'w')
+    # 将更新以后的内容重新写入到json文件当中
+    json.dump(origin_content, write_json)
+    # 记得关闭比句柄文件。
+    write_json.close()
