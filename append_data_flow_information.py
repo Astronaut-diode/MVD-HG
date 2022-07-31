@@ -10,13 +10,19 @@ def append_data_flow_information(project_node_list, project_node_dict, file_name
     for contract_node in project_node_dict['ContractDefinition']:
         # 为当前的合约增加几个新的节点,即默认属性,比如说this,msg.
         # 记得要增加抽线语法树的关系避免成为孤岛.并记录下当前的节点
-        msg_node = Node(len(project_node_list) + 1, "VariableDeclaration", contract_node)
+        max = 0
+        for loop in project_node_list:
+            if loop.node_id >= max:
+                max = loop.node_id
+        msg_node = Node(max + 1, "VariableDeclaration", contract_node)
         msg_node.append_attribute("name", "msg")
+        msg_node.append_attribute("src_code", "")
         contract_node.append_child(msg_node)
         project_node_list.append(msg_node)
         project_node_dict["VariableDeclaration"].append(msg_node)
-        this_node = Node(len(project_node_list) + 1, "VariableDeclaration", contract_node)
+        this_node = Node(max + 2, "VariableDeclaration", contract_node)
         this_node.append_attribute("name", "this")
+        this_node.append_attribute("src_code", "")
         contract_node.append_child(this_node)
         project_node_list.append(this_node)
         project_node_dict["VariableDeclaration"].append(this_node)
