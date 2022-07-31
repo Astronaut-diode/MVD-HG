@@ -91,9 +91,6 @@ def traverse_function_definition_node(function_definition_node, now_node, pre_va
     if is_child_of_function_definition_node(now_node, function_definition_node) is False:
         return
     count = 0
-    # 如果是函数调用也跳过，反正会有一个ExpressionStatement一直包着他
-    if now_node.node_type == "FunctionCall":
-        return
     # 遍历所有的已经路过的节点，如果当前节点出现了，那就增加计数器
     for gone_node in path:
         if now_node == gone_node:
@@ -229,9 +226,9 @@ def processing_expression_statement(function_definition_node, now_node, pre_vari
                 node_name = node.attribute["name"]
                 # 注意要逆向，因为要覆盖最近的
                 link_pre_node(pre_variable_node_list, method_params, node, node_name, True)
-        # 增加新的参数
-        for node in res:
-            method_params.append(node)
+        # 增加新的参数，这里是多余的呜呜呜
+        # for node in res:
+        #     method_params.append(node)
     # 接下来是回溯的内容
     # function_definition_node:不需要修改的
     # now_node:需要改变为控制流子节点
@@ -334,6 +331,8 @@ def processing_binary_operation(function_definition_node, now_node, pre_variable
 
 
 def processing_other_node(function_definition_node, now_node, pre_variable_node_list, method_params, method_returns, path):
+    other_node = now_node
+    get_return(other_node, pre_variable_node_list, method_params, False, False)
     # 接下来是回溯的内容
     # function_definition_node:不需要修改的
     # now_node:需要改变为控制流子节点
