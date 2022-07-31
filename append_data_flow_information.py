@@ -32,16 +32,16 @@ def append_data_flow_information(project_node_list, project_node_dict, file_name
             if child_of_contract_node.node_type == "VariableDeclaration":
                 # 将当前这个变量的节点添加到数组中。
                 pre_variable_node_list.append(child_of_contract_node)
-    # 如果当前的合约中是含有FunctionDefinition类型的。
-    if "FunctionDefinition" in project_node_dict.keys():
-        # 遍历所有的FunctionDefinition节点。
-        for function_definition_node in project_node_dict["FunctionDefinition"]:
-            # 在调用完了traverse_function_definition_node的时候，会给functionDefinition节点打上属性，data_flow:True。未完成的则没有。
-            if "data_flow" not in function_definition_node.attribute.keys():
-                # 根据函数定义节点获取他的函数入参和出参。
-                method_params, method_returns = get_method_message_at_function_definition_node(function_definition_node)
-                # 回溯+控制流的方法从function_definition_node出发去遍历整个轨迹，做到每一个控制流都有数据流
-                traverse_function_definition_node(function_definition_node, function_definition_node, pre_variable_node_list, method_params, method_returns, [])
+        # 如果当前的合约中是含有FunctionDefinition类型的。
+        if "FunctionDefinition" in project_node_dict.keys():
+            # 遍历所有的FunctionDefinition节点。
+            for function_definition_node in project_node_dict["FunctionDefinition"]:
+                # 在调用完了traverse_function_definition_node的时候，会给functionDefinition节点打上属性，data_flow:True。未完成的则没有。还要满足在同一个合约中的条件。
+                if "data_flow" not in function_definition_node.attribute.keys() and function_definition_node.parent == contract_node:
+                    # 根据函数定义节点获取他的函数入参和出参。
+                    method_params, method_returns = get_method_message_at_function_definition_node(function_definition_node)
+                    # 回溯+控制流的方法从function_definition_node出发去遍历整个轨迹，做到每一个控制流都有数据流
+                    traverse_function_definition_node(function_definition_node, function_definition_node, pre_variable_node_list, method_params, method_returns, [])
     print(f"{file_name}节点数据流更新成功")
 
 
