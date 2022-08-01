@@ -65,13 +65,21 @@ if __name__ == '__main__':
                     except Exception as e:
                         # 发现错误，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
+                        print(f"{now_dir}/{ast_json_file_name}出现错误，移入错误文件夹,并跳过后续操作。")
                         continue
                     # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
                     append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                    append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                    # 添加了打标签的功能
-                    reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                    utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, 0, 0, 0])
+                    try:
+                        # 根据内存中的数据，设定图的数据流。
+                        append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                        # 添加了打标签的功能
+                        reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                        utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, 0, 0, 0])
+                    except utils.CustomError as e:
+                        # 运行时间过长，是里面的控制流太多了，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
+                        utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
+                        print(f"{now_dir}/{ast_json_file_name}{e}")
+                        continue
                     # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
                     built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
