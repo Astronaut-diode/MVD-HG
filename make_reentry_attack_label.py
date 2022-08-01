@@ -34,7 +34,7 @@ def make_reentry_attack_label(project_node_dict, file_name):
                 for pre_variable in pre_variable_node_list:
                     method_params.append(pre_variable)
                 # 进行控制流+回溯的操作，判断在每一个控制流上是不是都是安全的。
-                traverse_reentry_attack(project_node_dict, function_definition_node, method_params, function_definition_node.control_childes[0], [], has_reentry_flag)
+                traverse_reentry_attack(project_node_dict, function_definition_node, method_params, function_definition_node.control_childes[0], [], has_reentry_flag, False)
                 if len(has_reentry_flag):
                     reentry_flag = True
                     break
@@ -113,7 +113,8 @@ def have_only_owner_modifiers(arbitrarily_node):
 # params:到当前位置的时候,已经被记录的参数
 # now_node:当前的节点位置
 # path:记录所有走过的节点,以避免进行死循环
-def traverse_reentry_attack(project_node_dict, function_definition_node, params, now_node, path, has_reentry_flag):
+# is_overlap:是否重叠了。
+def traverse_reentry_attack(project_node_dict, function_definition_node, params, now_node, path, has_reentry_flag, is_overlap):
     # 如果当前节点不是属于当前的函数定义节点的子节点,结束当前路径。
     if is_child_of_function_definition_node(now_node, function_definition_node) is False:
         return
@@ -137,16 +138,25 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
             params.append(param)
     # 进行回溯操作
     for control_child in now_node.control_childes:
+        # 如果是走回去了，那就是形成环了，直接跳过。
+        if control_child == now_node.parent:
+            continue
         # 说明已经找到漏洞了，不再进行深一步的循环
         if len(has_reentry_flag) != 0:
             continue
-        # 对当前的状态进行重入标签函数的判断,如果返回值是True，那说明是有漏洞的，直接往列表中新增加一个标记
-        if reentry_attack(project_node_dict, params, now_node, path) is True:
-            has_reentry_flag.append(True)
-            continue
+        # 如果没有重叠，才需要进行重入的判断，否则是不需要进行判断的。
+        if is_overlap is False:
+            # 对当前的状态进行重入标签函数的判断,如果返回值是True，那说明是有漏洞的，直接往列表中新增加一个标记
+            if reentry_attack(project_node_dict, params, now_node, path) is True:
+                has_reentry_flag.append(True)
+                continue
         path.append(now_node)
         # 进一步的进行检测
-        traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag)
+        # 如果控制流和抽象语法树是重叠的部分，那么下一步是不需要进行漏洞检测的
+        if control_child in now_node.childes:
+            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag, True)
+        else:
+            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag, False)
         path.pop(-1)
     # 回溯完了以后,需要将内容删除掉,以实现状态的回退.
     for _ in range(effective_push_count):

@@ -19,7 +19,10 @@ def append_data_flow_information(project_node_list, project_node_dict, file_name
         msg_node.append_attribute("src_code", "")
         contract_node.append_child(msg_node)
         project_node_list.append(msg_node)
-        project_node_dict["VariableDeclaration"].append(msg_node)
+        if "VariableDeclaration" in project_node_dict.keys():
+            project_node_dict["VariableDeclaration"].append(msg_node)
+        else:
+            project_node_dict["VariableDeclaration"] = [msg_node]
         this_node = Node(max + 2, "VariableDeclaration", contract_node)
         this_node.append_attribute("name", "this")
         this_node.append_attribute("src_code", "")
@@ -41,7 +44,7 @@ def append_data_flow_information(project_node_list, project_node_dict, file_name
                     # 根据函数定义节点获取他的函数入参和出参。
                     method_params, method_returns = get_method_message_at_function_definition_node(function_definition_node)
                     # 回溯+控制流的方法从function_definition_node出发去遍历整个轨迹，做到每一个控制流都有数据流
-                    traverse_function_definition_node(function_definition_node, function_definition_node, pre_variable_node_list, method_params, method_returns, [])
+                    traverse_function_definition_node(function_definition_node, function_definition_node, pre_variable_node_list, method_params, method_returns, [], False)
     print(f"{file_name}节点数据流更新成功")
 
 
@@ -86,7 +89,8 @@ def is_child_of_function_definition_node(node, function_definition_node):
 # method_params:是代表原始函数的入参，是一个一维数组
 # method_returns:代表原始函数的出参，是一个一维数组
 # path:当前这条路线经过的一些位置,是一个一维数组。
-def traverse_function_definition_node(function_definition_node, now_node, pre_variable_node_list, method_params, method_returns, path):
+# is_overlap:代表是不是控制流和抽象语法树的重叠部分，如果是，那就不需要进行别的操作，而是直接仅当作控制方向的节点处理。
+def traverse_function_definition_node(function_definition_node, now_node, pre_variable_node_list, method_params, method_returns, path, is_overlap):
     # 如果当前节点不是属于当前的函数定义节点的子节点,结束当前路径。
     if is_child_of_function_definition_node(now_node, function_definition_node) is False:
         return
@@ -100,7 +104,7 @@ def traverse_function_definition_node(function_definition_node, now_node, pre_va
         return
     # 从这里开始，代表当前这个节点是可以走的，所以先操作now_node的节点信息。
     # 如果节点类型是["revert", "FunctionDefinition", "IfStatement", "ForStatement", "WhileStatement", "DoWhileStatement"]中的某一种，其实没有处理的必要，只是简单的当作分岔路的路口即可。
-    if now_node.node_type in ["revert", "FunctionDefinition", "IfStatement", "ForStatement", "WhileStatement", "DoWhileStatement"]:
+    if now_node.node_type in ["revert", "FunctionDefinition", "IfStatement", "ForStatement", "WhileStatement", "DoWhileStatement"] or is_overlap:
         processing_control_flow_forks(function_definition_node, now_node, pre_variable_node_list, method_params, method_returns, path)
     elif now_node.node_type == "VariableDeclarationStatement":
         processing_variable_declaration_statement(function_definition_node, now_node, pre_variable_node_list, method_params, method_returns, path)
@@ -120,10 +124,18 @@ def traverse_function_definition_node(function_definition_node, now_node, pre_va
 def processing_control_flow_forks(function_definition_node, now_node, pre_variable_node_list, method_params, method_returns, path):
     # 遍历其中每一个控制流的路径，走下去。
     for control_child_of_now_node in now_node.control_childes:
+        # 如果发现下一个要走的节点是当前节点的抽象语法树的父节点，那就说明没有必要走回去了，会形成循环。
+        if control_child_of_now_node == now_node.parent:
+            continue
         # 将当前节点加入到路径列表中，因为代表这个节点已经走过了。
         path.append(now_node)
-        # 开始走向下一个控制流节点，在这种控制流的分岔路口，除了路径需要增加，别的都没有需要改变的。
-        traverse_function_definition_node(function_definition_node, control_child_of_now_node, pre_variable_node_list, method_params, method_returns, path)
+        # 因为在处理VariableDeclarationStatement的时候，会将子节点都处理完毕，但是下一步如果就是在自己的子节点中的时候，就会进行重复计算，所以要特殊处理。
+        if control_child_of_now_node in now_node.childes:
+            traverse_function_definition_node(function_definition_node, control_child_of_now_node, pre_variable_node_list, method_params, method_returns, path, True)
+        # 进行回溯的操作，继续走下一步。
+        else:
+            # 开始走向下一个控制流节点，在这种控制流的分岔路口，除了路径需要增加，别的都没有需要改变的。
+            traverse_function_definition_node(function_definition_node, control_child_of_now_node, pre_variable_node_list, method_params, method_returns, path, False)
         # 弹出当前的节点。
         path.pop(-1)
 
@@ -187,13 +199,20 @@ def processing_variable_declaration_statement(function_definition_node, now_node
     # method_params:不需要改变
     # path:需要改变
     for control_child_of_variable_declaration_statement_node in variable_declaration_statement_node.control_childes:
+        # 如果发现下一个要走的节点是当前节点的抽象语法树的父节点，那就说明没有必要走回去了，会形成循环。
+        if control_child_of_variable_declaration_statement_node == now_node.parent:
+            continue
         # 添加路径走过的节点
         path.append(variable_declaration_statement_node)
         # 添加新的参数
         for node_in_declarations_dict_list in declarations_dict_list:
             method_params.append(node_in_declarations_dict_list['node'])
+        # 因为在处理VariableDeclarationStatement的时候，会将子节点都处理完毕，但是下一步如果就是在自己的子节点中的时候，就会进行重复计算，所以要特殊处理。
+        if control_child_of_variable_declaration_statement_node in variable_declaration_statement_node.childes:
+            traverse_function_definition_node(function_definition_node, control_child_of_variable_declaration_statement_node, pre_variable_node_list, method_params, method_returns, path, True)
         # 进行回溯的操作，继续走下一步。
-        traverse_function_definition_node(function_definition_node, control_child_of_variable_declaration_statement_node, pre_variable_node_list, method_params, method_returns, path)
+        else:
+            traverse_function_definition_node(function_definition_node, control_child_of_variable_declaration_statement_node, pre_variable_node_list, method_params, method_returns, path, False)
         # 回退步骤，将所有的参数回退到原始状态。
         for _ in declarations_dict_list:
             method_params.pop(-1)
@@ -237,12 +256,18 @@ def processing_expression_statement(function_definition_node, now_node, pre_vari
     # method_params:不需要改变
     # path:需要改变
     for control_child_of_expression_statement_node in expression_statement_node.control_childes:
+        # 如果发现下一个要走的节点是当前节点的抽象语法树的父节点，那就说明没有必要走回去了，会形成循环。
+        if control_child_of_expression_statement_node == now_node.parent:
+            continue
         # 添加路径走过的节点
         path.append(expression_statement_node)
         for param in res:
             method_params.append(param)
+        if control_child_of_expression_statement_node in expression_statement_node.childes:
+            traverse_function_definition_node(function_definition_node, control_child_of_expression_statement_node, pre_variable_node_list, method_params, method_returns, path, True)
         # 进行回溯的操作，继续走下一步。
-        traverse_function_definition_node(function_definition_node, control_child_of_expression_statement_node, pre_variable_node_list, method_params, method_returns, path)
+        else:
+            traverse_function_definition_node(function_definition_node, control_child_of_expression_statement_node, pre_variable_node_list, method_params, method_returns, path, False)
         for _ in res:
             method_params.pop(-1)
         # 将路径也回退回原始状态。
@@ -301,10 +326,16 @@ def processing_return_statement(function_definition_node, now_node, pre_variable
     # method_params:不需要改变
     # path:需要改变
     for control_child_of_return_node in return_node.control_childes:
+        # 如果发现下一个要走的节点是当前节点的抽象语法树的父节点，那就说明没有必要走回去了，会形成循环。
+        if control_child_of_return_node == now_node.parent:
+            continue
         # 添加路径走过的节点
         path.append(return_node)
-        # 进行回溯的操作，继续走下一步。
-        traverse_function_definition_node(function_definition_node, control_child_of_return_node, pre_variable_node_list, method_params, method_returns, path)
+        # 如果控制流和抽象语法树重叠了，不需要操作，而是直接当作路口处理,设定is_overlap为True
+        if control_child_of_return_node in return_node.childes:
+            traverse_function_definition_node(function_definition_node, control_child_of_return_node, pre_variable_node_list, method_params, method_returns, path, True)
+        else:
+            traverse_function_definition_node(function_definition_node, control_child_of_return_node, pre_variable_node_list, method_params, method_returns, path, False)
         # 将路径也回退回原始状态。
         path.pop(-1)
 
@@ -322,10 +353,17 @@ def processing_binary_operation(function_definition_node, now_node, pre_variable
     # method_params:不需要改变
     # path:需要改变
     for control_child_of_binary_operation_node in binary_operation_node.control_childes:
+        # 如果发现下一个要走的节点是当前节点的抽象语法树的父节点，那就说明没有必要走回去了，会形成循环。
+        if control_child_of_binary_operation_node == now_node.parent:
+            continue
         # 添加路径走过的节点
         path.append(binary_operation_node)
+        # 如果控制流和抽象语法树重叠了，不需要操作，而是直接当作路口处理,设定is_overlap为True
+        if control_child_of_binary_operation_node in binary_operation_node.childes:
+            traverse_function_definition_node(function_definition_node, control_child_of_binary_operation_node, pre_variable_node_list, method_params, method_returns, path, True)
         # 进行回溯的操作，继续走下一步。
-        traverse_function_definition_node(function_definition_node, control_child_of_binary_operation_node, pre_variable_node_list, method_params, method_returns, path)
+        else:
+            traverse_function_definition_node(function_definition_node, control_child_of_binary_operation_node, pre_variable_node_list, method_params, method_returns, path, False)
         # 将路径也回退回原始状态。
         path.pop(-1)
 
@@ -340,11 +378,18 @@ def processing_other_node(function_definition_node, now_node, pre_variable_node_
     # method_params:不需要改变
     # method_params:不需要改变
     # path:需要改变
-    for control_child_of_now_node in now_node.control_childes:
+    for control_child_of_now_node in other_node.control_childes:
+        # 如果发现下一个要走的节点是当前节点的抽象语法树的父节点，那就说明没有必要走回去了，会形成循环。
+        if control_child_of_now_node == now_node.parent:
+            continue
         # 添加路径走过的节点
         path.append(now_node)
+        # 如果控制流和抽象语法树重叠了，不需要操作，而是直接当作路口处理,设定is_overlap为True
+        if control_child_of_now_node in other_node.childes:
+            traverse_function_definition_node(function_definition_node, control_child_of_now_node, pre_variable_node_list, method_params, method_returns, path, True)
         # 进行回溯的操作，继续走下一步。
-        traverse_function_definition_node(function_definition_node, control_child_of_now_node, pre_variable_node_list, method_params, method_returns, path)
+        else:
+            traverse_function_definition_node(function_definition_node, control_child_of_now_node, pre_variable_node_list, method_params, method_returns, path, False)
         # 将路径也回退回原始状态。
         path.pop(-1)
 
