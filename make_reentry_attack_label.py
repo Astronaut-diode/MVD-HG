@@ -22,28 +22,29 @@ def make_reentry_attack_label(project_node_dict, file_name):
             if child_of_contract_node.node_type == "VariableDeclaration":
                 # 将当前这个变量的节点添加到数组中。
                 pre_variable_node_list.append(child_of_contract_node)
-        # 遍历合约当中的函数定义节点，对每一个函数分开来进行判断。
-        for function_definition_node in project_node_dict["FunctionDefinition"]:
-            # 必须是在当前遍历的合约下，才能进行漏洞检测。
-            if function_definition_node.parent == contract_node and len(function_definition_node.control_childes):
-                # 记录回溯的操作结果的
-                has_reentry_flag = []
-                # 获取当前FunctionDefinition节点定义的入参和出参。
-                method_params, method_returns = get_method_message_at_function_definition_node(function_definition_node)
-                # 将预定义的参数和入参放到一起，送入到回溯的函数中进行操作。
-                for pre_variable in pre_variable_node_list:
-                    method_params.append(pre_variable)
-                now_node = None
-                # 先找出第一个应该走的节点是谁，不能够直接使用control_childes[0]，容易弄到修饰符上去。
-                for control_child in function_definition_node.control_childes:
-                    if control_child.node_type != "ModifierDefinition":
-                        now_node = control_child
+        if "FunctionDefinition" in project_node_dict.keys():
+            # 遍历合约当中的函数定义节点，对每一个函数分开来进行判断。
+            for function_definition_node in project_node_dict["FunctionDefinition"]:
+                # 必须是在当前遍历的合约下，才能进行漏洞检测。
+                if function_definition_node.parent == contract_node and len(function_definition_node.control_childes):
+                    # 记录回溯的操作结果的
+                    has_reentry_flag = []
+                    # 获取当前FunctionDefinition节点定义的入参和出参。
+                    method_params, method_returns = get_method_message_at_function_definition_node(function_definition_node)
+                    # 将预定义的参数和入参放到一起，送入到回溯的函数中进行操作。
+                    for pre_variable in pre_variable_node_list:
+                        method_params.append(pre_variable)
+                    now_node = None
+                    # 先找出第一个应该走的节点是谁，不能够直接使用control_childes[0]，容易弄到修饰符上去。
+                    for control_child in function_definition_node.control_childes:
+                        if control_child.node_type != "ModifierDefinition":
+                            now_node = control_child
+                            break
+                    # 进行控制流+回溯的操作，判断在每一个控制流上是不是都是安全的。
+                    traverse_reentry_attack(project_node_dict, function_definition_node, method_params, now_node, [], has_reentry_flag)
+                    if len(has_reentry_flag):
+                        reentry_flag = True
                         break
-                # 进行控制流+回溯的操作，判断在每一个控制流上是不是都是安全的。
-                traverse_reentry_attack(project_node_dict, function_definition_node, method_params, now_node, [], has_reentry_flag)
-                if len(has_reentry_flag):
-                    reentry_flag = True
-                    break
     print(f"{file_name}重入标签已经打上了。")
     # 最终返回这个控制的变量即可。
     if reentry_flag:
@@ -209,7 +210,7 @@ def has_same_structure(argument_node, node):
 # 当走到了now_node的时候，进行重入漏洞的判断
 def reentry_attack(params, now_node):
     # 当前节点需要是FunctionCall节点，拥有memberName属性，且memberName属性是value才能判断是call.value这个函数。
-    if now_node.node_type == "FunctionCall" and "memberName" in now_node.attribute["expression"][0].keys() and now_node.attribute["expression"][0]["memberName"] == "value":
+    if now_node.node_type == "FunctionCall" and now_node.attribute["src_code"].__contains__("call.value("):
         # call.value调用的参数的节点id和节点类型
         argument_node_node_id = now_node.attribute["arguments"][0][0]["id"]
         argument_node_node_type = now_node.attribute["arguments"][0][0]["nodeType"]
