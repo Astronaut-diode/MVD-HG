@@ -160,11 +160,7 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
             continue
         path.append(now_node)
         # 进一步的进行检测
-        # 如果控制流和抽象语法树是重叠的部分，那么下一步是不需要进行漏洞检测的
-        if control_child in now_node.childes:
-            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag)
-        else:
-            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag)
+        traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag)
         path.pop(-1)
     # 回溯完了以后,需要将内容删除掉,以实现状态的回退.
     for _ in range(effective_push_count):
