@@ -85,22 +85,23 @@ if __name__ == '__main__':
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
         if config.create_corpus_mode == "create_corpus_txt":
-            # 同时，处理将这些漏洞文件处理一下，保存到不同文件夹中，方便下一次使用。
-            # todo:不能做到断点续传，重新构造一下。
-            classification_of_documents()
-            sentences = []
-            # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
-            with open(config.corpus_txt_path, 'r', encoding="utf-8") as corpus_file:
-                for line in corpus_file.readlines():
-                    sentences.append(line.split(" "))
-            # 因为之前没有文件，所以先进行训练,
-            w2v = Word2Vec(sentences=sentences, size=config.encode_dim, workers=16, sg=1, min_count=1)
-            # 保存训练以后的模型。
-            w2v.save(config.corpus_file_path)
-            # 第一次训练完以后先把complete中的内容都重新移动到sol_source目录当中。这样不就不需要手动重新移动了。
-            shutil.rmtree(config.data_sol_source_dir_path)
-            os.rename(config.data_complete_dir_path, config.data_sol_source_dir_path)
-            print("word2Vec模型已经构建完毕.")
+            # 需要标签文件和语言库文件都在才能处理。
+            if os.path.exists(config.idx_to_label_file) and os.path.exists(config.corpus_txt_path):
+                # 同时，处理将这些漏洞文件处理一下，保存到不同文件夹中，方便下一次使用。
+                classification_of_documents()
+                sentences = []
+                # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
+                with open(config.corpus_txt_path, 'r', encoding="utf-8") as corpus_file:
+                    for line in corpus_file.readlines():
+                        sentences.append(line.split(" "))
+                # 因为之前没有文件，所以先进行训练,
+                w2v = Word2Vec(sentences=sentences, size=config.encode_dim, workers=16, sg=1, min_count=1)
+                # 保存训练以后的模型。
+                w2v.save(config.corpus_file_path)
+                # 第一次训练完以后先把complete中的内容都重新移动到sol_source目录当中。这样不就不需要手动重新移动了。
+                shutil.rmtree(config.data_sol_source_dir_path)
+                os.rename(config.data_complete_dir_path, config.data_sol_source_dir_path)
+                print("word2Vec模型已经构建完毕.")
     elif config.run_mode == "truncated":
         sentences = []
         # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
