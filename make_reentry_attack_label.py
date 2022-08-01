@@ -33,8 +33,14 @@ def make_reentry_attack_label(project_node_dict, file_name):
                 # 将预定义的参数和入参放到一起，送入到回溯的函数中进行操作。
                 for pre_variable in pre_variable_node_list:
                     method_params.append(pre_variable)
+                now_node = None
+                # 先找出第一个应该走的节点是谁，不能够直接使用control_childes[0]，容易弄到修饰符上去。
+                for control_child in function_definition_node.control_childes:
+                    if control_child.node_type != "ModifierDefinition":
+                        now_node = control_child
+                        break
                 # 进行控制流+回溯的操作，判断在每一个控制流上是不是都是安全的。
-                traverse_reentry_attack(project_node_dict, function_definition_node, method_params, function_definition_node.control_childes[0], [], has_reentry_flag, False)
+                traverse_reentry_attack(project_node_dict, function_definition_node, method_params, now_node, [], has_reentry_flag)
                 if len(has_reentry_flag):
                     reentry_flag = True
                     break
@@ -88,7 +94,9 @@ def get_all_literal_or_identifier_at_now(node):
     while not stack.empty():
         pop_node = stack.get()
         for child in pop_node.childes:
-            stack.put(child)
+            # 如果是block那就代表该停下来了，因为下面的内容不是当前行可以获取的。
+            if child.node_type != "Block":
+                stack.put(child)
         if pop_node.node_type in ["Literal", "Identifier", "MemberAccess", "IndexAccess", "VariableDeclaration"]:
             res.append(pop_node)
     return res
@@ -102,7 +110,9 @@ def have_only_owner_modifiers(arbitrarily_node):
     if len(function_definition_node.attribute["modifiers"][0]):
         modifier_list = function_definition_node.attribute["modifiers"][0]
         for modifier in modifier_list:
-            if modifier["name"] == "onlyOwner":
+            if "name" in modifier.keys() and modifier["name"] == "onlyOwner":
+                return True
+            if "modifierName" in modifier.keys() and modifier["modifierName"]["name"] == "onlyOwner":
                 return True
     return False
 
@@ -114,7 +124,7 @@ def have_only_owner_modifiers(arbitrarily_node):
 # now_node:当前的节点位置
 # path:记录所有走过的节点,以避免进行死循环
 # is_overlap:是否重叠了。
-def traverse_reentry_attack(project_node_dict, function_definition_node, params, now_node, path, has_reentry_flag, is_overlap):
+def traverse_reentry_attack(project_node_dict, function_definition_node, params, now_node, path, has_reentry_flag):
     # 如果当前节点不是属于当前的函数定义节点的子节点,结束当前路径。
     if is_child_of_function_definition_node(now_node, function_definition_node) is False:
         return
@@ -144,19 +154,17 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
         # 说明已经找到漏洞了，不再进行深一步的循环
         if len(has_reentry_flag) != 0:
             continue
-        # # 如果没有重叠，才需要进行重入的判断，否则是不需要进行判断的。
-        # if is_overlap is False:
         # 对当前的状态进行重入标签函数的判断,如果返回值是True，那说明是有漏洞的，直接往列表中新增加一个标记
-        if reentry_attack(project_node_dict, params, now_node, path) is True:
+        if reentry_attack(params, now_node) is True:
             has_reentry_flag.append(True)
             continue
         path.append(now_node)
         # 进一步的进行检测
         # 如果控制流和抽象语法树是重叠的部分，那么下一步是不需要进行漏洞检测的
         if control_child in now_node.childes:
-            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag, True)
+            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag)
         else:
-            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag, False)
+            traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag)
         path.pop(-1)
     # 回溯完了以后,需要将内容删除掉,以实现状态的回退.
     for _ in range(effective_push_count):
@@ -203,12 +211,13 @@ def has_same_structure(argument_node, node):
 
 
 # 当走到了now_node的时候，进行重入漏洞的判断
-def reentry_attack(project_node_dict, params, now_node, path):
+def reentry_attack(params, now_node):
     # 当前节点需要是FunctionCall节点，拥有memberName属性，且memberName属性是value才能判断是call.value这个函数。
     if now_node.node_type == "FunctionCall" and "memberName" in now_node.attribute["expression"][0].keys() and now_node.attribute["expression"][0]["memberName"] == "value":
         # call.value调用的参数的节点id和节点类型
         argument_node_node_id = now_node.attribute["arguments"][0][0]["id"]
         argument_node_node_type = now_node.attribute["arguments"][0][0]["nodeType"]
+        argument_node = None
         # 根据参数的详细信息取到对应的参数节点。
         for child_of_function_call_node in now_node.childes:
             # 如果节点id和节点类型都可以对的上, 那当前节点就是call.value使用的参数节点.
@@ -221,8 +230,10 @@ def reentry_attack(project_node_dict, params, now_node, path):
         while argument_node is not None:
             # 记录一次转账的节点，避免下一次重复使用该节点
             use_argument_node_list.append(argument_node)
-            # 如果源代码的内容是0获取拥有修饰符,那就说明不可能会有问题,直接返回False
-            if argument_node.attribute["src_code"] == "0" or have_only_owner_modifiers(now_node):
+            # 如果源代码的内容是0或者拥有修饰符,那就说明不可能会有问题,直接返回False，但是修饰符暂不明确可不可以，先留着注释掉。
+            # if have_only_owner_modifiers(now_node):
+            #     return False
+            if argument_node.attribute["src_code"] == "0":
                 return False
             # 如果参数是常数,按照常数的方式进行判断
             if argument_node.node_type == "Literal":
@@ -273,6 +284,9 @@ def reentry_attack(project_node_dict, params, now_node, path):
                 for param in params[::-1]:
                     if param in origin_node_list:
                         origin_node = param
+                # 连源头都没找到，那就更不可能有余额变化的地方
+                if origin_node is None:
+                    return True
                 # 遍历来源节点的所有的数据流子节点,这些地方用的都是和转账的变量一样的,还没有被修改过,所以只要检查字面量即可.
                 for data_child_of_origin_node in origin_node.data_childes:
                     # 如果当前这个数据流子节点是在等号左端的，那就是被赋值的对象，没有什么意义，跳过操作。
@@ -366,6 +380,62 @@ def reentry_attack(project_node_dict, params, now_node, path):
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
                     elif param.node_type == "IndexAccess" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                        # 遍历由param.parent.childes[1]得出对应的data_parents
+                        for source_node_of_tmp_variable in params[::-1]:
+                            # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
+                            if have_equal_variable:
+                                break
+                            # 符合条件的节点，说明是tmp变量的来源。
+                            if source_node_of_tmp_variable in param.data_parents:
+                                # 可以直接得出起点
+                                assignment_left_node = source_node_of_tmp_variable
+                                # 如果已经被使用过了,那就不要再次使用了.
+                                if assignment_left_node in use_argument_node_list:
+                                    continue
+                                for last_appear_position in params[::-1]:
+                                    if last_appear_position in assignment_left_node.data_childes:
+                                        argument_node = last_appear_position
+                                        have_equal_variable = True
+                                        break
+                # 如果没有等价的元素,设定argument_node为None,即可退出循环
+                if have_equal_variable is False:
+                    argument_node = None
+            elif argument_node.node_type == "BinaryOperation":
+                # 遍历所有在当前的控制流之前出现过的参数节点,看看其中是否有过进行余额变动的内容.
+                for other_binary_operation_node in params[::-1]:
+                    # 首先要满足的条件是，一定得是BinaryOperation。然后就是拥有一样的结构。
+                    if other_binary_operation_node.node_type == "BinaryOperation" and has_same_structure(argument_node, other_binary_operation_node):
+                        # 该数组索引元素的父节点，后续用来判断是不是等式。
+                        other_binary_operation_node_parent = other_binary_operation_node.parent
+                        # 如果是等式，而且用了-=号。如果是二元操作符，使用了-号。都是符合条件的。
+                        if (other_binary_operation_node_parent.node_type == "Assignment" and other_binary_operation_node_parent.attribute["operator"][0] == "-=") or (other_binary_operation_node_parent.node_type == "BinaryOperation" and other_binary_operation_node_parent.attribute["operator"][0] == "-"):
+                            # 再继续判断该符号的减量是不是找到的这个BinaryOperation，如果是，那就大功告成，说明成功找到了减少余额的地方。
+                            if other_binary_operation_node_parent.childes[1] == other_binary_operation_node:
+                                return False
+                # 经过了一论循环，发现没有余额直接使用BinaryOperation进行变动，所以开始找等价情况。
+                # 记录是否有等价的元素
+                have_equal_variable = False
+                # 遍历所有的参数节点,注意逆序查询.
+                for param in params[::-1]:
+                    # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
+                    if have_equal_variable:
+                        break
+                    # 使用了BinaryOperation作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
+                    if param.node_type == "BinaryOperation" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                        # 可以直接得出起点
+                        start_node = param.parent.childes[0]
+                        # 如果已经被使用过了,那就不要再次使用了.
+                        if start_node in use_argument_node_list:
+                            continue
+                        # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
+                        for last_appear_position in params[::-1]:
+                            # 如果遍历的节点确实是起点的后续数据流，而且该节点不是等式左端
+                            if last_appear_position in start_node.data_childes and is_assignment_left(last_appear_position) is False:
+                                argument_node = last_appear_position
+                                have_equal_variable = True
+                                break
+                    # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
+                    elif param.node_type == "BinaryOperation" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
