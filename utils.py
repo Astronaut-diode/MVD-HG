@@ -79,3 +79,13 @@ def update_label_file(file_name, label):
     json.dump(origin_content, write_json)
     # 记得关闭比句柄文件。
     write_json.close()
+
+
+# 自定义的异常类，用来抛出异常。
+class CustomError(Exception):
+    def __init__(self, error_info):
+        super().__init__(self)
+        self.error_info = error_info
+
+    def __str__(self):
+        return self.error_info
