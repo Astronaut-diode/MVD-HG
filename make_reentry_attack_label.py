@@ -510,5 +510,5 @@ def reentry_attack(params, now_node):
                     argument_node = None
         # 如果是这种函数，而且没有找到合适的语句，那就返回True
         return True
-    # 都不是函数调用，肯定是没有问题的
+    # 都不是函数调用，肯定是没有问题的.
     return False
