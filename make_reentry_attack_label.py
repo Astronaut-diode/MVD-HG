@@ -89,7 +89,7 @@ def get_all_literal_or_identifier_at_now(node):
         pop_node = stack.get()
         for child in pop_node.childes:
             stack.put(child)
-        if pop_node.node_type in ["Literal", "Identifier", "MemberAccess", "IndexAccess"]:
+        if pop_node.node_type in ["Literal", "Identifier", "MemberAccess", "IndexAccess", "VariableDeclaration"]:
             res.append(pop_node)
     return res
 
@@ -144,12 +144,12 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
         # 说明已经找到漏洞了，不再进行深一步的循环
         if len(has_reentry_flag) != 0:
             continue
-        # 如果没有重叠，才需要进行重入的判断，否则是不需要进行判断的。
-        if is_overlap is False:
-            # 对当前的状态进行重入标签函数的判断,如果返回值是True，那说明是有漏洞的，直接往列表中新增加一个标记
-            if reentry_attack(project_node_dict, params, now_node, path) is True:
-                has_reentry_flag.append(True)
-                continue
+        # # 如果没有重叠，才需要进行重入的判断，否则是不需要进行判断的。
+        # if is_overlap is False:
+        # 对当前的状态进行重入标签函数的判断,如果返回值是True，那说明是有漏洞的，直接往列表中新增加一个标记
+        if reentry_attack(project_node_dict, params, now_node, path) is True:
+            has_reentry_flag.append(True)
+            continue
         path.append(now_node)
         # 进一步的进行检测
         # 如果控制流和抽象语法树是重叠的部分，那么下一步是不需要进行漏洞检测的
@@ -283,7 +283,7 @@ def reentry_attack(project_node_dict, params, now_node, path):
                         continue
                     # 取出父节点,是为了判断父节点是不是BinaryOperation或者Assignment节点.然后判断是不是被用来修改了余额.而且child_of_origin_node一定要作为第二个子元素出现。
                     parent = data_child_of_origin_node.parent
-                    if data_child_of_origin_node == parent.childes[1]:
+                    if len(parent.childes) == 2 and data_child_of_origin_node == parent.childes[1]:
                         if (parent.node_type == "Assignment" and parent.attribute["operator"][0] == "-=") or (parent.node_type == "BinaryOperation" and parent.attribute["operator"][0] == "-"):
                             return False
                 # 经过对argument的查询，发现不存在，那就要找对应的等价节点。
