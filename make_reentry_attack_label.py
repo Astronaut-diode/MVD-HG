@@ -1,9 +1,13 @@
 from queue import LifoQueue
+import datetime
 import config
+import utils
 
 
 # 判断文件中是否含有重入的漏洞。
 def make_reentry_attack_label(project_node_dict, file_name):
+    # 进入函数的时间
+    enter_time = datetime.datetime.now()
     # 如果是generate_all，并不需要继续操作，因为这时候在create_corpus_txt的时候已经生成过标签了。
     if config.create_corpus_mode == "generate_all":
         return
@@ -41,7 +45,7 @@ def make_reentry_attack_label(project_node_dict, file_name):
                             now_node = control_child
                             break
                     # 进行控制流+回溯的操作，判断在每一个控制流上是不是都是安全的。
-                    traverse_reentry_attack(project_node_dict, function_definition_node, method_params, now_node, [], has_reentry_flag)
+                    traverse_reentry_attack(project_node_dict, function_definition_node, method_params, now_node, [], has_reentry_flag, enter_time)
                     if len(has_reentry_flag):
                         reentry_flag = True
                         break
@@ -125,7 +129,12 @@ def have_only_owner_modifiers(arbitrarily_node):
 # now_node:当前的节点位置
 # path:记录所有走过的节点,以避免进行死循环
 # is_overlap:是否重叠了。
-def traverse_reentry_attack(project_node_dict, function_definition_node, params, now_node, path, has_reentry_flag):
+def traverse_reentry_attack(project_node_dict, function_definition_node, params, now_node, path, has_reentry_flag, enter_time):
+    # 此刻的时间
+    now_time = datetime.datetime.now()
+    # 说明打标签的时间太长了,同时要注意，将源代码的sol
+    if (now_time - enter_time).seconds > config.make_reentry_attack_label_max_time:
+        raise utils.CustomError("重入攻击漏洞标签耗时过久，已被移入error文件夹")
     # 如果当前节点不是属于当前的函数定义节点的子节点,结束当前路径。
     if is_child_of_function_definition_node(now_node, function_definition_node) is False:
         return
@@ -138,15 +147,6 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
     # 如果这个节点已经走过两次了，那也结束当前路径，因为这代表进入了死循环之类的。
     if count >= 2:
         return
-    # 从这里开始代表当前节点是可以走的,所以,先取出所有的参数,添加到params当中.
-    all_could_connect_param = get_all_literal_or_identifier_at_now(now_node)
-    # 记录当前这个节点有多少个参数被添加到了params中。
-    effective_push_count = 0
-    for param in all_could_connect_param:
-        # 避免重复加入
-        if param not in params:
-            effective_push_count += 1
-            params.append(param)
     # 进行回溯操作
     for control_child in now_node.control_childes:
         # 如果是走回去了，那就是形成环了，直接跳过。
@@ -155,17 +155,14 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
         # 说明已经找到漏洞了，不再进行深一步的循环
         if len(has_reentry_flag) != 0:
             continue
+        path.append(now_node)
         # 对当前的状态进行重入标签函数的判断,如果返回值是True，那说明是有漏洞的，直接往列表中新增加一个标记
-        if reentry_attack(params, now_node) is True:
+        if reentry_attack(params, now_node, path) is True:
             has_reentry_flag.append(True)
             continue
-        path.append(now_node)
         # 进一步的进行检测
-        traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag)
+        traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag, enter_time)
         path.pop(-1)
-    # 回溯完了以后,需要将内容删除掉,以实现状态的回退.
-    for _ in range(effective_push_count):
-        params.pop(-1)
 
 
 # 判断是不是等号的左端。
@@ -208,9 +205,19 @@ def has_same_structure(argument_node, node):
 
 
 # 当走到了now_node的时候，进行重入漏洞的判断
-def reentry_attack(params, now_node):
+def reentry_attack(pre_variable_list, now_node, path):
     # 当前节点需要是FunctionCall节点，拥有memberName属性，且memberName属性是value才能判断是call.value这个函数。
     if now_node.node_type == "FunctionCall" and now_node.attribute["src_code"].__contains__("call.value("):
+        # 先获取原始的参数列表,只有当路径中出现了转账，才有可能触发重入，所以参数模拟放到这里面来。
+        params = pre_variable_list
+        # 模拟走每一步路
+        for monitor_node in path:
+            # 从这里开始代表当前节点是可以走的,所以,先取出所有的参数,添加到params当中.
+            all_could_connect_param = get_all_literal_or_identifier_at_now(monitor_node)
+            for param in all_could_connect_param:
+                # 避免重复加入
+                if param not in params:
+                    params.append(param)
         # call.value调用的参数的节点id和节点类型
         argument_node_node_id = now_node.attribute["arguments"][0][0]["id"]
         argument_node_node_type = now_node.attribute["arguments"][0][0]["nodeType"]
