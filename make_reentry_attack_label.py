@@ -13,6 +13,8 @@ def make_reentry_attack_label(project_node_dict, file_name):
         return
     # 默认没有重入攻击，只有当发现了重入攻击的时候，才会修改标签
     reentry_flag = False
+    # 记录回溯的操作结果的
+    has_reentry_flag = []
     # 遍历当前合约中的ContractDefinition节点，因为获取预定义参数的时候对于不同的ContractDefinition节点来说是不一样的。
     for contract_node in project_node_dict['ContractDefinition']:
         # 如果在某一次循环中已经发现当前文件中是带有漏洞的，那就直接可以直接退出循环得出答案了。
@@ -31,8 +33,6 @@ def make_reentry_attack_label(project_node_dict, file_name):
             for function_definition_node in project_node_dict["FunctionDefinition"]:
                 # 必须是在当前遍历的合约下，才能进行漏洞检测。
                 if function_definition_node.parent == contract_node and len(function_definition_node.control_childes):
-                    # 记录回溯的操作结果的
-                    has_reentry_flag = []
                     # 获取当前FunctionDefinition节点定义的入参和出参。
                     method_params, method_returns = get_method_message_at_function_definition_node(function_definition_node)
                     # 将预定义的参数和入参放到一起，送入到回溯的函数中进行操作。
@@ -49,10 +49,10 @@ def make_reentry_attack_label(project_node_dict, file_name):
                     if len(has_reentry_flag):
                         reentry_flag = True
                         break
-    print(f"{file_name}重入标签已经打上了。")
+    print(f"{file_name}重入标签已经检测完毕。")
     # 最终返回这个控制的变量即可。
     if reentry_flag:
-        return 1
+        return has_reentry_flag[0]
     else:
         return 0
 
@@ -158,7 +158,7 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
         path.append(now_node)
         # 对当前的状态进行重入标签函数的判断,如果返回值是True，那说明是有漏洞的，直接往列表中新增加一个标记
         if reentry_attack(params, now_node, path) is True:
-            has_reentry_flag.append(True)
+            has_reentry_flag.append(1)
             continue
         # 进一步的进行检测
         traverse_reentry_attack(project_node_dict, function_definition_node, params, control_child, path, has_reentry_flag, enter_time)
@@ -207,7 +207,7 @@ def has_same_structure(argument_node, node):
 # 当走到了now_node的时候，进行重入漏洞的判断
 def reentry_attack(pre_variable_list, now_node, path):
     # 当前节点需要是FunctionCall节点，拥有memberName属性，且memberName属性是value才能判断是call.value这个函数。
-    if now_node.node_type == "FunctionCall" and now_node.attribute["src_code"].__contains__("call.value("):
+    if now_node.node_type == "FunctionCall" and now_node.attribute["src_code"][0].__contains__("call.value(") and "memberName" in now_node.attribute["expression"][0].keys() and now_node.attribute["expression"][0]["memberName"] == "value":
         # 先获取原始的参数列表,只有当路径中出现了转账，才有可能触发重入，所以参数模拟放到这里面来。
         params = pre_variable_list
         # 模拟走每一步路
@@ -312,7 +312,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
                     if have_equal_variable:
                         break
-                    # 只对等式处理
+                    # 只对等式处理，todo:不单单是Assignment，还有可能是参数预定义。
                     if find_assignment_param.parent.node_type == "Assignment":
                         # argument_node在Assignment的子节点中,而且argument_node是另外一个子节点的数据流子节点
                         # 这里是转账金额 = tmp，tmp更新转账金额
