@@ -11,6 +11,7 @@ from train import train
 from gensim.models.word2vec import Word2Vec
 from append_data_flow_information import append_data_flow_information
 from make_reentry_attack_label import make_reentry_attack_label
+from make_arithmetic_attack_label import make_arithmetic_attack_label
 from classification_of_documents import classification_of_documents
 from tqdm import tqdm
 from gets_command_line_arguments import gets_command_line_arguments
@@ -72,9 +73,10 @@ if __name__ == '__main__':
                     try:
                         # 根据内存中的数据，设定图的数据流。
                         append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                        # 添加了打标签的功能
+                        # 判断文件中是否含有漏洞。
                         reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                        utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, 0, 0, 0])
+                        arithmetic_flag = make_arithmetic_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                        utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, 0, arithmetic_flag, 0])
                     except utils.CustomError as e:
                         # 运行时间过长，是里面的控制流太多了，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
