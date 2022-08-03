@@ -588,6 +588,13 @@ def create_node(origin_node):
         # 设定数据的来源，这里是固定的，如果有VariableDeclaration，那一定是从这里发射。
         res.data_parents.append(origin_node)
         return res
+    elif origin_node.node_type == "FunctionCall":
+        res = Node(None, "FunctionCall", None)
+        res.append_attribute("src_code", origin_node.attribute["src_code"][0])
+        # 可以在后面判断结构相同的时候，顺带判断是否来源相同。
+        for data_parent in origin_node.data_parents:
+            res.data_parents.append(data_parent)
+        return res
 
 
 # 判断两个结构是否完全一致。
@@ -618,7 +625,7 @@ def structure_equal(node_1, node_2, params):
         if res[0].node_type != res[1].node_type:
             return False
         # 是这四种类型的时候，比对src_code。
-        if res[0].node_type in ["Identifier", "Literal", "IndexAccess", "MemberAccess"]:
+        if res[0].node_type in ["Identifier", "Literal", "IndexAccess", "MemberAccess", "FunctionCall"]:
             # 先比对他们的源代码是否相同，如果源代码都不一样，那可以直接返回False了。
             if res[0].attribute["src_code"] != res[1].attribute["src_code"]:
                 return False

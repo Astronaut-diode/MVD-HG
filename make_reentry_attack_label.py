@@ -169,7 +169,7 @@ def traverse_reentry_attack(project_node_dict, function_definition_node, params,
 def is_assignment_left(node):
     parent = node.parent
     # 除非空或者是等号的时候才会停下来
-    while parent is not None and parent.node_type != "Assignment":
+    while parent is not None and parent.node_type != "Assignment" and parent.node_type != "VariableDeclarationStatement":
         parent = parent.parent
     # 如果不是空，那就说明是等号
     if parent is not None:
@@ -232,6 +232,9 @@ def reentry_attack(pre_variable_list, now_node, path):
         use_argument_node_list = []
         # 只要转账的参数节点不是空，就一直循环。
         while argument_node is not None:
+            # 强行退出，少一两个使用函数作为转账参数的类型的没什么问题。
+            if argument_node in use_argument_node_list:
+                break
             # 记录一次转账的节点，避免下一次重复使用该节点
             use_argument_node_list.append(argument_node)
             # 如果源代码的内容是0或者拥有修饰符,那就说明不可能会有问题,直接返回False，但是修饰符暂不明确可不可以，先留着注释掉。
@@ -261,16 +264,16 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了Literal作为Assignment第二个子节点的部分，而且该字面量需要和转账金额一样大,而且和原始的argument节点不是同一个节点。
-                    if param.node_type == "Literal" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and param == param.parent.childes[1] and param.attribute["src_code"] == argument_node.attribute["src_code"] and param != argument_node:
+                    if param.node_type == "Literal" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and param == param.parent.childes[1] and param.attribute["src_code"] == argument_node.attribute["src_code"] and param != argument_node:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
-                        # 如果已经被使用过了,那就不要再次使用了.
-                        if start_node in use_argument_node_list:
-                            continue
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
                         for last_appear_position in params[::-1]:
                             # 如果遍历的节点确实是起点的后续数据流，而且该节点不是等式左端
                             if last_appear_position in start_node.data_childes and is_assignment_left(last_appear_position) is False:
+                                # 如果已经被使用过了,那就不要再次使用了.
+                                if last_appear_position in use_argument_node_list:
+                                    continue
                                 argument_node = last_appear_position
                                 have_equal_variable = True
                                 break
@@ -313,7 +316,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 只对等式处理，
-                    if find_assignment_param.parent.node_type == "Assignment" or find_assignment_param.parent.node_type == "VariableDeclarationStatement":
+                    if (find_assignment_param.parent.node_type == "Assignment" and find_assignment_param.parent.attribute["operator"][0] == "=") or find_assignment_param.parent.node_type == "VariableDeclarationStatement":
                         # argument_node是转账金额节点，下面是转账金额 = tmp，接受来自tmp的内容
                         # 如果等号前面的数据流是当前转账金额的数据流来源，那就说明是等式赋值。
                         if find_assignment_param.parent.childes[0] in argument_node.data_parents:
@@ -326,11 +329,11 @@ def reentry_attack(pre_variable_list, now_node, path):
                                 if source_node_of_tmp_variable in find_assignment_param.parent.childes[1].data_parents:
                                     # 可以直接得出起点
                                     assignment_left_node = source_node_of_tmp_variable
-                                    # 如果已经被使用过了,那就不要再次使用了.
-                                    if assignment_left_node in use_argument_node_list:
-                                        continue
                                     for last_appear_position in params[::-1]:
                                         if last_appear_position in assignment_left_node.data_childes:
+                                            # 如果已经被使用过了,那就不要再次使用了.
+                                            if last_appear_position in use_argument_node_list:
+                                                continue
                                             argument_node = last_appear_position
                                             have_equal_variable = True
                                             break
@@ -338,12 +341,12 @@ def reentry_attack(pre_variable_list, now_node, path):
                         elif argument_node.data_parents == find_assignment_param.parent.childes[1].data_parents:
                             # 可以直接得出起点
                             assignment_left_node = find_assignment_param.parent.childes[0]
-                            # 如果已经被使用过了,那就不要再次使用了.
-                            if assignment_left_node in use_argument_node_list:
-                                continue
                             # 循环遍历找出最后一次使用的地方。
                             for last_appear_position in params[::-1]:
                                 if last_appear_position in assignment_left_node.data_childes:
+                                    # 如果已经被使用过了,那就不要再次使用了.
+                                    if last_appear_position in use_argument_node_list:
+                                        continue
                                     argument_node = last_appear_position
                                     have_equal_variable = True
                                     break
@@ -371,21 +374,21 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了IndexAccess作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
-                    if param.node_type == "IndexAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "IndexAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
-                        # 如果已经被使用过了,那就不要再次使用了.
-                        if start_node in use_argument_node_list:
-                            continue
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
                         for last_appear_position in params[::-1]:
                             # 如果遍历的节点确实是起点的后续数据流，而且该节点不是等式左端
                             if last_appear_position in start_node.data_childes and is_assignment_left(last_appear_position) is False:
+                                # 如果已经被使用过了,那就不要再次使用了.
+                                if last_appear_position in use_argument_node_list:
+                                    continue
                                 argument_node = last_appear_position
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "IndexAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclaration") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "IndexAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclaration") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
@@ -395,11 +398,11 @@ def reentry_attack(pre_variable_list, now_node, path):
                             if source_node_of_tmp_variable in param.parent.childes[1].data_parents:
                                 # 可以直接得出起点
                                 assignment_left_node = source_node_of_tmp_variable
-                                # 如果已经被使用过了,那就不要再次使用了.
-                                if assignment_left_node in use_argument_node_list:
-                                    continue
                                 for last_appear_position in params[::-1]:
                                     if last_appear_position in assignment_left_node.data_childes:
+                                        # 如果已经被使用过了,那就不要再次使用了.
+                                        if last_appear_position in use_argument_node_list:
+                                            continue
                                         argument_node = last_appear_position
                                         have_equal_variable = True
                                         break
@@ -427,21 +430,21 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了BinaryOperation作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。tmp = 金额。
-                    if param.node_type == "BinaryOperation" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "BinaryOperation" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
-                        # 如果已经被使用过了,那就不要再次使用了.
-                        if start_node in use_argument_node_list:
-                            continue
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
                         for last_appear_position in params[::-1]:
                             # 如果遍历的节点确实是起点的后续数据流，而且该节点不是等式左端
                             if last_appear_position in start_node.data_childes and is_assignment_left(last_appear_position) is False:
+                                # 如果已经被使用过了,那就不要再次使用了.
+                                if last_appear_position in use_argument_node_list:
+                                    continue
                                 argument_node = last_appear_position
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "BinaryOperation" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "BinaryOperation" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
@@ -451,11 +454,11 @@ def reentry_attack(pre_variable_list, now_node, path):
                             if source_node_of_tmp_variable in param.parent.childes[1].data_parents:
                                 # 可以直接得出起点
                                 assignment_left_node = source_node_of_tmp_variable
-                                # 如果已经被使用过了,那就不要再次使用了.
-                                if assignment_left_node in use_argument_node_list:
-                                    continue
                                 for last_appear_position in params[::-1]:
                                     if last_appear_position in assignment_left_node.data_childes:
+                                        # 如果已经被使用过了,那就不要再次使用了.
+                                        if last_appear_position in use_argument_node_list:
+                                            continue
                                         argument_node = last_appear_position
                                         have_equal_variable = True
                                         break
@@ -483,21 +486,21 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了MemberAccess作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
-                    if param.node_type == "MemberAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "MemberAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
-                        # 如果已经被使用过了,那就不要再次使用了.
-                        if start_node in use_argument_node_list:
-                            continue
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
                         for last_appear_position in params[::-1]:
                             # 如果遍历的节点确实是起点的后续数据流，而且该节点不是等式左端
                             if last_appear_position in start_node.data_childes and is_assignment_left(last_appear_position) is False:
+                                # 如果已经被使用过了,那就不要再次使用了.
+                                if last_appear_position in use_argument_node_list:
+                                    continue
                                 argument_node = last_appear_position
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "MemberAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "MemberAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
@@ -507,11 +510,11 @@ def reentry_attack(pre_variable_list, now_node, path):
                             if source_node_of_tmp_variable in param.parent.childes[0].data_parents:
                                 # 可以直接得出起点
                                 assignment_left_node = source_node_of_tmp_variable
-                                # 如果已经被使用过了,那就不要再次使用了.
-                                if assignment_left_node in use_argument_node_list:
-                                    continue
                                 for last_appear_position in params[::-1]:
                                     if last_appear_position in assignment_left_node.data_childes:
+                                        # 如果已经被使用过了,那就不要再次使用了.
+                                        if last_appear_position in use_argument_node_list:
+                                            continue
                                         argument_node = last_appear_position
                                         have_equal_variable = True
                                         break
