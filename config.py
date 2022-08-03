@@ -38,7 +38,6 @@ suspected_timestamp_attack_fold = f"{data_dir_path}/attack/suspected_timestamp_a
 suspected_arithmetic_attack_fold = f"{data_dir_path}/attack/suspected_arithmetic_attack/"
 # 疑似危险调用漏洞的文件啊及
 suspected_dangerous_delegate_call_attack_fold = f"{data_dir_path}/attack/suspected_dangerous_delegate_call_attack/"
-
 # 运行过程中出错的保存文件夹
 error_file_fold = f"{data_dir_path}/error/"
 # compile_files中用到的版本匹配规则,仅仅是用来判断当前行是否带有版本信息
@@ -99,5 +98,7 @@ versions = ["0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.4.5", "0.4.6", "0.4.
 create_data_flow_max_time = 40
 # 给文件进行重入攻击漏洞查询的最大时间，如果时间到了还没有找到漏洞也没有结束，那就说明是路径太多太爆炸了，提前退出，单位是秒。
 make_reentry_attack_label_max_time = 40
+# 给文件进行时间戳漏洞查询的最大时间，如果时间到了还没有找到漏洞也没有结束，那就说明是路径太多太爆炸了，提前退出，单位是秒。
+make_timestamp_attack_label_max_time = 40
 # 给文件进行算数溢出漏洞查询的最大时间，如果时间到了还没有找到漏洞也没有结束，那就说明是路径太多太爆炸了，提前退出，单位是秒。
 make_arithmetic_attack_label_max_time = 40
