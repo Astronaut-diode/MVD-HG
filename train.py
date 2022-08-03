@@ -15,7 +15,7 @@ def train():
     # 获取训练用的数据集。
     dataset = ASTGNNDataset(config.data_dir_path)
     # 将数据集加载到loader当中。别用shuffle，用了shuffle这两个数据集打乱的顺序就不一样了，不方便一起循环，不方便和zip一起使用。
-    data_loader = DataLoader(dataset=dataset, batch_size=config.batch_size, shuffle=False, drop_last=False)
+    data_loader = DataLoader(dataset=dataset, batch_size=config.batch_size, shuffle=True, drop_last=False)
     model = ASTGNNModel()
     # 将模型转化为在指定设备上运行的类型。
     model = model.to(device)

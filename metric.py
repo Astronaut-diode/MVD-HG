@@ -117,8 +117,14 @@ def label_f1_micro(label, predict, beta=1):
 def metric(predict, label, count, writer):
     predict = predict.data.cpu().numpy()
     label = label.data.cpu().numpy()
-    predict[predict >= config.valid_threshold] = 1
-    predict[predict < config.valid_threshold] = 0
+    predict[predict[:, 0] >= config.reentry_attack_valid_threshold, 0] = 1
+    predict[predict[:, 0] < config.reentry_attack_valid_threshold, 0] = 0
+    predict[predict[:, 1] >= config.timestamp_attack_valid_threshold, 1] = 1
+    predict[predict[:, 1] < config.timestamp_attack_valid_threshold, 1] = 0
+    predict[predict[:, 2] >= config.arithmetic_attack_valid_threshold, 2] = 1
+    predict[predict[:, 2] < config.arithmetic_attack_valid_threshold, 2] = 0
+    predict[predict[:, 3] >= config.delegate_attack_valid_threshold, 3] = 1
+    predict[predict[:, 3] < config.delegate_attack_valid_threshold, 3] = 0
     # subset_acc = example_subset_accuracy(label, predict)
     # ex_acc = example_accuracy(label, predict)
     # ex_precision = example_precision(label, predict)
