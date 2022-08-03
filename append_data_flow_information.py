@@ -34,6 +34,12 @@ def append_data_flow_information(project_node_list, project_node_dict, file_name
         contract_node.append_child(this_node)
         project_node_list.append(this_node)
         project_node_dict["VariableDeclaration"].append(this_node)
+        block_node = Node(max_count + 3, "VariableDeclaration", contract_node)
+        block_node.append_attribute("name", "block")
+        block_node.append_attribute("src_code", "")
+        contract_node.append_child(block_node)
+        project_node_list.append(block_node)
+        project_node_dict["VariableDeclaration"].append(block_node)
         # 遍历ContractDefinition节点下面的子节点，这些子节点就是预定义参数的节点。
         for child_of_contract_node in contract_node.childes:
             # 当类型是VariableDeclaration的时候，才是参数预定义，注意，在这个位置不管有没有等号赋值都只会是VariableDeclaration。
