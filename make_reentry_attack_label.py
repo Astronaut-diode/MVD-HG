@@ -264,7 +264,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了Literal作为Assignment第二个子节点的部分，而且该字面量需要和转账金额一样大,而且和原始的argument节点不是同一个节点。
-                    if param.node_type == "Literal" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and param == param.parent.childes[1] and param.attribute["src_code"] == argument_node.attribute["src_code"] and param != argument_node:
+                    if param.node_type == "Literal" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or (param.parent.node_type == "VariableDeclarationStatement" and len(param.parent) == 2)) and param == param.parent.childes[1] and param.attribute["src_code"] == argument_node.attribute["src_code"] and param != argument_node:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
@@ -316,7 +316,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 只对等式处理，
-                    if (find_assignment_param.parent.node_type == "Assignment" and find_assignment_param.parent.attribute["operator"][0] == "=") or find_assignment_param.parent.node_type == "VariableDeclarationStatement":
+                    if (find_assignment_param.parent.node_type == "Assignment" and find_assignment_param.parent.attribute["operator"][0] == "=") or (find_assignment_param.parent.node_type == "VariableDeclarationStatement" and len(find_assignment_param.parent.childes) == 2):
                         # argument_node是转账金额节点，下面是转账金额 = tmp，接受来自tmp的内容
                         # 如果等号前面的数据流是当前转账金额的数据流来源，那就说明是等式赋值。
                         if find_assignment_param.parent.childes[0] in argument_node.data_parents:
@@ -374,7 +374,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了IndexAccess作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
-                    if param.node_type == "IndexAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "IndexAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or (param.parent.node_type == "VariableDeclarationStatement" and len(param.parent) == 2)) and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
@@ -388,7 +388,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "IndexAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclaration") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "IndexAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or (param.parent.node_type == "VariableDeclarationStatement" and len(param.parent) == 2)) and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
@@ -430,7 +430,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了BinaryOperation作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。tmp = 金额。
-                    if param.node_type == "BinaryOperation" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "BinaryOperation" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or (param.parent.node_type == "VariableDeclarationStatement" and len(param.parent) == 2)) and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
@@ -444,7 +444,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "BinaryOperation" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "BinaryOperation" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or (param.parent.node_type == "VariableDeclarationStatement" and len(param.parent) == 2)) and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
@@ -486,7 +486,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了MemberAccess作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
-                    if param.node_type == "MemberAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "MemberAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or (param.parent.node_type == "VariableDeclarationStatement" and len(param.parent) == 2)) and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 根据起点我们可以推断出最后一次使用这个变量的位置,将这个推断出的位置,再一次当作新的转账金额进行判断即可.
@@ -500,7 +500,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "MemberAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "MemberAccess" and ((param.parent.node_type == "Assignment" and param.parent.attribute["operator"][0] == "=") or (param.parent.node_type == "VariableDeclarationStatement" and len(param.parent) == 2)) and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
