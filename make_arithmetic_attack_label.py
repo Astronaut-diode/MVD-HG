@@ -76,7 +76,7 @@ def make_arithmetic_attack_label(project_node_dict, file_name):
                     if len(has_arithmetic_flag):
                         arithmetic_flag = True
                         break
-    print(f"{file_name}溢出漏洞已经检测完毕。")
+    utils.success(f"{file_name}溢出漏洞已经检测完毕。")
     # 最终返回这个控制的变量即可。
     if arithmetic_flag:
         return has_arithmetic_flag[0]

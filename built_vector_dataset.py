@@ -34,7 +34,7 @@ def built_vector_dataset(project_node_list, file_name):
         create_cfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
         # 传入所有的节点信息，生成数据流边的边文件。
         create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
-        print(f"{file_name}节点和边文件已经构建完毕。")
+        utils.success(f"{file_name}节点和边文件已经构建完毕。")
 
 
 # 创建保存节点信息的json文件,注意，这里保存的结果点进去看只有一行，主要是为了减少保存的空间，如果想要好看，可以复制的json格式化的在线网站上看。
@@ -58,7 +58,7 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
     json.dump(node_feature_list, node_feature_handle, ensure_ascii=False)
     # 关闭句柄文件。
     node_feature_handle.close()
-    print(f"{node_feature_file_name}节点特征文件已经构建完毕")
+    utils.success(f"{node_feature_file_name}节点特征文件已经构建完毕")
 
 
 # 创建抽象语法树的边文件。
@@ -81,7 +81,7 @@ def create_ast_edge_json(project_node_list, raw_project_dir_half_name, id_mappin
     json.dump(ast_edge_list, ast_edge_handle, ensure_ascii=False)
     # 关闭句柄文件。
     ast_edge_handle.close()
-    print(f"{ast_edge_file_name}抽象语法树边文件已经构建完毕")
+    utils.success(f"{ast_edge_file_name}抽象语法树边文件已经构建完毕")
 
 
 # 创建控制流图的边文件。
@@ -104,7 +104,7 @@ def create_cfg_edge_json(project_node_list, raw_project_dir_half_name, id_mappin
     json.dump(cfg_edge_list, cfg_edge_handle, ensure_ascii=False)
     # 关闭句柄文件。
     cfg_edge_handle.close()
-    print(f"{cfg_edge_file_name}控制流图边文件已经构建完毕")
+    utils.success(f"{cfg_edge_file_name}控制流图边文件已经构建完毕")
 
 
 # 创建数据流图的边文件。
@@ -127,4 +127,4 @@ def create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mappin
     json.dump(dfg_edge_list, dfg_edge_handle, ensure_ascii=False)
     # 关闭句柄文件。
     dfg_edge_handle.close()
-    print(f"{dfg_edge_file_name}数据流图边文件已经构建完毕")
+    utils.success(f"{dfg_edge_file_name}数据流图边文件已经构建完毕")

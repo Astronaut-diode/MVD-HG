@@ -1,5 +1,6 @@
 from queue import LifoQueue
 from bean.Node import Node
+from utils import success
 import datetime
 import config
 import utils
@@ -56,7 +57,7 @@ def append_data_flow_information(project_node_list, project_node_dict, file_name
                     method_params, method_returns = get_method_message_at_function_definition_node(function_definition_node)
                     # 回溯+控制流的方法从function_definition_node出发去遍历整个轨迹，做到每一个控制流都有数据流
                     traverse_function_definition_node(function_definition_node, function_definition_node, pre_variable_node_list, method_params, method_returns, [], False, enter_time)
-    print(f"{file_name}节点数据流更新成功")
+    success(f"{file_name}节点数据流更新成功")
 
 
 # 找到一个FunctionDefinition节点下面的入参和出参

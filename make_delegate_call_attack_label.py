@@ -1,4 +1,5 @@
 from queue import LifoQueue
+import utils
 
 
 def make_delegate_call_attack_label(project_node_dict, file_name):
@@ -38,7 +39,7 @@ def make_delegate_call_attack_label(project_node_dict, file_name):
                             if pop_node.parent.node_type == "ParameterList":
                                 delegate_flag = True
                                 has_delegate_call_flag.append(1)
-    print(f"{file_name}危险调用漏洞已经检测完毕。")
+    utils.success(f"{file_name}危险调用漏洞已经检测完毕。")
     # 最终返回这个控制的变量即可。
     if delegate_flag:
         return has_delegate_call_flag[0]

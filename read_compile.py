@@ -180,4 +180,4 @@ def create_graph(content, node_list, source_file_name):
         # 如果是节点类型，说明需要更换父节点了。
         elif isinstance(q, Node):
             parent_node = q
-    print(f"{source_file_name}create_graph完成")
+    utils.success(f"{source_file_name}create_graph完成")

@@ -33,7 +33,7 @@ class ASTGNNDataset(Dataset):
     # 2.如果原始文件不存在，说明无法生成数据集。
     def download(self):
         if len(self.raw_file_names) == 0:
-            print("原始文件不存在，无法生成数据集。")
+            utils.error("原始文件不存在，无法生成数据集。")
 
     # 4.对文件进行处理，然后保存到processed中返回的文件列表里面去。
     def process(self):

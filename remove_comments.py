@@ -67,7 +67,7 @@ def remove_comments(data_sol_source_project_dir_path):
                         else:
                             tmp_file_handle.write(line)
                 except Exception as e:
-                    print(f'{file}因为含有不正常的内容而被删除，异常信息{e}')
+                    utils.error(f'{file}因为含有不正常的内容而被删除，异常信息{e}')
             # 都已经写好了，关闭句柄文件。
             origin_file_handle.close()
             tmp_file_handle.close()
@@ -75,4 +75,4 @@ def remove_comments(data_sol_source_project_dir_path):
             os.remove(file)
             # 将临时文件的文件名移动到对应的位置上，实现覆写。
             shutil.move(tmp_file_name, file)
-            print(f"{file}注释删除完毕")
+            utils.success(f"{file}注释删除完毕")

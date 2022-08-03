@@ -68,7 +68,7 @@ if __name__ == '__main__':
                     except Exception as e:
                         # 发现错误，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
-                        print(f"{now_dir}/{ast_json_file_name}出现错误，移入错误文件夹,并跳过后续操作。")
+                        utils.error(f"{now_dir}/{ast_json_file_name}出现错误，移入错误文件夹,并跳过后续操作。")
                         continue
                     # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
                     append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
@@ -86,13 +86,13 @@ if __name__ == '__main__':
                     except utils.CustomError as e:
                         # 运行时间过长，是里面的控制流太多了，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
-                        print(f"{now_dir}/{ast_json_file_name}{e}")
+                        utils.error(f"{now_dir}/{ast_json_file_name}{e}")
                         continue
                     # 如果控制流过多，执行上述的函数，可能会出现递归栈溢出的错误，捕获以后继续执行。
                     except RecursionError as e:
                         # 路径爆炸了，导致深度出现问题，删除源文件，并跳过。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
-                        print(f"{now_dir}/{ast_json_file_name}{e}")
+                        utils.error(f"{now_dir}/{ast_json_file_name}{e}")
                         continue
                     # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
                     built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
@@ -123,7 +123,7 @@ if __name__ == '__main__':
                 # 第一次训练完以后先把complete中的内容都重新移动到sol_source目录当中。这样不就不需要手动重新移动了。
                 shutil.rmtree(config.data_sol_source_dir_path)
                 os.rename(config.data_complete_dir_path, config.data_sol_source_dir_path)
-                print("word2Vec模型已经构建完毕.")
+                utils.success("word2Vec模型已经构建完毕.")
     elif config.run_mode == "truncated":
         sentences = []
         # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
@@ -134,14 +134,14 @@ if __name__ == '__main__':
         w2v = Word2Vec(sentences=sentences, size=config.encode_dim, workers=16, sg=1, min_count=1)
         # 保存训练以后的模型。
         w2v.save(config.corpus_file_path)
-        print("word2Vec模型已经构建完毕.")
+        utils.success("word2Vec模型已经构建完毕.")
     elif config.run_mode == "train":
         train()
     end = datetime.datetime.now()
-    print(f"开始时间:{start}")
-    print(f"结束时间:{end}")
-    print(f"一共耗时:{end - start}")
-    print("以下是使用的参数")
-    print(f"run_mode:{config.run_mode}")
-    print(f"create_corpus_mode:{config.create_corpus_mode}")
+    utils.tip(f"开始时间:{start}")
+    utils.tip(f"结束时间:{end}")
+    utils.tip(f"一共耗时:{end - start}")
+    utils.tip("以下是使用的参数")
+    utils.tip(f"run_mode:{config.run_mode}")
+    utils.tip(f"create_corpus_mode:{config.create_corpus_mode}")
     sys.exit(47)

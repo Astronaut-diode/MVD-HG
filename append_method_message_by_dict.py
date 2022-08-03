@@ -1,4 +1,5 @@
 # coding=UTF-8
+from utils import success
 
 
 # 设置函数的method_name等详细信息到attribute上。
@@ -113,4 +114,4 @@ def append_method_message_by_dict(project_node_dict, file_name):
             # 将这里的函数名字和参数都添加到ModifierDefinition节点的attribute上。
             node.append_attribute("method_name", method_name)
             node.append_attribute("params", params)
-    print(f"{file_name}函数信息更新成功")
+    success(f"{file_name}函数信息更新成功")

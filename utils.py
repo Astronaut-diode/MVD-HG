@@ -89,3 +89,16 @@ class CustomError(Exception):
 
     def __str__(self):
         return self.error_info
+
+
+# 自定义的输出函数，带有颜色。
+def error(msg):
+    print(f"\033[1;;31m{msg}")
+
+
+def success(msg):
+    print(f"\033[1;;32m{msg}")
+
+
+def tip(msg):
+    print(f"\033[1;;33m{msg}")

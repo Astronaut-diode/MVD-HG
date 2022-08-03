@@ -4,6 +4,7 @@ from model import ASTGNNModel
 from torch_geometric.loader import DataLoader
 from metric import metric
 from torch.utils.tensorboard import SummaryWriter
+import utils
 import torch
 import config
 
@@ -38,7 +39,7 @@ def train():
             loss.backward()
             optimizer.step()
             # 进行准确率计算。
-            print(f"epoch:{epoch}, index:{index}, 当前阶段的loss为{loss}", end="")
+            utils.tip(f"epoch:{epoch}, index:{index}, 当前阶段的loss为{loss}", end="")
             writer.add_scalar("train_loss", loss, count)
             metric(predict, batch.y, count, writer)
             count = count + 1

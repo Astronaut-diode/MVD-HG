@@ -36,7 +36,7 @@ def make_timestamp_attack_label(project_node_dict, file_name):
                         if len(has_timestamp_flag):
                             timestamp_flag = True
                             break
-    print(f"{file_name}时间戳标签已经检测完毕。")
+    utils.success(f"{file_name}时间戳标签已经检测完毕。")
     # 最终返回这个控制的变量即可。
     if timestamp_flag:
         return has_timestamp_flag[0]

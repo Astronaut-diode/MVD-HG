@@ -1,6 +1,7 @@
 # coding=UTF-8
 from queue import LifoQueue, Queue
 from bean.Node import Node
+from utils import success
 import re
 
 
@@ -187,7 +188,7 @@ def append_control_flow_information(project_node_list, project_node_dict, file_n
                         command.append_control_child(control_child)
                     # 删除ModifierDefinition和FunctionDefinition连接的边。
                     modifier_definition_node.control_childes.remove(control_child)
-    print(f"{file_name}节点控制流更新成功")
+    success(f"{file_name}节点控制流更新成功")
 
 
 # 找到block节点下面的第一句语句。
