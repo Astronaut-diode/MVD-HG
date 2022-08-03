@@ -15,6 +15,8 @@ from make_arithmetic_attack_label import make_arithmetic_attack_label
 from classification_of_documents import classification_of_documents
 from tqdm import tqdm
 from gets_command_line_arguments import gets_command_line_arguments
+from make_timestamp_attack_label import make_timestamp_attack_label
+from make_delegate_call_attack_label import make_delegate_call_attack_label
 import datetime
 import config
 import utils
@@ -75,8 +77,12 @@ if __name__ == '__main__':
                         append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                         # 判断文件中是否含有漏洞。
                         reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                        timestamp_flag = make_timestamp_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                         arithmetic_flag = make_arithmetic_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                        utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, 0, arithmetic_flag, 0])
+                        delegate_flag = make_delegate_call_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                        # 避免第二次运行的时候覆盖了第一次计算出来的标签。
+                        if config.create_corpus_mode != "generate_all":
+                            utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, timestamp_flag, arithmetic_flag, delegate_flag])
                     except utils.CustomError as e:
                         # 运行时间过长，是里面的控制流太多了，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
