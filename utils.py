@@ -100,5 +100,5 @@ def success(msg):
     print(f"\033[1;;32m{msg}")
 
 
-def tip(msg):
-    print(f"\033[1;;33m{msg}")
+def tip(msg, end="\n"):
+    print(f"\033[1;;33m{msg}", end=end)
