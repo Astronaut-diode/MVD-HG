@@ -88,6 +88,12 @@ if __name__ == '__main__':
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
                         print(f"{now_dir}/{ast_json_file_name}{e}")
                         continue
+                    # 如果控制流过多，执行上述的函数，可能会出现递归栈溢出的错误，捕获以后继续执行。
+                    except RecursionError as e:
+                        # 路径爆炸了，导致深度出现问题，删除源文件，并跳过。
+                        utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
+                        print(f"{now_dir}/{ast_json_file_name}{e}")
+                        continue
                     # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
                     built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
