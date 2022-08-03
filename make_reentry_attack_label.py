@@ -261,7 +261,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了Literal作为Assignment第二个子节点的部分，而且该字面量需要和转账金额一样大,而且和原始的argument节点不是同一个节点。
-                    if param.node_type == "Literal" and param.parent.node_type == "Assignment" and param == param.parent.childes[1] and param.attribute["src_code"] == argument_node.attribute["src_code"] and param != argument_node:
+                    if param.node_type == "Literal" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and param == param.parent.childes[1] and param.attribute["src_code"] == argument_node.attribute["src_code"] and param != argument_node:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 如果已经被使用过了,那就不要再次使用了.
@@ -312,11 +312,11 @@ def reentry_attack(pre_variable_list, now_node, path):
                     # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
                     if have_equal_variable:
                         break
-                    # 只对等式处理，todo:不单单是Assignment，还有可能是参数预定义。
-                    if find_assignment_param.parent.node_type == "Assignment":
-                        # argument_node在Assignment的子节点中,而且argument_node是另外一个子节点的数据流子节点
-                        # 这里是转账金额 = tmp，tmp更新转账金额
-                        if argument_node == find_assignment_param.parent.childes[0] and argument_node in find_assignment_param.parent.childes[1].data_childes:
+                    # 只对等式处理，
+                    if find_assignment_param.parent.node_type == "Assignment" or find_assignment_param.parent.node_type == "VariableDeclarationStatement":
+                        # argument_node是转账金额节点，下面是转账金额 = tmp，接受来自tmp的内容
+                        # 如果等号前面的数据流是当前转账金额的数据流来源，那就说明是等式赋值。
+                        if find_assignment_param.parent.childes[0] in argument_node.data_parents:
                             # 遍历由param.parent.childes[1]得出对应的data_parents
                             for source_node_of_tmp_variable in params[::-1]:
                                 # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
@@ -334,12 +334,14 @@ def reentry_attack(pre_variable_list, now_node, path):
                                             argument_node = last_appear_position
                                             have_equal_variable = True
                                             break
-                        elif argument_node == find_assignment_param.parent.childes[1] and argument_node in find_assignment_param.parent.childes[0].data_childes:
+                        # 下面是tmp = 转账金额的方式。
+                        elif argument_node.data_parents == find_assignment_param.parent.childes[1].data_parents:
                             # 可以直接得出起点
-                            assignment_left_node = find_assignment_param.parent.childes[1]
+                            assignment_left_node = find_assignment_param.parent.childes[0]
                             # 如果已经被使用过了,那就不要再次使用了.
                             if assignment_left_node in use_argument_node_list:
                                 continue
+                            # 循环遍历找出最后一次使用的地方。
                             for last_appear_position in params[::-1]:
                                 if last_appear_position in assignment_left_node.data_childes:
                                     argument_node = last_appear_position
@@ -369,7 +371,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了IndexAccess作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
-                    if param.node_type == "IndexAccess" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "IndexAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 如果已经被使用过了,那就不要再次使用了.
@@ -383,14 +385,14 @@ def reentry_attack(pre_variable_list, now_node, path):
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "IndexAccess" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "IndexAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclaration") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
                             if have_equal_variable:
                                 break
                             # 符合条件的节点，说明是tmp变量的来源。
-                            if source_node_of_tmp_variable in param.data_parents:
+                            if source_node_of_tmp_variable in param.parent.childes[1].data_parents:
                                 # 可以直接得出起点
                                 assignment_left_node = source_node_of_tmp_variable
                                 # 如果已经被使用过了,那就不要再次使用了.
@@ -424,8 +426,8 @@ def reentry_attack(pre_variable_list, now_node, path):
                     # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
                     if have_equal_variable:
                         break
-                    # 使用了BinaryOperation作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
-                    if param.node_type == "BinaryOperation" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    # 使用了BinaryOperation作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。tmp = 金额。
+                    if param.node_type == "BinaryOperation" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 如果已经被使用过了,那就不要再次使用了.
@@ -439,14 +441,14 @@ def reentry_attack(pre_variable_list, now_node, path):
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "BinaryOperation" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "BinaryOperation" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
                             if have_equal_variable:
                                 break
                             # 符合条件的节点，说明是tmp变量的来源。
-                            if source_node_of_tmp_variable in param.data_parents:
+                            if source_node_of_tmp_variable in param.parent.childes[1].data_parents:
                                 # 可以直接得出起点
                                 assignment_left_node = source_node_of_tmp_variable
                                 # 如果已经被使用过了,那就不要再次使用了.
@@ -481,7 +483,7 @@ def reentry_attack(pre_variable_list, now_node, path):
                     if have_equal_variable:
                         break
                     # 使用了MemberAccess作为Assignment中的第二个子节点,而且该第二个子节点和argument_node拥有一样的结构。
-                    if param.node_type == "MemberAccess" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
+                    if param.node_type == "MemberAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[1]:
                         # 可以直接得出起点
                         start_node = param.parent.childes[0]
                         # 如果已经被使用过了,那就不要再次使用了.
@@ -495,14 +497,14 @@ def reentry_attack(pre_variable_list, now_node, path):
                                 have_equal_variable = True
                                 break
                     # 当结果被作为了第一个子节点的时候的处理方式,也就是金额 = tmp
-                    elif param.node_type == "MemberAccess" and param.parent.node_type == "Assignment" and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
+                    elif param.node_type == "MemberAccess" and (param.parent.node_type == "Assignment" or param.parent.node_type == "VariableDeclarationStatement") and has_same_structure(argument_node, param) and param == param.parent.childes[0]:
                         # 遍历由param.parent.childes[1]得出对应的data_parents
                         for source_node_of_tmp_variable in params[::-1]:
                             # 如果已经找到了等价元素，那就跳出循环，没有必要继续了
                             if have_equal_variable:
                                 break
                             # 符合条件的节点，说明是tmp变量的来源。
-                            if source_node_of_tmp_variable in param.data_parents:
+                            if source_node_of_tmp_variable in param.parent.childes[0].data_parents:
                                 # 可以直接得出起点
                                 assignment_left_node = source_node_of_tmp_variable
                                 # 如果已经被使用过了,那就不要再次使用了.
