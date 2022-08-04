@@ -15,6 +15,9 @@ def get_char(group, source_dict):
 # 计算出工程项目的hash值，如果工程项目的hash值已经存在了，那就代表出现了重复，不操作当前文件，返回True。
 # 否则记录当前工程项目的hash值，并返回False。
 def has_equal_hash(dir_path):
+    # 如果是第二趟，那就不用操作了，没有必要。
+    if config.create_corpus_mode == "generate_all":
+        return False
     utils.create_file(config.hash_to_file)
     source_dict = {'a': 0, 'b': 0, 'c': 0, 'd': 0, 'e': 0, 'f': 0, 'g': 0, 'h': 0, 'i': 0, 'j': 0, 'k': 0,
                    'l': 0, 'm': 0, 'n': 0, 'o': 0, 'p': 0, 'q': 0, 'r': 0, 's': 0, 't': 0, 'u': 0, 'v': 0,

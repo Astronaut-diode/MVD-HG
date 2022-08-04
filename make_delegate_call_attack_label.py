@@ -1,8 +1,12 @@
 from queue import LifoQueue
 import utils
+import config
 
 
 def make_delegate_call_attack_label(project_node_dict, file_name):
+    # 如果是generate_all，并不需要继续操作，因为这时候在create_corpus_txt的时候已经生成过标签了。
+    if config.create_corpus_mode == "generate_all":
+        return
     delegate_flag = False
     has_delegate_call_flag = []
     if "FunctionCall" in project_node_dict.keys():
