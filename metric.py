@@ -2,163 +2,67 @@ import numpy as np
 import config
 import utils
 
-# modified from https://github.com/yl2019lw/ImPloc/blob/revision/util/npmetrics.py
 
-epsilon = 1e-8  # to aviod zero-divison
-
-
-# Example-based metrics
-
-# label (numpy boolean) shape: N x nlabel
-# predict (numpy boolean) shape: N x nlabel
-def example_subset_accuracy(label, predict):
-    ex_equal = np.all(np.equal(label, predict), axis=1).astype("float32")
-    return np.mean(ex_equal)
-
-
-def example_accuracy(label, predict):
-    ex_and = np.sum(np.logical_and(label, predict), axis=1).astype("float32")
-    ex_or = np.sum(np.logical_or(label, predict), axis=1).astype("float32")
-    return np.mean(ex_and / (ex_or + epsilon))
-
-
-def example_precision(label, predict):
-    ex_and = np.sum(np.logical_and(label, predict), axis=1).astype("float32")
-    ex_predict = np.sum(predict, axis=1).astype("float32")
-    return np.mean(ex_and / (ex_predict + epsilon))
+# 计算出四种漏洞的各种最优的属性
+# predict:预测结果
+# label:原始标签
+# writer:tensor board画图用的
+# fold:外面的交叉验证到哪一步了。
+# epoch:交叉验证中已经到了哪一个世代了。
+def score(predict, label, writer, fold, epoch):
+    predict = predict.data.cpu().numpy()
+    label = label.data.cpu().numpy()
+    # 结果矩阵，里面存放的是四种漏洞类型的四种基础衡量标准。
+    optimal_list = np.zeros((4, 4))
+    # 取出第i中类型的预测结果和原始标签，输入到阈值调优中进行调优
+    for attack_index in range(config.classes):
+        res = threshold_optimize(predict[:, attack_index], label[:, attack_index], writer, fold, epoch)
+        optimal_list[0, attack_index] = res["accuracy"]
+        optimal_list[1, attack_index] = res["precision"]
+        optimal_list[2, attack_index] = res["recall"]
+        optimal_list[3, attack_index] = res["f_score"]
+    utils.tqdm_write(optimal_list)
 
 
-def example_recall(label, predict):
-    ex_and = np.sum(np.logical_and(label, predict), axis=1).astype("float32")
-    ex_label = np.sum(label, axis=1).astype("float32")
-    return np.mean(ex_and / (ex_label + epsilon))
+# 将多标签分类为多种单标签，以进行阈值调优。
+def threshold_optimize(predict, label, writer, fold, epoch):
+    # 求出其中的最佳值，然后返回。
+    best_res = {"probability": 0, "accuracy": 0, "precision": 0, "recall": 0, "f_score": 0}
+    # 取出所有的不同的概率
+    probability_list = np.unique(predict)
+    # 遍历其中每一个概率，求出对应的四种度量标准。
+    for probability in probability_list:
+        # 复制内容，避免对下一个概率的计算造成影响
+        predict_tmp = predict.copy()
+        label_tmp = label.copy()
+        # 根据阈值，将计算出来的概率转化为标签。
+        predict_tmp[predict_tmp >= probability] = 1
+        predict_tmp[predict_tmp < probability] = 0
+        # 根据转化以后的预测标签和原始标签，计算出混淆矩阵。
+        confuse_matrix = _label_quantity(predict_tmp, label_tmp)
+        accuracy = (confuse_matrix[0] + confuse_matrix[2]) / (confuse_matrix[0] + confuse_matrix[1] + confuse_matrix[2] + confuse_matrix[3])
+        precision = confuse_matrix[0] / (confuse_matrix[0] + confuse_matrix[1])
+        recall = confuse_matrix[0] / (confuse_matrix[0] + confuse_matrix[3])
+        f_score = (1 + config.beta ** 2) * confuse_matrix[0] / ((1 + config.beta ** 2) * confuse_matrix[0] + config.beta ** 2 * confuse_matrix[3] + confuse_matrix[1] + config.epsilon)
+        # 如果原始记录的内容没有当前的好，记录一下。
+        if best_res["f_score"] < f_score:
+            best_res["probability"] = probability
+            best_res["accuracy"] = accuracy
+            best_res["precision"] = precision
+            best_res["recall"] = recall
+            best_res["f_score"] = f_score
+        # 进行四种属性的绘制。
+        writer.add_scalar(f"{fold}_{epoch}_accuracy", accuracy, probability)
+        writer.add_scalar(f"{fold}_{epoch}_precision", precision, probability)
+        writer.add_scalar(f"{fold}_{epoch}_recall", recall, probability)
+        writer.add_scalar(f"{fold}_{epoch}_f_score", f_score, probability)
+    return best_res
 
 
-def example_f1(label, predict, beta=1):
-    p = example_precision(label, predict)
-    r = example_recall(label, predict)
-    return ((1 + beta ** 2) * p * r) / ((beta ** 2) * (p + r + epsilon))
-
-
-# Label-based metrics
-
-def _label_quantity(label, predict):
+# 根据传入的标签和原始值，计算出混淆矩阵
+def _label_quantity(predict, label):
     tp = np.sum(np.logical_and(label, predict), axis=0)
     fp = np.sum(np.logical_and(1 - label, predict), axis=0)
     tn = np.sum(np.logical_and(1 - label, 1 - predict), axis=0)
     fn = np.sum(np.logical_and(label, 1 - predict), axis=0)
     return np.stack([tp, fp, tn, fn], axis=0).astype("float")
-
-
-def cal_base_metric(label, predict, beta=1):
-    quantity = _label_quantity(label, predict)
-    utils.tip(f"\nAccuracy:{(quantity[0] + quantity[2]) / (quantity[0] + quantity[1] + quantity[2] + quantity[3])}")
-    utils.tip(f"Precision:{quantity[0] / (quantity[0] + quantity[1])}")
-    utils.tip(f"Recall:{quantity[0] / (quantity[0] + quantity[3])}")
-    utils.tip(f"F-Score:{(1 + beta ** 2) * quantity[0] / ((1 + beta ** 2) * quantity[0] + beta ** 2 * quantity[3] + quantity[1] + epsilon)}")
-
-
-def label_accuracy_macro(label, predict):
-    quantity = _label_quantity(label, predict)
-    tp_tn = np.add(quantity[0], quantity[2])
-    tp_fp_tn_fn = np.sum(quantity, axis=0)
-    return np.mean(tp_tn / (tp_fp_tn_fn + epsilon))
-
-
-def label_accuracy_micro(label, predict):
-    quantity = _label_quantity(label, predict)
-    sum_tp, sum_fp, sum_tn, sum_fn = np.sum(quantity, axis=1)
-    return (sum_tp + sum_tn) / (
-            sum_tp + sum_fp + sum_tn + sum_fn + epsilon)
-
-
-def label_precision_macro(label, predict):
-    quantity = _label_quantity(label, predict)
-    tp = quantity[0]
-    tp_fp = np.add(quantity[0], quantity[1])
-    return np.mean(tp / (tp_fp + epsilon))
-
-
-def label_precision_micro(label, predict):
-    quantity = _label_quantity(label, predict)
-    sum_tp, sum_fp, sum_tn, sum_fn = np.sum(quantity, axis=1)
-    return sum_tp / (sum_tp + sum_fp + epsilon)
-
-
-def label_recall_macro(label, predict):
-    quantity = _label_quantity(label, predict)
-    tp = quantity[0]
-    tp_fn = np.add(quantity[0], quantity[3])
-    return np.mean(tp / (tp_fn + epsilon))
-
-
-def label_recall_micro(label, predict):
-    quantity = _label_quantity(label, predict)
-    sum_tp, sum_fp, sum_tn, sum_fn = np.sum(quantity, axis=1)
-    return sum_tp / (sum_tp + sum_fn + epsilon)
-
-
-def label_f1_macro(label, predict, beta=1):
-    quantity = _label_quantity(label, predict)
-    tp = quantity[0]
-    fp = quantity[1]
-    fn = quantity[3]
-    return np.mean((1 + beta ** 2) * tp / ((1 + beta ** 2) * tp + beta ** 2 * fn + fp + epsilon))
-
-
-def label_f1_micro(label, predict, beta=1):
-    quantity = _label_quantity(label, predict)
-    tp = np.sum(quantity[0])
-    fp = np.sum(quantity[1])
-    fn = np.sum(quantity[3])
-    return (1 + beta ** 2) * tp / ((1 + beta ** 2) * tp + beta ** 2 * fn + fp + epsilon)
-
-
-def metric(predict, label, count, writer):
-    predict = predict.data.cpu().numpy()
-    label = label.data.cpu().numpy()
-    predict[predict[:, 0] >= config.reentry_attack_valid_threshold, 0] = 1
-    predict[predict[:, 0] < config.reentry_attack_valid_threshold, 0] = 0
-    predict[predict[:, 1] >= config.timestamp_attack_valid_threshold, 1] = 1
-    predict[predict[:, 1] < config.timestamp_attack_valid_threshold, 1] = 0
-    predict[predict[:, 2] >= config.arithmetic_attack_valid_threshold, 2] = 1
-    predict[predict[:, 2] < config.arithmetic_attack_valid_threshold, 2] = 0
-    predict[predict[:, 3] >= config.delegate_attack_valid_threshold, 3] = 1
-    predict[predict[:, 3] < config.delegate_attack_valid_threshold, 3] = 0
-    # subset_acc = example_subset_accuracy(label, predict)
-    # ex_acc = example_accuracy(label, predict)
-    # ex_precision = example_precision(label, predict)
-    # ex_recall = example_recall(label, predict)
-    # ex_f1 = example_f1(label, predict)
-
-    lab_acc_ma = label_accuracy_macro(label, predict)
-    lab_acc_mi = label_accuracy_micro(label, predict)
-    lab_precision_ma = label_precision_macro(label, predict)
-    lab_precision_mi = label_precision_micro(label, predict)
-    lab_recall_ma = label_recall_macro(label, predict)
-    lab_recall_mi = label_recall_micro(label, predict)
-    lab_f1_ma = label_f1_macro(label, predict)
-    lab_f1_mi = label_f1_micro(label, predict)
-    cal_base_metric(label, predict)
-    # utils.tip("subset acc:        %.4f" % subset_acc)
-    # utils.tip("example acc:       %.4f" % ex_acc)
-    # utils.tip("example precision: %.4f" % ex_precision)
-    # utils.tip("example recall:    %.4f" % ex_recall)
-    # utils.tip("example f1:        %.4f" % ex_f1)
-    utils.tip("label acc macro:   %.4f" % lab_acc_ma)
-    utils.tip("label acc micro:   %.4f" % lab_acc_mi)
-    utils.tip("label prec macro:  %.4f" % lab_precision_ma)
-    utils.tip("label prec micro:  %.4f" % lab_precision_mi)
-    utils.tip("label rec macro:   %.4f" % lab_recall_ma)
-    utils.tip("label rec micro:   %.4f" % lab_recall_mi)
-    utils.tip("label f1 macro:    %.4f" % lab_f1_ma)
-    utils.tip("label f1 micro:    %.4f" % lab_f1_mi)
-    writer.add_scalar("label acc macro:", lab_acc_ma, count)
-    writer.add_scalar("label acc micro:", lab_acc_ma, count)
-    writer.add_scalar("label prec macro:", lab_acc_ma, count)
-    writer.add_scalar("label prec micro:", lab_acc_ma, count)
-    writer.add_scalar("label rec macro:", lab_acc_ma, count)
-    writer.add_scalar("label rec micro:", lab_acc_ma, count)
-    writer.add_scalar("label f1 macro:", lab_acc_ma, count)
-    writer.add_scalar("label f1 micro:", lab_acc_ma, count)
-
