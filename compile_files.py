@@ -60,7 +60,7 @@ def compile_files(data_sol_source_project_dir_path, data_ast_json_project_dir_pa
                     utils.error(f"{full_compile_file_path}由于无效版本号被删除")
                 else:
                     # 将所有缺乏的版本的号码，输出到一个txt文件中，到时候方便一次性安装。
-                    with open("/home/xjj/AST-GNN/data/absent_version_cmd.txt", 'a') as write_file:
+                    with open(config.absent_version_cmd_file, 'a') as write_file:
                         write_file.write("solc-select install" + version + "\n")
                     write_file.close()
                     utils.remove_file(full_compile_file_path)

@@ -15,6 +15,7 @@ frozen = "frozen"
 # ========================= 运行模式 =========================
 # ========================= 文件夹路径 =========================
 # 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
+root_dir = f"{os.getcwd()}"
 data_dir_path = f"{os.getcwd()}/data"
 img_dir_path = f"{data_dir_path}/img"
 data_sol_source_dir_path = f"{data_dir_path}/sol_source"
@@ -25,6 +26,8 @@ data_raw_dir_path = f"{data_dir_path}/raw"
 hash_to_file = f"{data_dir_path}/hash_to_file.json"
 # 标签文件的保存地址，这是加工之前的保存位置。这时候保存的内容比较粗糙,其中保存的格式是{"0": 0, "1": 0, "2": 1}。
 idx_to_label_file = f'{data_dir_path}/idx_to_label.json'
+# 缺乏版本号码的保存地址
+absent_version_cmd_file = f"{data_dir_path}/absent_version_cmd.txt"
 # 重入攻击的文件夹
 reentry_attack_fold = f'{data_dir_path}/attack/reentry_attack_fold/'
 # 时间戳攻击的文件夹

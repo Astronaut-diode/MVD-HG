@@ -21,7 +21,7 @@ def read_compile(now_dir, ast_json_file_name):
             flag = False
             # 用来比对哪一行开始记录的语句。
             pattern = f"======= {full_ast_json_path.replace('AST_json', 'sol_source').replace('.json', '.sol')} ======="
-            pattern2 = pattern.replace("/home/xjj/AST-GNN/", "")
+            pattern2 = pattern.replace(f"{config.root_dir}/", "")
             for index, line in enumerate(read_file.readlines()):
                 # 如果已经需要开始记录了，开始抄写，把内容抄到w.json文件中
                 if flag:
