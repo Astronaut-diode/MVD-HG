@@ -333,6 +333,9 @@ def processing_return_statement(function_definition_node, now_node, pre_variable
                     stack.put(child)
             # 通过遍历每一个出参，获取出参的详细信息，这样就能知道刚刚遍历出来的结果，哪些是可以直接连接到出参上的。
             for component_dict in return_node.attribute["expression"][0]["components"]:
+                # 明明只有一个出参，但是可能会被写成return (a, )。(ˉ▽ˉ；)...
+                if component_dict is None:
+                    continue
                 component_node_id = component_dict["id"]
                 component_node_type = component_dict["nodeType"]
                 for node in node_list:
