@@ -81,8 +81,11 @@ def get_file_version(full_compile_file_path):
             ans = re.search(config.version_match_rule, line)
             # 如果有匹配上的，那就需要取出其中的版本号，也就是说当前行是pragma solidity ^xxx等。
             if ans:
-                # 根据这一行pragma中的代码，判断可以用的版本号有哪些，待会一股脑进行计算谁可以使用。
-                versions.append(get_versions(ans.group()))
+                res = get_versions(ans.group())
+                # res有可能是个空的列表，因为给出的版本号是找不到的。
+                if len(res):
+                    # 根据这一行pragma中的代码，判断可以用的版本号有哪些，待会一股脑进行计算谁可以使用。
+                    versions.append(res)
             # 进行引用匹配，查看是否有引用其他文件。
             pattern = "import \'?\"?[@.\\/\\w]*\'?\"?;"
             import_re = re.findall(pattern, line)
@@ -128,8 +131,11 @@ def get_versions(pragma):
             floor_version = f"{res}{tmp[2][1]}"
         else:
             floor_version = f"{res}{tmp[2]}"
-        # 将这个版本号作为最低的版本号。
-        floor_index = config.versions.index(floor_version)
+        if floor_version in config.versions:
+            # 将这个版本号作为最低的版本号。
+            floor_index = config.versions.index(floor_version)
+        else:
+            return []
         # 匹配大版本的模式串
         pattern = "..."
         # 因为是^所以可以一直往后取。
