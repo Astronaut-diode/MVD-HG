@@ -17,6 +17,7 @@ from tqdm import tqdm
 from gets_command_line_arguments import gets_command_line_arguments
 from make_timestamp_attack_label import make_timestamp_attack_label
 from make_delegate_call_attack_label import make_delegate_call_attack_label
+from hash_code import has_equal_hash
 import datetime
 import config
 import utils
@@ -49,6 +50,10 @@ if __name__ == '__main__':
             data_ast_json_project_dir_path = f'{config.data_ast_json_dir_path}/{project_name}'
             # 删除对应sol_source下工程文件夹中的注释。
             remove_comments(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
+            # 如果已经存在了相同的hash值，那就删除当前的工程文件夹，同时跳过后续处理。
+            if has_equal_hash(dir_path=data_sol_source_project_dir_path):
+                shutil.rmtree(data_sol_source_project_dir_path)
+                continue
             # 如果当前sol_source下工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):
                 continue
@@ -101,7 +106,7 @@ if __name__ == '__main__':
                     built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 打印树的样子。
                     generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
-            # 如果是冻结模式，直接移动文件到already中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
+            # 如果是冻结模式，直接移动文件到complete文件夹中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
             # 同时还要判断文件夹的是否存在的特性，因为上面的循环可能会删除文件。
             if config.frozen == "frozen" and os.path.exists(data_sol_source_project_dir_path):
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)

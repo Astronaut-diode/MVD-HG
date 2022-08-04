@@ -21,8 +21,8 @@ data_sol_source_dir_path = f"{data_dir_path}/sol_source"
 data_ast_json_dir_path = f"{data_dir_path}/AST_json"
 data_complete_dir_path = f"{data_dir_path}/complete"
 data_raw_dir_path = f"{data_dir_path}/raw"
-# 保存tensor board文件的位置
-tensor_board_position = f"{data_dir_path}/tensorboard_logs"
+# 文件hash值的保存位置。
+hash_to_file = f"{data_dir_path}/hash_to_file.json"
 # 标签文件的保存地址，这是加工之前的保存位置。这时候保存的内容比较粗糙,其中保存的格式是{"0": 0, "1": 0, "2": 1}。
 idx_to_label_file = f'{data_dir_path}/idx_to_label.json'
 # 重入攻击的文件夹
@@ -107,6 +107,8 @@ k_folds = 10
 device = "cuda:1"
 # 模型文件的保存位置
 model_data_dir = f"{data_dir_path}/model"
+# 保存tensor board文件的位置
+tensor_board_position = f"{data_dir_path}/tensorboard_logs"
 # 计算度量标准的时候使用的参数
 beta = 1
 epsilon = 1e-8
