@@ -685,8 +685,12 @@ def get_return(initial_node, pre_variable_node_list, method_params, is_src, is_a
                 method_params, method_returns = get_method_message_at_function_definition_node(control_child)
                 for param in zip(arguments, method_params):
                     param[0]["node"].append_data_child(param[1])
+                # 如果长度是0.那就直接返回函数节点，否则没有节点可以返回了。
+                if len(method_returns) == 0:
+                    return [function_call_node]
                 # 返回出参，供下一次使用。
-                return method_returns
+                else:
+                    return method_returns
         # 能到达这里说明不是内部函数,那就直接将所有的入参全部连接到FunctionCallNode上.记得还要引用来自之前的部分.
         for argument_node in arguments:
             argument_node["node"].append_data_child(function_call_node)

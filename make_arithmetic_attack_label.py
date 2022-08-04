@@ -515,6 +515,9 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
 
 # 复制节点,以及所有的子域内容，需要根据不同类型节点复制不同内容。
 def copy_node(origin_node):
+    # 如果一开始就就是一元运算符，需要直接取子节点。
+    if origin_node.node_type == "UnaryOperation":
+        origin_node = origin_node.childes[0]
     # 复制原始节点
     tmp_node = create_node(origin_node)
     stack = Queue(maxsize=0)
@@ -530,6 +533,9 @@ def copy_node(origin_node):
             # 如果是参数类型，不用去复制，直接跳过。
             if child.node_type in ["ElementaryTypeName", "ElementaryTypeNameExpression", "FunctionTypeName", "UserDefinedTypeName", "ArrayTypeName"]:
                 continue
+            # 如果是Unary，切换对象即可。
+            if child.node_type == "UnaryOperation":
+                child = child.childes[0]
             # 根据这里的子节点，复制，并连接
             tmp_child_node = create_node(child)
             pop_construct_node.append_child(tmp_child_node)
