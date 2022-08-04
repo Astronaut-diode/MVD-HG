@@ -136,6 +136,8 @@ if __name__ == '__main__':
         w2v.save(config.corpus_file_path)
         utils.success("word2Vec模型已经构建完毕.")
     elif config.run_mode == "train":
+        # 判断模型文件夹是否存在，不存在则创建。
+        utils.dir_exists(config.model_data_dir)
         train()
     end = datetime.datetime.now()
     utils.tip(f"开始时间:{start}")
