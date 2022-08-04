@@ -1,4 +1,5 @@
 # coding=UTF-8
+from tqdm import tqdm
 import os
 import json
 import config
@@ -102,3 +103,7 @@ def success(msg):
 
 def tip(msg, end="\n"):
     print(f"\033[1;;33m{msg}", end=end)
+
+
+def tqdm_write(msg):
+    tqdm.write(f"\r{msg}")
