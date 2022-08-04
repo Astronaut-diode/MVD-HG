@@ -80,6 +80,8 @@ def train():
                 test_all_predicts = torch.cat((test_all_predicts, predict), dim=0)
                 test_all_labels = torch.cat((test_all_labels, test_batch.y), dim=0)
             # 计算对应的度量标准，进行阈值调优。
+            score(test_all_predicts, test_all_labels, writer, fold, epoch)
+            # 计算对应的度量标准，进行阈值调优。
             utils.tqdm_write(f"第{fold}折中第{epoch}个epoch中训练集计算出来的loss为{train_total_loss / len(train_dataloader)}")
             utils.tqdm_write(f"第{fold}折中第{epoch}个epoch中测试集计算出来的loss为{test_total_loss / len(test_dataloader)}")
         # 每一折计算完之后保存一个模型文件
