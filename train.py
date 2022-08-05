@@ -10,6 +10,7 @@ import datetime
 import utils
 import torch
 import config
+import sys
 
 device = torch.device(config.device)
 writer = SummaryWriter(config.tensor_board_position)
@@ -21,7 +22,7 @@ def train():
     # 定义 K 折交叉验证
     k_fold = KFold(n_splits=config.k_folds, shuffle=True)
     # K折交叉验证模型评估
-    for fold, (train_ids, test_ids) in enumerate(tqdm(k_fold.split(dataset), desc="K-FOLD", leave=False)):
+    for fold, (train_ids, test_ids) in enumerate(tqdm(k_fold.split(dataset), desc="K-FOLD", leave=False, file=sys.stdout)):
         # 获取K折以后的train和test数据集
         train_dataset = torch.utils.data.dataset.Subset(dataset, train_ids)
         test_dataset = torch.utils.data.dataset.Subset(dataset, test_ids)
@@ -36,7 +37,7 @@ def train():
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
         criterion = torch.nn.BCEWithLogitsLoss()
         # 进行Epoch次的训练，由config配置文件中指定。
-        for epoch in tqdm(range(config.epoch_size), desc=f"K-Fold{fold}===>Epoch", leave=False, ncols=120):
+        for epoch in tqdm(range(config.epoch_size), desc=f"K-Fold{fold}===>Epoch", leave=False, ncols=config.tqdm_ncols, file=sys.stdout):
             # 保存当前的epoch所记录的所有答案。
             train_all_predicts = torch.tensor([]).to(device)
             train_all_labels = torch.tensor([]).to(device)
@@ -46,7 +47,7 @@ def train():
             test_total_loss = 0.0
             # 开始训练的信号,进行训练集上的计算
             model.train()
-            for train_batch in tqdm(train_dataloader, desc=f"Epoch {epoch}===>Train", leave=False, postfix=f"{train_total_loss}", ncols=120):
+            for train_batch in tqdm(train_dataloader, desc=f"Epoch {epoch}===>Train", leave=False, postfix=f"{train_total_loss}", ncols=config.tqdm_ncols, file=sys.stdout):
                 # 将数据转化为指定设备上运行
                 train_batch = train_batch.to(device)
                 # 经典的五步计算
@@ -65,7 +66,7 @@ def train():
             # 计算对应的度量标准，进行阈值调优。
             score(train_all_predicts, train_all_labels, writer, fold, epoch)
             model.eval()
-            for test_batch in tqdm(test_dataloader, desc=f"Epoch {epoch}===> Test", leave=False, ncols=120):
+            for test_batch in tqdm(test_dataloader, desc=f"Epoch {epoch}===> Test", leave=False, ncols=config.tqdm_ncols, file=sys.stdout):
                 # 将数据转化为指定设备上运行
                 test_batch = test_batch.to(device)
                 # 经典的五步计算

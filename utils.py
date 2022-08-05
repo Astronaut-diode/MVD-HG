@@ -94,15 +94,15 @@ class CustomError(Exception):
 
 # 自定义的输出函数，带有颜色。
 def error(msg):
-    print(f"\033[1;;31m{msg}")
+    print(f"\033[1;;31m{msg}\033[;;m")
 
 
 def success(msg):
-    print(f"\033[1;;32m{msg}")
+    print(f"\033[1;;32m{msg}\033[;;m")
 
 
 def tip(msg, end="\n"):
-    print(f"\033[1;;33m{msg}", end=end)
+    print(f"\033[1;;33m{msg}\033[;;m", end=end)
 
 
 def tqdm_write(msg):

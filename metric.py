@@ -3,6 +3,7 @@ import config
 import utils
 import torch
 import math
+from prettytable import PrettyTable
 
 
 # 计算出四种漏洞的各种最优的属性
@@ -11,7 +12,7 @@ import math
 # writer:tensor board画图用的
 # fold:外面的交叉验证到哪一步了。
 # epoch:交叉验证中已经到了哪一个世代了。
-def score(predict, label, writer, fold, epoch):
+def score(predict, label, writer, fold, epoch, msg):
     predict = predict.data
     label = label.data
     # 结果矩阵，里面存放的是四种漏洞类型的四种基础衡量标准。
@@ -24,8 +25,15 @@ def score(predict, label, writer, fold, epoch):
         optimal_list[1, attack_index] = res["precision"]
         optimal_list[2, attack_index] = res["recall"]
         optimal_list[3, attack_index] = res["f_score"]
-    # 打印一下。
-    utils.tqdm_write(optimal_list)
+    # 打印一下看一下四种漏洞类型的精度之类的，而且这里可以放大版面。
+    table = PrettyTable(['', 'Reentry', 'TimeStamp', 'Arithmetic', 'Delegate'], )
+    table._table_width = config.table_width
+    table.title = msg
+    table.add_row(["Accuracy", optimal_list[0, 0], optimal_list[0, 1], optimal_list[0, 2], optimal_list[0, 3]])
+    table.add_row(["Precision", optimal_list[1, 0], optimal_list[1, 1], optimal_list[1, 2], optimal_list[1, 3]])
+    table.add_row(["Recall", optimal_list[2, 0], optimal_list[2, 1], optimal_list[2, 2], optimal_list[2, 3]])
+    table.add_row(["F-score", optimal_list[3, 0], optimal_list[3, 1], optimal_list[3, 2], optimal_list[3, 3]])
+    utils.tqdm_write(table)
 
 
 # 将多标签分类为多种单标签，以进行阈值调优。
@@ -39,7 +47,7 @@ def threshold_optimize(predict, label, writer, fold, epoch):
     # 取出所有的不同的概率，然后将概率转换为0和1的predict_matrix矩阵,注意，如果种类太多，会导致GPU都存不下，所以需要少取一些，这里取步长为100好了。
     unique_probability = torch.unique(predict).reshape(-1, 1)
     # 通过步长重新选取，免得取得太多了，内存爆炸。
-    unique_probability = unique_probability[::math.ceil(len(unique_probability)/config.threshold_max_classes)]
+    unique_probability = unique_probability[::math.ceil(len(unique_probability) / config.threshold_max_classes)]
     predict_matrix = (predict >= unique_probability).add(0)
     # 根据标签矩阵和预测矩阵，求出四个基础标签。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=1).reshape(-1, 1)
@@ -60,7 +68,7 @@ def threshold_optimize(predict, label, writer, fold, epoch):
     best_res["f_score"] = f_score[best_sample_index, 0]
     # 进行四种属性的绘制,每个epoch只画一次。
     writer.add_scalar(f"{fold}_accuracy", best_res["accuracy"], epoch)
-    writer.add_scalar(f"{fold}_precision",  best_res["precision"], epoch)
+    writer.add_scalar(f"{fold}_precision", best_res["precision"], epoch)
     writer.add_scalar(f"{fold}_recall", best_res["recall"], epoch)
     writer.add_scalar(f"{fold}_f_score", best_res["f_score"], epoch)
     return best_res
