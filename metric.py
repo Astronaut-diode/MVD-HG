@@ -22,7 +22,7 @@ def score(predict, label, writer, fold, epoch, msg):
                     ["", "", "", ""]]
     # 取出第i中类型的预测结果和原始标签，输入到阈值调优中进行调优
     for attack_index in range(config.classes):
-        res = threshold_optimize(predict[:, attack_index], label[:, attack_index], writer, fold, epoch)
+        res = threshold_optimize(predict[:, attack_index], label[:, attack_index], writer, fold, epoch, attack_index)
         # 四种漏洞的四种度量标准，一行是同一种度量，但是是不同的错误类型。
         optimal_list[0][attack_index] = f"{format(res['accuracy'].item(), '.30f')}"
         optimal_list[1][attack_index] = f"{format(res['precision'].item(), '.30f')}"
@@ -44,7 +44,7 @@ def score(predict, label, writer, fold, epoch, msg):
 # writer画tensor board的时候用的。
 # fold:到了第几折了。
 # epoch:第几个epoch了。
-def threshold_optimize(predict, label, writer, fold, epoch):
+def threshold_optimize(predict, label, writer, fold, epoch, attack_index):
     # 求出其中的最佳值，然后返回。
     best_res = {"probability": 0, "accuracy": 0, "precision": 0, "recall": 0, "f_score": 0}
     # 取出所有的不同的概率，然后将概率转换为0和1的predict_matrix矩阵,注意，如果种类太多，会导致GPU都存不下，所以需要少取一些，这里取步长为100好了。
@@ -70,8 +70,24 @@ def threshold_optimize(predict, label, writer, fold, epoch):
     best_res["recall"] = recall[best_sample_index, 0]
     best_res["f_score"] = f_score[best_sample_index, 0]
     # 进行四种属性的绘制,每个epoch只画一次。
-    writer.add_scalar(f"{fold}_accuracy", best_res["accuracy"], epoch)
-    writer.add_scalar(f"{fold}_precision", best_res["precision"], epoch)
-    writer.add_scalar(f"{fold}_recall", best_res["recall"], epoch)
-    writer.add_scalar(f"{fold}_f_score", best_res["f_score"], epoch)
+    if attack_index == 0:
+        writer.add_scalar(f"{config.start_time}_reentry_accuracy", best_res["accuracy"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_reentry_precision", best_res["precision"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_reentry_recall", best_res["recall"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_reentry_f_score", best_res["f_score"], fold * config.epoch_size + epoch)
+    elif attack_index == 1:
+        writer.add_scalar(f"{config.start_time}_timestamp_accuracy", best_res["accuracy"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_timestamp_precision", best_res["precision"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_timestamp_recall", best_res["recall"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_timestamp_f_score", best_res["f_score"], fold * config.epoch_size + epoch)
+    elif attack_index == 2:
+        writer.add_scalar(f"{config.start_time}_arithmetic_accuracy", best_res["accuracy"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_arithmetic_precision", best_res["precision"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_arithmetic_recall", best_res["recall"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_arithmetic_f_score", best_res["f_score"], fold * config.epoch_size + epoch)
+    elif attack_index == 3:
+        writer.add_scalar(f"{config.start_time}_delegate_accuracy", best_res["accuracy"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_delegate_precision", best_res["precision"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_delegate_recall", best_res["recall"], fold * config.epoch_size + epoch)
+        writer.add_scalar(f"{config.start_time}_delegate_f_score", best_res["f_score"], fold * config.epoch_size + epoch)
     return best_res

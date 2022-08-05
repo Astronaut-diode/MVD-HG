@@ -1,7 +1,7 @@
 # coding=UTF-8
 import os
 import argparse
-
+import datetime
 # 默认会先加载config配置文件夹，然后设定好程序运行的配置。
 parser = argparse.ArgumentParser(description='参数表')
 # create:创建数据集的时候用的
@@ -142,6 +142,8 @@ beta = 1
 epsilon = 1e-8
 # 阈值调优的时候使用的总长度，到时候计算的总类最大也只会是这个值。
 threshold_max_classes = 100
+# 为tensor board创建的文件名字前缀。
+start_time = datetime.datetime.now()
 # ========================= 模型和度量标准配置 =========================
 # ========================= 漏洞建模配置 =========================
 # 构建数据流的时候最大的耐心时间，如果时间到了，就停止当前文件，因为没有必要，肯定是里面路径太多爆炸了，这里是以秒为单位的。
