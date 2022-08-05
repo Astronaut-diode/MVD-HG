@@ -2,6 +2,7 @@ import numpy as np
 import config
 import utils
 import torch
+import math
 
 
 # 计算出四种漏洞的各种最优的属性
@@ -35,8 +36,10 @@ def score(predict, label, writer, fold, epoch):
 def threshold_optimize(predict, label, writer, fold, epoch):
     # 求出其中的最佳值，然后返回。
     best_res = {"probability": 0, "accuracy": 0, "precision": 0, "recall": 0, "f_score": 0}
-    # 取出所有的不同的概率，然后将概率转换为0和1的predict_matrix矩阵。
+    # 取出所有的不同的概率，然后将概率转换为0和1的predict_matrix矩阵,注意，如果种类太多，会导致GPU都存不下，所以需要少取一些，这里取步长为100好了。
     unique_probability = torch.unique(predict).reshape(-1, 1)
+    # 通过步长重新选取，免得取得太多了，内存爆炸。
+    unique_probability = unique_probability[::math.ceil(len(unique_probability)/config.threshold_max_classes)]
     predict_matrix = (predict >= unique_probability).add(0)
     # 根据标签矩阵和预测矩阵，求出四个基础标签。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=1).reshape(-1, 1)
