@@ -2,7 +2,6 @@ import os
 import json
 import re
 import hashlib
-import utils
 import config
 
 
@@ -18,7 +17,6 @@ def has_equal_hash(dir_path):
     # 如果是第二趟，那就不用操作了，没有必要。
     if config.create_corpus_mode == "generate_all":
         return False
-    utils.create_file(config.hash_to_file)
     source_dict = {'a': 0, 'b': 0, 'c': 0, 'd': 0, 'e': 0, 'f': 0, 'g': 0, 'h': 0, 'i': 0, 'j': 0, 'k': 0,
                    'l': 0, 'm': 0, 'n': 0, 'o': 0, 'p': 0, 'q': 0, 'r': 0, 's': 0, 't': 0, 'u': 0, 'v': 0,
                    'w': 0, 'x': 0, 'y': 0, 'z': 0}
@@ -56,7 +54,7 @@ def has_equal_hash(dir_path):
         # 关闭读取的句柄
         read_json.close()
         # 重新打开一个写入的句柄
-        write_json = open(config.idx_to_label_file, 'w')
+        write_json = open(config.hash_to_file, 'w')
         # 将更新以后的内容重新写入到json文件当中
         json.dump(origin_content, write_json)
         # 记得关闭比句柄文件。

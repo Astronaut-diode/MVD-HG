@@ -14,7 +14,6 @@ from make_reentry_attack_label import make_reentry_attack_label
 from make_arithmetic_attack_label import make_arithmetic_attack_label
 from classification_of_documents import classification_of_documents
 from tqdm import tqdm
-from gets_command_line_arguments import gets_command_line_arguments
 from make_timestamp_attack_label import make_timestamp_attack_label
 from make_delegate_call_attack_label import make_delegate_call_attack_label
 from hash_code import has_equal_hash
@@ -26,8 +25,6 @@ import shutil
 import sys
 
 if __name__ == '__main__':
-    # 先获取命令行参数，更新config配置。
-    gets_command_line_arguments()
     start = datetime.datetime.now()
     if config.run_mode == "create":
         # 先验证四个重要的文件夹是否存在，不存在则创建。
@@ -53,6 +50,7 @@ if __name__ == '__main__':
             # 如果已经存在了相同的hash值，那就删除当前的工程文件夹，同时跳过后续处理。
             if has_equal_hash(dir_path=data_sol_source_project_dir_path):
                 shutil.rmtree(data_sol_source_project_dir_path)
+                utils.error(f"{data_sol_source_project_dir_path}出现重复，已被删除，并跳过后续操作。")
                 continue
             # 如果当前sol_source下工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):

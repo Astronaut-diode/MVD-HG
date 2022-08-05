@@ -1,22 +1,47 @@
 # coding=UTF-8
 import os
+import argparse
+
+# 默认会先加载config配置文件夹，然后设定好程序运行的配置。
+parser = argparse.ArgumentParser(description='参数表')
+# create:创建数据集的时候用的
+# train:训练模式
+# valid:预测模式
+# truncated:语言模型受损，需要重新训练。
+parser.add_argument('--run_mode', type=str,
+                    help="运行模式:\n"
+                         "1.create:创建数据集的时候用的。\n"
+                         "2.train:训练模式。\n"
+                         "3.valid:预测模式。\n"
+                         "4.truncated:语言模型受损，需要重新训练。\n")
+# create_corpus_txt:仅仅创建语料库文件。
+# generate_all: 生成所有的向量文件。
+parser.add_argument('--create_corpus_mode', type=str,
+                    help="创建文件的模式:\n"
+                         "1.create_corpus_txt:仅仅创建语料库文件。\n"
+                         "2.generate_all: 生成所有的向量文件。\n")
+# data_dir_name:数据文件夹的名字，这样子就可以在一个项目里面多次运行，只要多创建data目录就行。
+parser.add_argument('--data_dir_name', type=str,
+                    help="数据文件夹的名字，为了可以多进程启动运行:\n")
+# 下面更新config配置
+args = parser.parse_args()
 
 # ========================= 运行模式 =========================
 # create:创建数据集的时候用的
 # train:训练模式
 # valid:预测模式
 # truncated:语言模型受损，需要重新训练。
-run_mode = "create"
+run_mode = args.run_mode
 # create_corpus_txt:仅仅创建语料库文件。
 # generate_all: 生成所有的向量文件
-create_corpus_mode = "generate_all"
+create_corpus_mode = args.create_corpus_mode
 # frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
 frozen = "frozen"
 # ========================= 运行模式 =========================
 # ========================= 文件夹路径 =========================
 # 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
 root_dir = f"{os.getcwd()}"
-data_dir_path = f"{os.getcwd()}/data"
+data_dir_path = f"{root_dir}/{args.data_dir_name}"
 img_dir_path = f"{data_dir_path}/img"
 data_sol_source_dir_path = f"{data_dir_path}/sol_source"
 data_ast_json_dir_path = f"{data_dir_path}/AST_json"
