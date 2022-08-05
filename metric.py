@@ -16,23 +16,26 @@ def score(predict, label, writer, fold, epoch, msg):
     predict = predict.data
     label = label.data
     # 结果矩阵，里面存放的是四种漏洞类型的四种基础衡量标准。
-    optimal_list = np.zeros((4, 4))
+    optimal_list = [["", "", "", ""],
+                    ["", "", "", ""],
+                    ["", "", "", ""],
+                    ["", "", "", ""]]
     # 取出第i中类型的预测结果和原始标签，输入到阈值调优中进行调优
     for attack_index in range(config.classes):
         res = threshold_optimize(predict[:, attack_index], label[:, attack_index], writer, fold, epoch)
         # 四种漏洞的四种度量标准，一行是同一种度量，但是是不同的错误类型。
-        optimal_list[0, attack_index] = res["accuracy"]
-        optimal_list[1, attack_index] = res["precision"]
-        optimal_list[2, attack_index] = res["recall"]
-        optimal_list[3, attack_index] = res["f_score"]
+        optimal_list[0][attack_index] = f"{format(res['accuracy'].item(), '.30f')}"
+        optimal_list[1][attack_index] = f"{format(res['precision'].item(), '.30f')}"
+        optimal_list[2][attack_index] = f"{format(res['recall'].item(), '.30f')}"
+        optimal_list[3][attack_index] = f"{format(res['f_score'].item(), '.30f')}"
     # 打印一下看一下四种漏洞类型的精度之类的，而且这里可以放大版面。
     table = PrettyTable(['', 'Reentry', 'TimeStamp', 'Arithmetic', 'Delegate'], )
     table._table_width = config.table_width
     table.title = msg
-    table.add_row(["Accuracy", optimal_list[0, 0], optimal_list[0, 1], optimal_list[0, 2], optimal_list[0, 3]])
-    table.add_row(["Precision", optimal_list[1, 0], optimal_list[1, 1], optimal_list[1, 2], optimal_list[1, 3]])
-    table.add_row(["Recall", optimal_list[2, 0], optimal_list[2, 1], optimal_list[2, 2], optimal_list[2, 3]])
-    table.add_row(["F-score", optimal_list[3, 0], optimal_list[3, 1], optimal_list[3, 2], optimal_list[3, 3]])
+    table.add_row(["Accuracy", optimal_list[0][0], optimal_list[0][1], optimal_list[0][2], optimal_list[0][3]])
+    table.add_row(["Precision", optimal_list[1][0], optimal_list[1][1], optimal_list[1][2], optimal_list[1][3]])
+    table.add_row(["Recall", optimal_list[2][0], optimal_list[2][1], optimal_list[2][2], optimal_list[2][3]])
+    table.add_row(["F-score", optimal_list[3][0], optimal_list[3][1], optimal_list[3][2], optimal_list[3][3]])
     utils.tqdm_write(table)
 
 
