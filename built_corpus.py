@@ -44,7 +44,7 @@ def built_corpus_bfs(project_node_list, file_name):
         f = open(config.corpus_txt_path, 'a', encoding="utf-8")
         string = ""
         for sentence in sentences:
-            string = string + sentence + " "
+            string = string + sentence + config.split_word
         f.write(string)
         f.close()
         utils.success(f"{file_name}语料库添加成功")
@@ -104,7 +104,7 @@ def built_corpus_dfs(project_node_list, file_name):
         f = open(config.corpus_txt_path, 'a', encoding="utf-8")
         string = ""
         for sentence in sentences:
-            string = string + sentence + " "
+            string = string + sentence + config.split_word
         f.write(string)
         f.close()
         utils.success(f"{file_name}语料库添加成功")
@@ -137,11 +137,14 @@ def have_attribute(node):
     # 如果含有名字
     if "name" in node.attribute.keys():
         return node.attribute["name"]
+    if "src_code" in node.attribute.keys():
+        return node.attribute["src_code"]
     return None
 
 
 # 拆分原始的大小驼峰信息
 def hump2sub(hump_str):
+    hump_str = hump_str.replace("\n", " ")
     p = re.compile(r'([a-z]|\d)([A-Z])')
     sub = re.sub(p, r'\1_\2', hump_str).lower()
     q = re.compile(r'([a-z][a-z])([0-9])')

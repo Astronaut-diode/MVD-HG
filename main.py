@@ -118,7 +118,7 @@ if __name__ == '__main__':
                 # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
                 with open(config.corpus_txt_path, 'r', encoding="utf-8") as corpus_file:
                     for line in corpus_file.readlines():
-                        sentences.append(line.split(" "))
+                        sentences.append(line.split(config.split_word))
                 # 因为之前没有文件，所以先进行训练,
                 w2v = Word2Vec(sentences=sentences, size=config.encode_dim, workers=16, sg=1, min_count=1)
                 # 保存训练以后的模型。
@@ -132,7 +132,7 @@ if __name__ == '__main__':
         # 读取之前保存的语料文件，因为是a b c d这样保存的，所以读出来，然后用空格断句，就能得到一个列表，再append到sentences中就是二维数组，可以直接作为sentences输入到模型中训练。
         with open(config.corpus_txt_path, 'r', encoding="utf-8") as corpus_file:
             for line in corpus_file.readlines():
-                sentences.append(line.split(" "))
+                sentences.append(line.split(config.split_word))
         # 因为之前没有文件，所以先进行训练,
         w2v = Word2Vec(sentences=sentences, size=config.encode_dim, workers=16, sg=1, min_count=1)
         # 保存训练以后的模型。

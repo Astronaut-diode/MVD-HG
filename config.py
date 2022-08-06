@@ -25,7 +25,6 @@ parser.add_argument('--data_dir_name', type=str,
                     help="数据文件夹的名字，为了可以多进程启动运行:\n")
 # 下面更新config配置
 args = parser.parse_args()
-
 # ========================= 运行模式 =========================
 # create:创建数据集的时候用的
 # train:训练模式
@@ -90,6 +89,8 @@ corpus_file_path = f"{data_dir_path}/corpus_model.pkl"
 corpus_txt_path = f"{data_dir_path}/corpus.txt"
 # 词库文件当中，保存的每个单词的维度向量
 encode_dim = 128
+# 用来分割用的单词。
+split_word = "(●'◡'●)"
 # ========================= 生成语言库配置 =========================
 # ========================= 图可视化配置 =========================
 # 是否要调用print_tree方法来显示图片

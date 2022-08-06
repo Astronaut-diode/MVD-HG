@@ -1,6 +1,7 @@
 # coding=UTF-8
 from gensim.models import Word2Vec
 import os
+import re
 import config
 import json
 import utils
@@ -50,8 +51,19 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
     word2vec_model = Word2Vec.load(config.corpus_file_path).wv
     # 遍历所有的节点，待会一一操作，保存到node_feature_list中去。
     for node in project_node_list:
+        node_feature = word2vec_model[node.node_type]
+        # 判断这个节点是否含有string字符串或者数字或者是方法名，如果有，需要一起添加进去，而且要注意大小驼峰的分割。
+        tmp = have_attribute(node)
+        # 如果有返回值，那就所说明确实是含有字符串或者数字或者方法名的
+        if tmp:
+            # 如果弹出的内容是str或者int类型，才会选择将他们添加到词库当中去。
+            if isinstance(tmp[0], str) or isinstance(tmp[0], int):
+                # 如果是方法名，那是需要进行大小驼峰的转化的
+                for s in hump2sub(tmp[0]):
+                    # 将拆分以后的结果一个个的添加到向量中。
+                    node_feature = node_feature + word2vec_model[s]
         # 第一规则：根据每一个节点的类型，获取他的向量化表示
-        obj = {"node_id": id_mapping_id[node.node_id], "node_feature": word2vec_model[node.node_type].tolist()}
+        obj = {"node_id": id_mapping_id[node.node_id], "node_feature": node_feature.tolist()}
         # 添加到数组中，循环结束直接录入到节点特征文件当中。
         node_feature_list.append(obj)
     # 将节点信息保存到文件当中去。
@@ -59,6 +71,30 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
     # 关闭句柄文件。
     node_feature_handle.close()
     utils.success(f"{node_feature_file_name}节点特征文件已经构建完毕")
+
+
+# 判断这个节点是否包含了name，Literal或者value
+def have_attribute(node):
+    # 如果含有value的信息
+    if "value" in node.attribute.keys():
+        return node.attribute["value"]
+    # 如果含有名字
+    if "name" in node.attribute.keys():
+        return node.attribute["name"]
+    if "src_code" in node.attribute.keys():
+        return node.attribute["src_code"]
+    return None
+
+
+# 拆分原始的大小驼峰信息
+def hump2sub(hump_str):
+    hump_str = hump_str.replace("\n", " ")
+    p = re.compile(r'([a-z]|\d)([A-Z])')
+    sub = re.sub(p, r'\1_\2', hump_str).lower()
+    q = re.compile(r'([a-z][a-z])([0-9])')
+    new_sub = re.sub(q, r'\1_\2', sub)
+    seq = re.split('_', new_sub)
+    return seq
 
 
 # 创建抽象语法树的边文件。
