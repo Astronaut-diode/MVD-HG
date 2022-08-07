@@ -125,7 +125,7 @@ batch_size = 64
 # 学习率
 learning_rate = 0.005
 # 世代数量
-epoch_size = 20
+epoch_size = 50
 # K折交叉验证的数量。
 k_folds = 10
 # 使用的设备

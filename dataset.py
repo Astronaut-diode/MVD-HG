@@ -53,10 +53,17 @@ class ASTGNNDataset(Dataset):
                     x = self.get_x(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
                     # 获取抽象语法树边的信息
                     ast_edge_index = self.get_ast_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
+                    # 创建边的属性
+                    ast_edge_attr = torch.zeros(ast_edge_index.shape[1])
                     cfg_edge_index = self.get_cfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
+                    cfg_edge_attr = torch.zeros(cfg_edge_index.shape[1]) + 1
                     dfg_edge_index = self.get_dfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    # 通过x和ast_edge_index一起构造图数据
-                    graph_train_data = Data(x=x, edge_index=[ast_edge_index, cfg_edge_index, dfg_edge_index], y=y)
+                    dfg_edge_attr = torch.zeros(dfg_edge_index.shape[1]) + 2
+                    # 将上面三份内容一起使用，用来构造一份数据集。
+                    edge_index = torch.cat((ast_edge_index, cfg_edge_index, dfg_edge_index), dim=1)
+                    edge_attr = torch.cat((ast_edge_attr, cfg_edge_attr, dfg_edge_attr))
+                    # 通过节点属性，边连接情况，边的属性，还有标签一起构建数据集。
+                    graph_train_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
                     # 添加到列表中，待会可以直接一次性保存。
                     graph_data_list.append(graph_train_data)
         # 数据构造完毕以后，直接保存到对应文件中即可。

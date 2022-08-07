@@ -52,7 +52,7 @@ def train():
                 # 经典的五步计算
                 optimizer.zero_grad()
                 # 将两个batch的节点，边还有batch信息都传进去
-                predict = model(train_batch.x, train_batch.edge_index[0], train_batch.batch, train_batch.x, train_batch.edge_index[1], train_batch.batch, train_batch.x, train_batch.edge_index[2], train_batch.batch)
+                predict = model(train_batch.x, train_batch.edge_index, train_batch.edge_attr, train_batch.batch)
                 # 计算准确率计算一次就行了，因为两个人的结果是一样的，而且本来就是两个模型合并起来计算。
                 loss = criterion(predict, train_batch.y)
                 loss.backward()
@@ -71,7 +71,7 @@ def train():
                 # 经典的五步计算
                 optimizer.zero_grad()
                 # 将两个batch的节点，边还有batch信息都传进去
-                predict = model(test_batch.x, test_batch.edge_index[0], test_batch.batch, test_batch.x, test_batch.edge_index[1], test_batch.batch, test_batch.x, test_batch.edge_index[2], test_batch.batch)
+                predict = model(test_batch.x, test_batch.edge_index, test_batch.edge_attr, test_batch.batch)
                 # 计算准确率计算一次就行了，因为两个人的结果是一样的，而且本来就是两个模型合并起来计算。
                 loss = criterion(predict, test_batch.y)
                 # 计算验证集上的总损失值
