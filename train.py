@@ -63,7 +63,7 @@ def train():
                 train_all_predicts = torch.cat((train_all_predicts, predict), dim=0)
                 train_all_labels = torch.cat((train_all_labels, train_batch.y), dim=0)
             # 计算对应的度量标准，进行阈值调优。
-            score(train_all_predicts, train_all_labels, writer, fold, epoch, f"{fold}折{epoch}Epoch中训练集的loss{format(train_total_loss / len(train_dataloader), '.20f')}")
+            score(train_all_predicts, train_all_labels, writer, fold, epoch, f"{fold}折{epoch}Epoch中训练集的loss{format(train_total_loss / len(train_dataloader), '.20f')}", False)
             model.eval()
             for test_batch in tqdm(test_dataloader, desc=f"Epoch {epoch}===> Test", leave=False, ncols=config.tqdm_ncols, file=sys.stdout):
                 # 将数据转化为指定设备上运行
@@ -80,6 +80,6 @@ def train():
                 test_all_predicts = torch.cat((test_all_predicts, predict), dim=0)
                 test_all_labels = torch.cat((test_all_labels, test_batch.y), dim=0)
             # 计算对应的度量标准，进行阈值调优。
-            score(test_all_predicts, test_all_labels, writer, fold, epoch, f"{fold}折{epoch}Epoch中测试集的loss{format(test_total_loss / len(test_dataloader), '.20f')}")
+            score(test_all_predicts, test_all_labels, writer, fold, epoch, f"{fold}折{epoch}Epoch中测试集的loss{format(test_total_loss / len(test_dataloader), '.20f')}", True)
         # 每一折计算完之后保存一个模型文件
         torch.save({'model_params': model.state_dict()}, f'{config.model_data_dir}/{datetime.datetime.now()}_{fold}.pth')
