@@ -58,16 +58,12 @@ reentry_attack_fold = f'{data_dir_path}/attack/reentry_attack_fold/'
 timestamp_attack_fold = f"{data_dir_path}/attack/timestamp_attack_fold/"
 # 溢出漏洞的文件夹
 arithmetic_attack_fold = f"{data_dir_path}/attack/arithmetic_attack/"
-# 危险调用漏洞的文件夹
-dangerous_delegate_call_attack_fold = f"{data_dir_path}/attack/dangerous_delegate_call_attack/"
 # 疑似重入攻击的文件夹
 suspected_reentry_attack_fold = f'{data_dir_path}/attack/suspected_reentry_attack_fold/'
 # 疑似时间戳攻击的文件夹
 suspected_timestamp_attack_fold = f"{data_dir_path}/attack/suspected_timestamp_attack_fold/"
 # 疑似溢出漏洞的文件夹
 suspected_arithmetic_attack_fold = f"{data_dir_path}/attack/suspected_arithmetic_attack/"
-# 疑似危险调用漏洞的文件夹
-suspected_dangerous_delegate_call_attack_fold = f"{data_dir_path}/attack/suspected_dangerous_delegate_call_attack/"
 # 运行过程中出错的保存文件夹
 error_file_fold = f"{data_dir_path}/error/"
 # ========================= 文件夹路径 =========================
@@ -123,7 +119,7 @@ ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclarati
 # ========================= 图可视化配置 =========================
 # ========================= 模型和度量标准配置 =========================
 # 最终的分类数
-classes = 4
+classes = 3
 # 批处理数量
 batch_size = 64
 # 学习率

@@ -7,7 +7,6 @@ from torch.utils.tensorboard import SummaryWriter
 from sklearn.model_selection import KFold
 from tqdm import tqdm
 import datetime
-import utils
 import torch
 import config
 import sys

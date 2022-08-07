@@ -1,20 +1,22 @@
 # coding=UTF-8
-from torch_geometric.nn import MessagePassing, GATConv, global_mean_pool, Linear
+from torch_geometric.nn import MessagePassing, GATConv, global_mean_pool, Linear, RGCNConv
 from typing import Optional
 from torch import Tensor
 from torch.nn import ReLU
 from torch_sparse import SparseTensor
 
 import config
-import torch
 
 
 class ASTGNNModel(MessagePassing):
     def __init__(self):
         super(ASTGNNModel, self).__init__()
-        self.GATconv_AST = GATConv(128, 1)
-        self.GATconv_CFG = GATConv(128, 1)
-        self.GATconv_DFG = GATConv(128, 1)
+        self.GATconv_AST = GATConv(128, 256)
+        self.GATconv_CFG = GATConv(128, 256)
+        self.GATconv_DFG = GATConv(128, 256)
+        self.GATconv_AST1 = GATConv(256, 1)
+        self.GATconv_CFG1 = GATConv(256, 1)
+        self.GATconv_DFG1 = GATConv(256, 1)
         self.Linear_AST = Linear(in_channels=1, out_channels=config.classes)
         self.Linear_CFG = Linear(in_channels=1, out_channels=config.classes)
         self.Linear_DFG = Linear(in_channels=1, out_channels=config.classes)
@@ -37,6 +39,7 @@ class ASTGNNModel(MessagePassing):
     # 传入单组数据，然后计算出结果，这是抽象语法树的部分。
     def ast_forward(self, x, edge_index, batch):
         x = self.GATconv_AST(x, edge_index)
+        x = self.GATconv_AST1(x, edge_index)
         x = self.relu(x)
         x = global_mean_pool(x=x, batch=batch)
         x = self.Linear_AST(x)
@@ -45,6 +48,7 @@ class ASTGNNModel(MessagePassing):
     # 传入单组数据，然后计算出结果，这是控制流图的部分。
     def cfg_forward(self, x, edge_index, batch):
         x = self.GATconv_CFG(x, edge_index)
+        x = self.GATconv_CFG1(x, edge_index)
         x = self.relu(x)
         x = global_mean_pool(x=x, batch=batch)
         x = self.Linear_CFG(x)
@@ -53,6 +57,7 @@ class ASTGNNModel(MessagePassing):
     # 传入单组数据，然后计算出结果，这是控制流图的部分。
     def dfg_forward(self, x, edge_index, batch):
         x = self.GATconv_DFG(x, edge_index)
+        x = self.GATconv_DFG1(x, edge_index)
         x = self.relu(x)
         x = global_mean_pool(x=x, batch=batch)
         x = self.Linear_DFG(x)

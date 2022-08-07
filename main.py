@@ -15,7 +15,6 @@ from make_arithmetic_attack_label import make_arithmetic_attack_label
 from classification_of_documents import classification_of_documents
 from tqdm import tqdm
 from make_timestamp_attack_label import make_timestamp_attack_label
-from make_delegate_call_attack_label import make_delegate_call_attack_label
 from hash_code import has_equal_hash
 import datetime
 import config
@@ -37,7 +36,6 @@ if __name__ == '__main__':
         utils.dir_exists(config.reentry_attack_fold)
         utils.dir_exists(config.timestamp_attack_fold)
         utils.dir_exists(config.arithmetic_attack_fold)
-        utils.dir_exists(config.dangerous_delegate_call_attack_fold)
         # 判断问题文件夹是否存在，不存在则创建。
         utils.dir_exists(config.error_file_fold)
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
@@ -82,10 +80,9 @@ if __name__ == '__main__':
                         reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                         timestamp_flag = make_timestamp_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                         arithmetic_flag = make_arithmetic_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                        delegate_flag = make_delegate_call_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                         # 避免第二次运行的时候覆盖了第一次计算出来的标签。
                         if config.create_corpus_mode != "generate_all":
-                            utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, timestamp_flag, arithmetic_flag, delegate_flag])
+                            utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, timestamp_flag, arithmetic_flag])
                     except utils.CustomError as e:
                         # 运行时间过长，是里面的控制流太多了，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
