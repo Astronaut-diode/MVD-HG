@@ -1,6 +1,7 @@
 # coding=UTF-8
 from typing import Tuple, Union, List
 from torch_geometric.data import Data, Dataset
+from skmultilearn.model_selection import iterative_train_test_split
 import numpy as np
 import torch
 import json
@@ -10,9 +11,23 @@ import utils
 
 
 class ASTGNNDataset(Dataset):
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, mode):
         super().__init__(root_dir)
-        self.data = torch.load(self.processed_file_names[0])
+        self.total_data = torch.load(self.processed_file_names[0])
+        # 创建两个容器，分别存储每一个数据的id还有每一个数据对应的标签。
+        x_list = np.zeros((len(self.total_data), 1))
+        y_list = np.zeros((len(self.total_data), 3))
+        # 往容器中填充内容
+        for index, data in enumerate(self.total_data):
+            x_list[index] = index
+            y_list[index] = data.y
+        # 根据两个容器，对原始的数据集进行划分，分为训练集和测试集。
+        train_ids, _, test_ids, _ = iterative_train_test_split(x_list, y_list, test_size=0.2)
+        # 按照模式，获取不同的数据集
+        if mode == "train":
+            self.data = [self.total_data[int(x[0])] for x in train_ids]
+        else:
+            self.data = [self.total_data[int(x[0])] for x in test_ids]
 
     # 1.先判断原始文件是否已经存在了，如果存在了那就没有关系，否则是需要提醒报错的。
     @property

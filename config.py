@@ -84,7 +84,7 @@ versions = ["0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.4.5", "0.4.6", "0.4.
 corpus_file_path = f"{data_dir_path}/corpus_model.pkl"
 corpus_txt_path = f"{data_dir_path}/corpus.txt"
 # 词库文件当中，保存的每个单词的维度向量
-encode_dim = 128
+encode_dim = 300
 # 用来分割用的单词。
 split_word = "(●'◡'●)"
 # ========================= 生成语言库配置 =========================
@@ -141,6 +141,10 @@ epsilon = 1e-8
 threshold_max_classes = 100
 # 为tensor board创建的文件名字前缀。
 start_time = datetime.datetime.now()
+# 三种攻击的最佳阈值
+reentry_threshold = 0
+timestamp_threshold = 0
+arithmetic_threshold = 0
 # ========================= 模型和度量标准配置 =========================
 # ========================= 漏洞建模配置 =========================
 # 构建数据流的时候最大的耐心时间，如果时间到了，就停止当前文件，因为没有必要，肯定是里面路径太多爆炸了，这里是以秒为单位的。
