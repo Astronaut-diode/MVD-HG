@@ -60,8 +60,10 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
             if isinstance(tmp[0], str) or isinstance(tmp[0], int):
                 # 如果是方法名，那是需要进行大小驼峰的转化的
                 for s in hump2sub(tmp[0]):
-                    # 将拆分以后的结果一个个的添加到向量中。
-                    node_feature = node_feature + word2vec_model[s]
+                    # 如果实在不存在，那就算了。
+                    if s in word2vec_model:
+                        # 将拆分以后的结果一个个的添加到向量中。
+                        node_feature = node_feature + word2vec_model[s]
         # 第一规则：根据每一个节点的类型，获取他的向量化表示
         obj = {"node_id": id_mapping_id[node.node_id], "node_feature": node_feature.tolist()}
         # 添加到数组中，循环结束直接录入到节点特征文件当中。
