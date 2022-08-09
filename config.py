@@ -145,6 +145,8 @@ start_time = datetime.datetime.now()
 reentry_threshold = 0
 timestamp_threshold = 0
 arithmetic_threshold = 0
+# 测试集的占比。
+test_dataset_percent = 0.2
 # ========================= 模型和度量标准配置 =========================
 # ========================= 漏洞建模配置 =========================
 # 构建数据流的时候最大的耐心时间，如果时间到了，就停止当前文件，因为没有必要，肯定是里面路径太多爆炸了，这里是以秒为单位的。

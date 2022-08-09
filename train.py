@@ -96,7 +96,7 @@ def train():
             test_all_labels = torch.cat((test_all_labels, test_batch.y), dim=0)
         # 先是打印表格，最终返回4*3的表格，并每一折叠加一次。
         metric[fold] = torch.as_tensor(np.array([list(map(float, x)) for x in test_score(test_all_predicts, test_all_labels, writer, fold, f"{fold}折中Test的loss{format(test_total_loss / len(test_dataloader), '.20f')}")]))
-        # 每一折计算完之后保存一个模型文件
-        torch.save({'model_params': model.state_dict()}, f'{config.model_data_dir}/{datetime.datetime.now()}_{fold}.pth')
+        # 每一折计算完之后保存一个模型文件，文件名字的格式是时间_折数——三种漏洞的f分数。
+        torch.save({'model_params': model.state_dict()}, f'{config.model_data_dir}/{datetime.datetime.now()}_{fold}——{metric[fold][3]}.pth')
     # 打印平均以后的计算结果。
     utils.tqdm_write(f"K折平均值为:{torch.mean(metric, dim=0)}")

@@ -16,13 +16,13 @@ class ASTGNNDataset(Dataset):
         self.total_data = torch.load(self.processed_file_names[0])
         # 创建两个容器，分别存储每一个数据的id还有每一个数据对应的标签。
         x_list = np.zeros((len(self.total_data), 1))
-        y_list = np.zeros((len(self.total_data), 3))
+        y_list = np.zeros((len(self.total_data), config.classes))
         # 往容器中填充内容
         for index, data in enumerate(self.total_data):
             x_list[index] = index
             y_list[index] = data.y
         # 根据两个容器，对原始的数据集进行划分，分为训练集和测试集。
-        train_ids, _, test_ids, _ = iterative_train_test_split(x_list, y_list, test_size=0.2)
+        train_ids, _, test_ids, _ = iterative_train_test_split(x_list, y_list, test_size=config.test_dataset_percent)
         # 按照模式，获取不同的数据集
         if mode == "train":
             self.data = [self.total_data[int(x[0])] for x in train_ids]
