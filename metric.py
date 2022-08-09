@@ -109,7 +109,7 @@ def test_score(predict, label, writer, fold, msg):
                     ["", "", ""],
                     ["", "", ""]]
     # 先将预测值转化为标签内容
-    predict_matrix = (predict >= torch.as_tensor(data=[config.reentry_threshold, config.timestamp_threshold, config.arithmetic_threshold], device="cuda:1")).add(0)
+    predict_matrix = (predict >= torch.as_tensor(data=[config.reentry_threshold, config.timestamp_threshold, config.arithmetic_threshold], device=config.device)).add(0)
     # 这里的结果是一个一行3列的数组，分别代表不同漏洞的TP,FP,TN,FN。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=0).reshape(-1, 1)
     fp = torch.sum(torch.logical_and(torch.sub(1, label), predict_matrix), dim=0).reshape(-1, 1)

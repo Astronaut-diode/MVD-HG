@@ -129,7 +129,7 @@ epoch_size = 50
 # K折交叉验证的数量。
 k_folds = 10
 # 使用的设备
-device = "cuda:1"
+device = "cuda:0"
 # 模型文件的保存位置
 model_data_dir = f"{data_dir_path}/model"
 # 保存tensor board文件的位置
