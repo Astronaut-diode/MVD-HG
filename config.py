@@ -130,14 +130,16 @@ os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
 device_ids = range(torch.cuda.device_count())
 # 使用的主设备，就是gpu_id的第一块。
 main_device = f"cuda:{gpu_id[0]}"
+# 多线程加载数据
+num_workers = 8
 # 最终的分类数
 classes = 3
 # 批处理数量
-batch_size = 64
+batch_size = 256
 # 学习率
 learning_rate = 0.005
 # 世代数量
-epoch_size = 50
+epoch_size = 20
 # K折交叉验证的数量。
 k_folds = 10
 # 模型文件的保存位置
