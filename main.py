@@ -38,6 +38,8 @@ if __name__ == '__main__':
         utils.dir_exists(config.arithmetic_attack_fold)
         # 判断问题文件夹是否存在，不存在则创建。
         utils.dir_exists(config.error_file_fold)
+        # 判断没有漏洞的文件夹是否存在，不存在则创建。
+        utils.dir_exists(config.no_attack_fold)
         # 先创建词向量模型的对象，因为在create_corpus的时候还没有这个文件，肯定是不会加载的。
         word2vec_model = None
         if config.create_corpus_mode == "generate_all":

@@ -54,6 +54,8 @@ hash_to_file = f"{data_dir_path}/hash_to_file.json"
 idx_to_label_file = f'{data_dir_path}/idx_to_label.json'
 # 缺乏版本号码的保存地址
 absent_version_cmd_file = f"{data_dir_path}/absent_version_cmd.txt"
+# 没有漏洞的文件夹
+no_attack_fold = f'{data_dir_path}/attack/no_attack_fold/'
 # 重入攻击的文件夹
 reentry_attack_fold = f'{data_dir_path}/attack/reentry_attack_fold/'
 # 时间戳攻击的文件夹
