@@ -38,6 +38,11 @@ if __name__ == '__main__':
         utils.dir_exists(config.arithmetic_attack_fold)
         # 判断问题文件夹是否存在，不存在则创建。
         utils.dir_exists(config.error_file_fold)
+        # 先创建词向量模型的对象，因为在create_corpus的时候还没有这个文件，肯定是不会加载的。
+        word2vec_model = None
+        if config.create_corpus_mode == "generate_all":
+            # 加载词向量的模型
+            word2vec_model = Word2Vec.load(config.corpus_file_path).wv
         # 循环sol_source文件夹，获取每一个工程文件夹的名字。
         for project_name in tqdm(os.listdir(config.data_sol_source_dir_path)):
             # sol_source中遍历到的工程文件夹的全路径。
@@ -98,7 +103,7 @@ if __name__ == '__main__':
                     built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 创建数据集
-                    built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                    built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}", word2vec_model=word2vec_model)
                     # 打印树的样子。
                     generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
             # 如果是冻结模式，直接移动文件到complete文件夹中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
