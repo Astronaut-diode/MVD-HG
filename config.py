@@ -2,6 +2,8 @@
 import os
 import argparse
 import datetime
+import torch
+
 # 默认会先加载config配置文件夹，然后设定好程序运行的配置。
 parser = argparse.ArgumentParser(description='参数表')
 # create:创建数据集的时候用的
@@ -118,6 +120,14 @@ color_dict = {"SourceUnit": "#ddd02f",
 ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
 # ========================= 图可视化配置 =========================
 # ========================= 模型和度量标准配置 =========================
+# 指定gpu id,这里的赋值必须是字符串，list会报错
+gpu_id = "0,1"
+# 配置环境,设定当前程序可见GPU只有这几个,这样子就可以设定多GPU用哪几块。
+os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
+# 然后转化为设备id的数组，之后可以传入多GPU进行使用。
+device_ids = range(torch.cuda.device_count())
+# 使用的主设备，就是gpu_id的第一块。
+main_device = f"cuda:{gpu_id[0]}"
 # 最终的分类数
 classes = 3
 # 批处理数量
@@ -128,8 +138,6 @@ learning_rate = 0.005
 epoch_size = 50
 # K折交叉验证的数量。
 k_folds = 10
-# 使用的设备
-device = "cuda:0"
 # 模型文件的保存位置
 model_data_dir = f"{data_dir_path}/model"
 # 保存tensor board文件的位置
@@ -162,4 +170,3 @@ make_arithmetic_attack_label_max_time = 40
 tqdm_ncols = 70
 table_width = 120
 # ========================= 输出配置 =========================
-
