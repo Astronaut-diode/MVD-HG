@@ -26,7 +26,7 @@ def train():
     origin_train_dataset = ASTGNNDataset(config.data_dir_path, "train")
     test_dataset = ASTGNNDataset(config.data_dir_path, "test")
     # 使用Loader加载数据集
-    test_dataloader = DataListLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=True, drop_last=False, num_workers=config.num_workers)
+    test_dataloader = DataListLoader(dataset=test_dataset, batch_size=config.batch_size, shuffle=True, drop_last=False, num_workers=config.num_workers, pin_memory=True)
     # 定义K折交叉验证
     k_fold = KFold(n_splits=config.k_folds, shuffle=True)
     # 创建精度的集合，是一个3维内容，分别是折，4 * 3相当于每一折的结果都作为一个平面叠加上去。
@@ -39,9 +39,8 @@ def train():
             train_dataset = torch.utils.data.dataset.Subset(origin_train_dataset, train_ids).dataset
             valid_dataset = torch.utils.data.dataset.Subset(origin_train_dataset, valid_ids).dataset
             # 将训练集和验证集加载到loader中。
-
-            train_dataloader = DataListLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, drop_last=False, num_workers=config.num_workers)
-            valid_dataloader = DataListLoader(dataset=valid_dataset, batch_size=config.batch_size, shuffle=True, drop_last=False, num_workers=config.num_workers)
+            train_dataloader = DataListLoader(dataset=train_dataset, batch_size=config.batch_size, shuffle=True, drop_last=False, num_workers=config.num_workers, pin_memory=True)
+            valid_dataloader = DataListLoader(dataset=valid_dataset, batch_size=config.batch_size, shuffle=True, drop_last=False, num_workers=config.num_workers, pin_memory=True)
             # 加载网络，这里是为了避免使用同一个网络，对于不同的K折交叉验证会有影响。
             model = ASTGNNModel()
             # 使用多GPU，注意，使用的卡是直接配置好的gpu_id以后转换的从零开始的数组。

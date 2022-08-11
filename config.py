@@ -131,11 +131,11 @@ device_ids = range(torch.cuda.device_count())
 # 使用的主设备，就是gpu_id的第一块。
 main_device = f"cuda:{gpu_id[0]}"
 # 多线程加载数据
-num_workers = 8
+num_workers = 4
 # 最终的分类数
 classes = 3
 # 批处理数量
-batch_size = 256
+batch_size = 128
 # 学习率
 learning_rate = 0.005
 # 世代数量
