@@ -122,14 +122,10 @@ color_dict = {"SourceUnit": "#ddd02f",
 ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
 # ========================= 图可视化配置 =========================
 # ========================= 模型和度量标准配置 =========================
-# 指定gpu id,这里的赋值必须是字符串，list会报错
-gpu_id = "0,1"
+# 开几个线程进行计算。
+thread_num = 2
 # 配置环境,设定当前程序可见GPU只有这几个,这样子就可以设定多GPU用哪几块。
-os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
-# 然后转化为设备id的数组，之后可以传入多GPU进行使用。
-device_ids = range(torch.cuda.device_count())
-# 使用的主设备，就是gpu_id的第一块。
-main_device = f"cuda:{gpu_id[0]}"
+os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
 # 多线程加载数据
 num_workers = 4
 # 最终的分类数
