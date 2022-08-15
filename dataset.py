@@ -16,59 +16,61 @@ class ASTGNNDataset(Dataset):
     # root_dir,数据集的根目录
     # mode:获取数据集的模式
     # attack_type:漏洞的类型
-    def __init__(self, root_dir, mode, attack_type, rank, train_indices=None, valid_indices=None):
+    def __init__(self, root_dir, attack_type):
         super().__init__(root_dir)
-        # 先获取完全数据集，后面根据输入的模式和索引集合获取不同的数据集合。
+        # 直接分出测试集和原始的训练集,还有原始训练集中的训练集和测试集部分，如果要使用谁，就将self.data转化为对应的数据集。
+        self.test_data = []
+        self.origin_train_data = []
+        self.data = []
+        # 先获取一份数据集，后面再根据额外的自定义方法改变调用的数据集是谁。
+        import datetime
+        start = datetime.datetime.now()
         self.total_data = torch.load(self.processed_file_names[0])
-        # 如果是测试集模式，直接返回原始的测试集。
+        end = datetime.datetime.now()
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        print(end - start)
+        # 创建两个容器，分别存储每一个数据的id还有每一个数据对应的标签，注意，这里取标签只取一个。尺寸都是[样本总数, 1]。
+        id_list = np.zeros((len(self.total_data), 1))
+        label_list = np.zeros((len(self.total_data), 1))
+        # 往容器中填充内容，分别记录对应的样本的id和样本对应的标签是谁。
+        for id, data in enumerate(self.total_data):
+            index = id
+            # 记录对应的id
+            id_list[index] = id
+            # 根据漏洞的类型，取出对应的漏洞类型下标，去获取对应的标签。
+            label_list[index] = data.y[0][config.attack_list.index(attack_type)]
+        # 根据两个容器，对原始的数据集进行划分，划分出测试集。
+        train_ids, test_ids, _, _ = train_test_split(id_list, label_list, test_size=config.test_dataset_percent)
+        for x in test_ids:
+            self.test_data.append(self.total_data[int(x[0])])
+        for x in train_ids:
+            self.origin_train_data.append(self.total_data[int(x[0])])
+
+    # 根据模式改变使用的数据集是谁。
+    def update_dataset(self, mode, train_indices=None, valid_indices=None):
         if mode == "test":
-            # 创建两个容器，分别存储每一个数据的id还有每一个数据对应的标签，注意，这里取标签只取一个。尺寸都是[样本总数, 1]。
-            id_list = np.zeros((len(self.total_data), 1))
-            label_list = np.zeros((len(self.total_data), 1))
-            # 往容器中填充内容，分别记录对应的样本的id和样本对应的标签是谁。
-            for id, data in enumerate(tqdm(self.total_data, f"填充id和label列表", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1, disable=(rank != 0))):
-                index = id
-                # 记录对应的id
-                id_list[index] = id
-                # 根据漏洞的类型，取出对应的漏洞类型下标，去获取对应的标签。
-                label_list[index] = data.y[0][config.attack_list.index(attack_type)]
-            # 根据两个容器，对原始的数据集进行划分，划分出测试集。
-            train_ids, test_ids, _, _ = train_test_split(id_list, label_list, test_size=config.test_dataset_percent)
-            # 按照模式，获取不同的数据集
+            self.data = self.test_data
+        elif mode == "origin_train":
+            self.data = self.origin_train_data
+        elif train_indices is not None:
             self.data = []
-            for x in tqdm(test_ids, desc=f"{mode}_{attack_type}", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1, disable=(rank != 0)):
-                self.data.append(self.total_data[int(x[0])])
-        # 返回训练集，里面还需要根据是否传入了列表来判断返回K折的中的哪一部分。
-        elif mode == "train":
-            # 创建两个容器，分别存储每一个数据的id还有每一个数据对应的标签，注意，这里取标签只取一个。尺寸都是[样本总数, 1]。
-            id_list = np.zeros((len(self.total_data), 1))
-            label_list = np.zeros((len(self.total_data), 1))
-            # 往容器中填充内容，分别记录对应的样本的id和样本对应的标签是谁。
-            for id, data in enumerate(tqdm(self.total_data, f"填充id和label列表", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1, disable=(rank != 0))):
-                index = id
-                # 记录对应的id
-                id_list[index] = id
-                # 根据漏洞的类型，取出对应的漏洞类型下标，去获取对应的标签。
-                label_list[index] = data.y[0][config.attack_list.index(attack_type)]
-            # 根据两个容器，对原始的数据集进行划分，划分出测试集。
-            train_ids, test_ids, _, _ = train_test_split(id_list, label_list, test_size=config.test_dataset_percent)
-            # 按照模式，获取不同的数据集
-            self.origin_data = []
-            for x in tqdm(train_ids, desc=f"{mode}_{attack_type}", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1, disable=(rank != 0)):
-                self.origin_data.append(self.total_data[int(x[0])])
-            # 如果训练集的id不是空，那就说明是需要从原始的被分割出来的部分中选出对应的训练部分。
-            if train_indices is not None:
-                self.data = []
-                for index in tqdm(train_indices, desc=f"KFold_train_{attack_type}", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1, disable=(rank != 0)):
-                    self.data.append(self.origin_data[index])
-            # 如果验证集不是空的内容，那就说明需要返回验证集的内容。
-            elif valid_indices is not None:
-                self.data = []
-                for index in tqdm(valid_indices, desc=f"KFold_valid_{attack_type}", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1, disable=(rank != 0)):
-                    self.data.append(self.origin_data[index])
-            # 如果两个索引列表都是空的，那就返回原始的训练集
-            else:
-                self.data = self.origin_data
+            for index in train_indices:
+                self.data.append(self.origin_train_data[index])
+        elif valid_indices is not None:
+            self.data = []
+            for index in valid_indices:
+                self.data.append(self.origin_train_data[index])
 
     # 1.先判断原始文件是否已经存在了，如果存在了那就没有关系，否则是需要提醒报错的。
     @property

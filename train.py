@@ -47,11 +47,8 @@ writer = SummaryWriter(config.tensor_board_position)
 
 # 下面才是正式开始我的内容，上面的部分是固定的DDP写法
 def core(world_size, rank, attack_index, attack_type):
-    # 获取测试集的dataset,sampler,loader,测试集和验证集不能够分割。
-    test_dataset = ASTGNNDataset(config.data_dir_path, "test", attack_type, rank)
-    test_loader = DataLoader(test_dataset, batch_size=config.batch_size)
-    # 加载原始的数据集，并分割为训练集和测试集
-    origin_train_dataset = ASTGNNDataset(config.data_dir_path, "train", attack_type, rank)
+    # 获取原始的训练集，这样子每一种漏洞检测只需要简单的加载一次，后面直接通过update方法，改变使用的dataset即可。
+    dataset = ASTGNNDataset(config.data_dir_path, attack_type)
     # 定义K折交叉验证
     k_fold = KFold(n_splits=config.k_folds, shuffle=True)
     # 创建精度的集合，是一个3维内容，分别是折，4 * 1相当于每一折的结果都作为一个平面叠加上去。
@@ -59,14 +56,14 @@ def core(world_size, rank, attack_index, attack_type):
     # K折的进度条
     if rank == 0:
         k_fold_bar = tqdm(range(config.k_folds), desc="Fold ", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=0)
+    # 改变为原始的训练集
+    dataset.update_dataset(mode="origin_train")
     # K折交叉验证模型评估，对训练集进行十折划分。
-    for fold, (train_ids, valid_ids) in enumerate(k_fold.split(origin_train_dataset)):
-        # 获取K折以后的train和valid数据集，同时获取对应的sampler和loader
-        train_dataset = ASTGNNDataset(root_dir=config.data_dir_path, mode="train", attack_type=attack_type, rank=rank, train_indices=train_ids)
-        train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank)
-        train_loader = DataLoader(train_dataset, batch_size=config.batch_size, sampler=train_sampler)
-        valid_dataset = ASTGNNDataset(root_dir=config.data_dir_path, mode="train", attack_type=attack_type, rank=rank, valid_indices=valid_ids)
-        valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size)
+    for fold, (train_ids, valid_ids) in enumerate(k_fold.split(dataset)):
+        # 传入train_ids，转换为训练集模式
+        dataset.update_dataset(mode="train", train_indices=train_ids)
+        train_sampler = DistributedSampler(dataset=dataset, num_replicas=world_size, rank=rank)
+        train_loader = DataLoader(dataset=dataset, batch_size=config.batch_size, sampler=train_sampler)
         # 加载网络，注意要先加载到GPU中，然后再开启多GPU
         model = ASTGNNModel().to(rank)
         model = DistributedDataParallel(model, device_ids=[rank])
@@ -117,6 +114,8 @@ def core(world_size, rank, attack_index, attack_type):
                 train_batch_bar.close()
                 # 更新epoch的进度条
                 epoch_bar.update()
+        # 同步一下线程
+        dist.barrier()
         if rank == 0:
             # Epoch全部走完了，关闭epoch的进度条
             epoch_bar.close()
@@ -134,6 +133,9 @@ def core(world_size, rank, attack_index, attack_type):
                 valid_total_loss = 0.0
                 # 验证集上已经经过计算的图的总数，用来计算验证集的平均损失值。
                 count = 0
+                # 传入valid_ids，转换为验证集模式。
+                dataset.update_dataset(mode="train", valid_indices=valid_ids)
+                valid_loader = DataLoader(dataset=dataset, batch_size=config.batch_size)
                 with tqdm(valid_loader, desc=f"Valid", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1) as valid_batch_bar:
                     for valid_batch in valid_loader:
                         valid_batch = valid_batch.to(rank)
@@ -160,6 +162,9 @@ def core(world_size, rank, attack_index, attack_type):
                 test_total_loss = 0.0
                 # 测试集上已经被处理过的图张数。
                 count = 0
+                # 改变为测试集
+                dataset.update_dataset(mode="test")
+                test_loader = DataLoader(dataset=dataset, batch_size=config.batch_size)
                 with tqdm(test_loader, desc=f"Test ", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1) as test_batch_bar:
                     for test_batch in test_loader:
                         test_batch = test_batch.to(rank)
@@ -184,6 +189,10 @@ def core(world_size, rank, attack_index, attack_type):
         if rank == 0:
             # 更新K折的进度条
             k_fold_bar.update()
+        # 后续进来的时候也得是origin_train_data,否则无法切分数据集，所以需要改回来。
+        dataset.update_dataset(mode="origin_train")
+        # 同步双线程的进度
+        dist.barrier()
     # 只有在主线程才会打印
     if rank == 0:
         # 关闭K折的进度条。
