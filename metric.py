@@ -10,35 +10,33 @@ from prettytable import PrettyTable
 # label:原始标签
 # writer:tensor board画图用的
 # msg:table上的title。
-def valid_score(predict, label, writer, msg):
+def valid_score(predict, label, writer, msg, attack_index, attack_type):
     predict = predict.data
     label = label.data
     # 记录每种漏洞的最佳阈值。
     best_probability = []
-    # 结果矩阵，里面存放的是四种漏洞类型的四种基础衡量标准。
-    optimal_list = [["", "", ""],
-                    ["", "", ""],
-                    ["", "", ""],
-                    ["", "", ""]]
-    # 取出第i中类型的预测结果和原始标签，输入到阈值调优中进行调优
-    for attack_index in range(config.classes):
-        res = valid_threshold_optimize(predict[:, attack_index], label[:, attack_index], writer, attack_index)
-        best_probability.append(res["probability"])
-        # 三种漏洞的四种度量标准，一行是同一种度量，但是是不同的错误类型。
-        optimal_list[0][attack_index] = f"{format(res['accuracy'].item(), '.30f')}"
-        optimal_list[1][attack_index] = f"{format(res['precision'].item(), '.30f')}"
-        optimal_list[2][attack_index] = f"{format(res['recall'].item(), '.30f')}"
-        optimal_list[3][attack_index] = f"{format(res['f_score'].item(), '.30f')}"
+    # 结果矩阵，里面存放的是某漏洞类型的四种基础衡量标准。
+    optimal_list = [[""],
+                    [""],
+                    [""],
+                    [""]]
+    res = valid_threshold_optimize(predict, label, writer, attack_index)
+    best_probability.append(res["probability"])
+    # 当前漏洞的四种度量标准，一行是同一种度量
+    optimal_list[0] = f"{format(res['accuracy'].item(), '.30f')}"
+    optimal_list[1] = f"{format(res['precision'].item(), '.30f')}"
+    optimal_list[2] = f"{format(res['recall'].item(), '.30f')}"
+    optimal_list[3] = f"{format(res['f_score'].item(), '.30f')}"
     # 打印一下看一下三种漏洞类型的精度之类的，而且这里可以放大版面。
-    table = PrettyTable(['', 'Reentry', 'TimeStamp', 'Arithmetic'])
+    table = PrettyTable(['', attack_type])
     table._table_width = config.table_width
     table.title = msg
-    table.add_row(["Accuracy", optimal_list[0][0], optimal_list[0][1], optimal_list[0][2]])
-    table.add_row(["Precision", optimal_list[1][0], optimal_list[1][1], optimal_list[1][2]])
-    table.add_row(["Recall", optimal_list[2][0], optimal_list[2][1], optimal_list[2][2]])
-    table.add_row(["F-score", optimal_list[3][0], optimal_list[3][1], optimal_list[3][2]])
+    table.add_row(["Accuracy", optimal_list[0]])
+    table.add_row(["Precision", optimal_list[1]])
+    table.add_row(["Recall", optimal_list[2]])
+    table.add_row(["F-score", optimal_list[3]])
     utils.tqdm_write(table)
-    # 如果是valid，那就返回每一种漏洞的最优阈值。
+    # 如果是valid，那就返回该漏洞的最优阈值。
     return best_probability
 
 
@@ -53,7 +51,7 @@ def valid_threshold_optimize(predict, label, writer, attack_index):
     unique_probability = torch.unique(predict).reshape(-1, 1)
     # 通过步长重新选取，免得取得太多了，内存爆炸。
     unique_probability = unique_probability[::math.ceil(len(unique_probability) / config.threshold_max_classes)]
-    predict_matrix = (predict >= unique_probability).add(0)
+    predict_matrix = (predict.view(1, -1) >= unique_probability).add(0)
     # 根据标签矩阵和预测矩阵，求出四个基础标签。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=1).reshape(-1, 1)
     fp = torch.sum(torch.logical_and(torch.sub(1, label), predict_matrix), dim=1).reshape(-1, 1)
@@ -66,6 +64,7 @@ def valid_threshold_optimize(predict, label, writer, attack_index):
     f_score = tp.mul(1 + config.beta ** 2).div(tp.mul(1 + config.beta ** 2).add(fn.mul(config.beta ** 2).add(fp).add(config.epsilon)))
     # 根据p和r的和，决定谁是效果最好的，直接返回这组结果。
     best_sample_index = precision.add(recall).argmax(dim=0)
+    # 取出每一种度量标准中的最大得分。
     best_res["probability"] = unique_probability[best_sample_index, 0]
     best_res["accuracy"] = accuracy[best_sample_index, 0]
     best_res["precision"] = precision[best_sample_index, 0]
@@ -100,16 +99,16 @@ def valid_threshold_optimize(predict, label, writer, attack_index):
 # writer:tensor board画图用的
 # fold:外面的交叉验证到哪一步了。
 # model:代表不同的模式
-def test_score(predict, label, msg, rank):
+def test_score(predict, label, msg, rank, attack_index, attack_type):
     predict = predict.data
-    label = label.data
+    label = label.data.view(-1, 1)
     # 结果矩阵，里面存放的是四种漏洞类型的四种基础衡量标准。
-    optimal_list = [["", "", ""],
-                    ["", "", ""],
-                    ["", "", ""],
-                    ["", "", ""]]
+    optimal_list = [[""],
+                    [""],
+                    [""],
+                    [""]]
     # 先将预测值转化为标签内容,记住要将内容转化到主GPU上。
-    predict_matrix = (predict >= torch.as_tensor(data=[config.reentry_threshold, config.timestamp_threshold, config.arithmetic_threshold]).to(rank)).add(0)
+    predict_matrix = (predict >= torch.as_tensor(data=[config.threshold]).to(rank)).add(0)
     # 这里的结果是一个一行3列的数组，分别代表不同漏洞的TP,FP,TN,FN。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=0).reshape(-1, 1)
     fp = torch.sum(torch.logical_and(torch.sub(1, label), predict_matrix), dim=0).reshape(-1, 1)
@@ -121,13 +120,13 @@ def test_score(predict, label, msg, rank):
     optimal_list[2] = tp.div(tp.add(fn))
     optimal_list[3] = tp.mul(1 + config.beta ** 2).div(tp.mul(1 + config.beta ** 2).add(fn.mul(config.beta ** 2).add(fp).add(config.epsilon)))
     # 打印一下看一下三种漏洞类型的精度之类的，而且这里可以放大版面。
-    table = PrettyTable(['', 'Reentry', 'TimeStamp', 'Arithmetic'])
+    table = PrettyTable(['', attack_type])
     table._table_width = config.table_width
     table.title = msg
-    table.add_row(["Accuracy", f"{format(optimal_list[0][0].item(), '.30f')}", f"{format(optimal_list[0][1].item(), '.30f')}", f"{format(optimal_list[0][2].item(), '.30f')}"])
-    table.add_row(["Precision", f"{format(optimal_list[1][0].item(), '.30f')}", f"{format(optimal_list[1][1].item(), '.30f')}", f"{format(optimal_list[1][2].item(), '.30f')}"])
-    table.add_row(["Recall", f"{format(optimal_list[2][0].item(), '.30f')}", f"{format(optimal_list[2][1].item(), '.30f')}", f"{format(optimal_list[2][2].item(), '.30f')}"])
-    table.add_row(["F-score", f"{format(optimal_list[3][0].item(), '.30f')}", f"{format(optimal_list[3][1].item(), '.30f')}", f"{format(optimal_list[3][2].item(), '.30f')}"])
+    table.add_row(["Accuracy", f"{format(optimal_list[0][0].item(), '.30f')}"])
+    table.add_row(["Precision", f"{format(optimal_list[1][0].item(), '.30f')}"])
+    table.add_row(["Recall", f"{format(optimal_list[2][0].item(), '.30f')}"])
+    table.add_row(["F-score", f"{format(optimal_list[3][0].item(), '.30f')}"])
     utils.tqdm_write(table)
     # 返回每一个测试集上的计算结果，然后最终用来求平均。
     return optimal_list

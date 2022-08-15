@@ -19,15 +19,25 @@ import utils
 
 
 def train():
-    mp.spawn(run, nprocs=torch.cuda.device_count(), join=True)
+    # 如果processed文件夹存在，而且内容不是空，那就说明数据集已经生成好了，直接进行训练即可。
+    if os.path.exists(config.data_process_dir_path) and os.listdir(config.data_process_dir_path):
+        attack_type_list = ["reentry", "timestamp", "arithmetic"]
+        # 遍历每一种漏洞类型进行训练。
+        for attack_type in attack_type_list:
+            attack_index = config.attack_list.index(attack_type)
+            args = (attack_index, attack_type)
+            mp.spawn(run, args=args, nprocs=torch.cuda.device_count(), join=True)
+    # 否则随便生成一个数据集就结束。
+    else:
+        ASTGNNDataset(config.data_dir_path, "test", "reentry", 0)
 
 
-def run(rank):
+def run(rank, attack_index: int, attack_type: str):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
     dist.init_process_group('nccl', rank=rank, world_size=config.thread_num)
     # 核心内容都在core里面，其他的都是为了开启DDP写的。
-    core(world_size=torch.cuda.device_count(), rank=rank)
+    core(world_size=torch.cuda.device_count(), rank=rank, attack_index=attack_index, attack_type=attack_type)
     dist.destroy_process_group()
 
 
@@ -36,29 +46,27 @@ writer = SummaryWriter(config.tensor_board_position)
 
 
 # 下面才是正式开始我的内容，上面的部分是固定的DDP写法
-def core(world_size, rank):
-    # 获取测试集的dataset,sampler,loader
-    test_dataset = ASTGNNDataset(config.data_dir_path, "test")
-    test_sampler = DistributedSampler(test_dataset, num_replicas=world_size, rank=rank)
-    test_loader = DataLoader(test_dataset, batch_size=config.batch_size, sampler=test_sampler)
+def core(world_size, rank, attack_index, attack_type):
+    # 获取测试集的dataset,sampler,loader,测试集和验证集不能够分割。
+    test_dataset = ASTGNNDataset(config.data_dir_path, "test", attack_type, rank)
+    test_loader = DataLoader(test_dataset, batch_size=config.batch_size)
     # 加载原始的数据集，并分割为训练集和测试集
-    origin_train_dataset = ASTGNNDataset(config.data_dir_path, "train")
+    origin_train_dataset = ASTGNNDataset(config.data_dir_path, "train", attack_type, rank)
     # 定义K折交叉验证
     k_fold = KFold(n_splits=config.k_folds, shuffle=True)
-    # 创建精度的集合，是一个3维内容，分别是折，4 * 3相当于每一折的结果都作为一个平面叠加上去。
-    metric = torch.zeros((config.k_folds, 4, config.classes))
+    # 创建精度的集合，是一个3维内容，分别是折，4 * 1相当于每一折的结果都作为一个平面叠加上去。
+    metric = torch.zeros((config.k_folds, 4, 1))
     # K折的进度条
     if rank == 0:
         k_fold_bar = tqdm(range(config.k_folds), desc="Fold ", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=0)
     # K折交叉验证模型评估，对训练集进行十折划分。
     for fold, (train_ids, valid_ids) in enumerate(k_fold.split(origin_train_dataset)):
         # 获取K折以后的train和valid数据集，同时获取对应的sampler和loader
-        train_dataset = torch.utils.data.dataset.Subset(origin_train_dataset, train_ids).dataset
+        train_dataset = ASTGNNDataset(root_dir=config.data_dir_path, mode="train", attack_type=attack_type, rank=rank, train_indices=train_ids)
         train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank)
         train_loader = DataLoader(train_dataset, batch_size=config.batch_size, sampler=train_sampler)
-        valid_dataset = torch.utils.data.dataset.Subset(origin_train_dataset, valid_ids).dataset
-        valid_sampler = DistributedSampler(valid_dataset, num_replicas=world_size, rank=rank)
-        valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size, sampler=valid_sampler)
+        valid_dataset = ASTGNNDataset(root_dir=config.data_dir_path, mode="train", attack_type=attack_type, rank=rank, valid_indices=valid_ids)
+        valid_loader = DataLoader(valid_dataset, batch_size=config.batch_size)
         # 加载网络，注意要先加载到GPU中，然后再开启多GPU
         model = ASTGNNModel().to(rank)
         model = DistributedDataParallel(model, device_ids=[rank])
@@ -89,7 +97,7 @@ def core(world_size, rank):
                 # 传入batch，因为是多GPU所以会将batch一个个拆分，送入到模型中进行训练。
                 predict = model(train_batch)
                 # 计算损失值，并进行梯度下降。
-                loss = criterion(predict, train_batch.y)
+                loss = criterion(predict, train_batch.y[:, attack_index].view(predict.shape))
                 loss.backward()
                 optimizer.step()
                 # 计算训练集上总的损失值
@@ -97,17 +105,16 @@ def core(world_size, rank):
                 # 增加已经训练过图的总数
                 count += len(train_batch)
                 if rank == 0:
+                    # 设置epoch进度条的后缀。
+                    epoch_bar.set_postfix_str(f"{format(train_total_loss, '.4f')}")
                     # 在进度条的后缀，显示当前batch的损失信息
-                    train_batch_bar.set_postfix_str(f"{format(train_total_loss / count, '.4f')}")
+                    train_batch_bar.set_postfix_str(f"{format(train_total_loss / count, '.4f')}_当前在用{int(torch.cuda.memory_allocated(device=0) / 1024 / 1024)}_已分配{int(torch.cuda.max_memory_allocated(device=0) / 1024 / 1024)}_保留部分{int(torch.cuda.memory_reserved(device=0) / 1024 / 1024)}")
                     # 更新train_batch的进度条。
                     train_batch_bar.update()
-                    if index == len(train_loader):
-                        # 关闭train的进度条
-                        train_batch_bar.close()
             # 只有是主线程的时候才会打印Epoch
             if rank == 0:
-                # 设置epoch进度条的后缀。
-                epoch_bar.set_postfix_str(f"{format(train_total_loss, '.4f')}")
+                # 关闭train的进度条
+                train_batch_bar.close()
                 # 更新epoch的进度条
                 epoch_bar.update()
         if rank == 0:
@@ -133,19 +140,19 @@ def core(world_size, rank):
                         # 传入batch，因为是多GPU所以会将batch一个个拆分，送入到模型中进行训练。
                         predict = model(valid_batch)
                         # 计算损失值。
-                        loss = criterion(predict, valid_batch.y)
+                        loss = criterion(predict, valid_batch.y[:, attack_index].view(predict.shape))
                         # 计算验证集上的总损失值。
                         valid_total_loss += loss.item()
                         # 保存其中每一个mini batch计算出的结果与对应的标签。
                         valid_all_predicts = torch.cat((valid_all_predicts, predict), dim=0)
-                        valid_all_labels = torch.cat((valid_all_labels, valid_batch.y), dim=0)
+                        valid_all_labels = torch.cat((valid_all_labels, valid_batch.y[:, attack_index]), dim=0)
                         # 更新计算过的图的总数量。
                         count += len(valid_batch)
                         # 更新valid_batch的后缀信息还有进度条。
-                        valid_batch_bar.set_postfix_str(f"{format(valid_total_loss / count, '.4f')}")
+                        valid_batch_bar.set_postfix_str(f"{format(valid_total_loss / count, '.4f')}_当前在用{int(torch.cuda.memory_allocated() / 1024 / 1024)}_已分配{int(torch.cuda.max_memory_allocated() / 1024 / 1024)}_保留部分{int(torch.cuda.memory_reserved() / 1024 / 1024)}")
                         valid_batch_bar.update()
                 # 先是对验证集上的结果进行画图，并打印表格，最终返回最好的阈值。
-                config.reentry_threshold, config.timestamp_threshold, config.arithmetic_threshold = valid_score(valid_all_predicts, valid_all_labels, writer, f"{fold}折中Valid的loss{format(valid_total_loss / len(valid_loader), '.20f')}")
+                config.threshold = valid_score(valid_all_predicts, valid_all_labels, writer, f"{attack_type}_{fold}折中Valid的loss{format(valid_total_loss / len(valid_loader), '.10f')}", attack_index, attack_type)
                 # 进行测试集上的操作,创建两个容器，分别记录结果和原始标签。
                 test_all_predicts = torch.tensor([]).to(rank)
                 test_all_labels = torch.tensor([]).to(rank)
@@ -159,21 +166,21 @@ def core(world_size, rank):
                         # 传入batch，因为是多GPU所以会将batch一个个拆分，送入到模型中进行训练。
                         predict = model(test_batch)
                         # 计算损失值。
-                        loss = criterion(predict, test_batch.y)
+                        loss = criterion(predict, test_batch.y[:, attack_index].view(predict.shape))
                         # 计算测试集上的总损失值
                         test_total_loss += loss.item()
                         # 保存其中每一个mini batch计算出的结果与对应的标签。
                         test_all_predicts = torch.cat((test_all_predicts, predict), dim=0)
-                        test_all_labels = torch.cat((test_all_labels, test_batch.y), dim=0)
+                        test_all_labels = torch.cat((test_all_labels, test_batch.y[:, attack_index]), dim=0)
                         # 更新测试集上已经经过训练的图的总张数
                         count += len(test_batch)
                         # 更新测试集进度条上的平均损失
-                        test_batch_bar.set_postfix_str(f"{format(test_total_loss / count, '.4f')}")
+                        test_batch_bar.set_postfix_str(f"{format(test_total_loss / count, '.4f')}_当前在用{int(torch.cuda.memory_allocated() / 1024 / 1024)}_已分配{int(torch.cuda.max_memory_allocated() / 1024 / 1024)}_保留部分{int(torch.cuda.memory_reserved() / 1024 / 1024)}")
                         test_batch_bar.update()
-                # 先是打印表格，最终返回4*3的表格，并每一折叠加一次。
-                metric[fold] = torch.as_tensor(np.array([list(map(float, x)) for x in test_score(test_all_predicts, test_all_labels, f"{fold}折中Test的loss{format(test_total_loss / len(test_loader), '.20f')}", rank)]))
+                # 先是打印表格，最终返回4*1的表格，并每一折叠加一次。
+                metric[fold] = torch.as_tensor(np.array([list(map(float, x)) for x in test_score(test_all_predicts, test_all_labels, f"{attack_type}_{fold}折中Test的loss{format(test_total_loss / len(test_loader), '.10f')}", rank, attack_index, attack_type)]))
                 # 每一折计算完之后保存一个模型文件，文件名字的格式是时间_折数——三种漏洞的f分数。
-                torch.save({'model_params': model.state_dict()}, f'{config.model_data_dir}/{datetime.datetime.now()}_{fold}——{metric[fold][3]}.pth')
+                torch.save({'model_params': model.state_dict()}, f'{config.model_data_dir}/{attack_type}_{datetime.datetime.now()}_{fold}——{metric[fold][3]}.pth')
         if rank == 0:
             # 更新K折的进度条
             k_fold_bar.update()

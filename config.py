@@ -48,6 +48,7 @@ data_sol_source_dir_path = f"{data_dir_path}/sol_source"
 data_ast_json_dir_path = f"{data_dir_path}/AST_json"
 data_complete_dir_path = f"{data_dir_path}/complete"
 data_raw_dir_path = f"{data_dir_path}/raw"
+data_process_dir_path = f"{data_dir_path}/processed"
 # 文件hash值的保存位置。
 hash_to_file = f"{data_dir_path}/hash_to_file.json"
 # 标签文件的保存地址，这是加工之前的保存位置。这时候保存的内容比较粗糙,其中保存的格式是{"0": 0, "1": 0, "2": 1}。
@@ -131,7 +132,7 @@ num_workers = 4
 # 最终的分类数
 classes = 3
 # 批处理数量
-batch_size = 128
+batch_size = 64
 # 学习率
 learning_rate = 0.005
 # 世代数量
@@ -149,12 +150,12 @@ epsilon = 1e-8
 threshold_max_classes = 100
 # 为tensor board创建的文件名字前缀。
 start_time = datetime.datetime.now()
-# 三种攻击的最佳阈值
-reentry_threshold = 0
-timestamp_threshold = 0
-arithmetic_threshold = 0
+# 攻击的最佳阈值
+threshold = 0
 # 测试集的占比。
-test_dataset_percent = 0.2
+test_dataset_percent = 0.1
+# 用问题类型找到对应的下标。
+attack_list = ["reentry", "timestamp", "arithmetic"]
 # ========================= 模型和度量标准配置 =========================
 # ========================= 漏洞建模配置 =========================
 # 构建数据流的时候最大的耐心时间，如果时间到了，就停止当前文件，因为没有必要，肯定是里面路径太多爆炸了，这里是以秒为单位的。
