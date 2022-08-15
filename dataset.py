@@ -23,23 +23,7 @@ class ASTGNNDataset(Dataset):
         self.origin_train_data = []
         self.data = []
         # 先获取一份数据集，后面再根据额外的自定义方法改变调用的数据集是谁。
-        import datetime
-        start = datetime.datetime.now()
         self.total_data = torch.load(self.processed_file_names[0])
-        end = datetime.datetime.now()
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
-        print(end - start)
         # 创建两个容器，分别存储每一个数据的id还有每一个数据对应的标签，注意，这里取标签只取一个。尺寸都是[样本总数, 1]。
         id_list = np.zeros((len(self.total_data), 1))
         label_list = np.zeros((len(self.total_data), 1))

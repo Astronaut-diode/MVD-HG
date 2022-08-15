@@ -128,7 +128,7 @@ thread_num = 2
 # 配置环境,设定当前程序可见GPU只有这几个,这样子就可以设定多GPU用哪几块。
 os.environ['CUDA_VISIBLE_DEVICES'] = "0,1"
 # 多线程加载数据
-num_workers = 4
+num_workers = 0
 # 最终的分类数
 classes = 3
 # 批处理数量

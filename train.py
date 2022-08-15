@@ -8,6 +8,7 @@ from tqdm import tqdm
 from metric import valid_score, test_score
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
+import pynvml
 import datetime
 import sys
 import config
@@ -43,10 +44,15 @@ def run(rank, attack_index: int, attack_type: str):
 
 # tensorboard画图用的对象
 writer = SummaryWriter(config.tensor_board_position)
+# 保证DataListLoader多线程加载数据的时候不会出现错误。
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 
 # 下面才是正式开始我的内容，上面的部分是固定的DDP写法
 def core(world_size, rank, attack_index, attack_type):
+    pynvml.nvmlInit()
+    zero_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+    first_handle = pynvml.nvmlDeviceGetHandleByIndex(1)
     # 获取原始的训练集，这样子每一种漏洞检测只需要简单的加载一次，后面直接通过update方法，改变使用的dataset即可。
     dataset = ASTGNNDataset(config.data_dir_path, attack_type)
     # 定义K折交叉验证
@@ -63,7 +69,7 @@ def core(world_size, rank, attack_index, attack_type):
         # 传入train_ids，转换为训练集模式
         dataset.update_dataset(mode="train", train_indices=train_ids)
         train_sampler = DistributedSampler(dataset=dataset, num_replicas=world_size, rank=rank)
-        train_loader = DataLoader(dataset=dataset, batch_size=config.batch_size, sampler=train_sampler)
+        train_loader = DataLoader(dataset=dataset, batch_size=config.batch_size, sampler=train_sampler, num_workers=config.num_workers)
         # 加载网络，注意要先加载到GPU中，然后再开启多GPU
         model = ASTGNNModel().to(rank)
         model = DistributedDataParallel(model, device_ids=[rank])
@@ -103,9 +109,13 @@ def core(world_size, rank, attack_index, attack_type):
                 count += len(train_batch)
                 if rank == 0:
                     # 设置epoch进度条的后缀。
-                    epoch_bar.set_postfix_str(f"{format(train_total_loss, '.4f')}")
+                    epoch_bar.set_postfix_str(f"Total  Loss:{format(train_total_loss, '.4f')}")
+                    # 设置在KFold上显示内存利用率。
+                    zero_meminfo = pynvml.nvmlDeviceGetMemoryInfo(zero_handle)
+                    first_meminfo = pynvml.nvmlDeviceGetMemoryInfo(first_handle)
+                    k_fold_bar.set_postfix_str(f"GPU 0:{int(zero_meminfo.used / 1024 / 1024)}M GPU 1:{int(first_meminfo.used / 1024 / 1024)}M")
                     # 在进度条的后缀，显示当前batch的损失信息
-                    train_batch_bar.set_postfix_str(f"{format(train_total_loss / count, '.4f')}_当前在用{int(torch.cuda.memory_allocated(device=0) / 1024 / 1024)}_已分配{int(torch.cuda.max_memory_allocated(device=0) / 1024 / 1024)}_保留部分{int(torch.cuda.memory_reserved(device=0) / 1024 / 1024)}")
+                    train_batch_bar.set_postfix_str(f"Average Loss:{format(train_total_loss / count, '.4f')}")
                     # 更新train_batch的进度条。
                     train_batch_bar.update()
             # 只有是主线程的时候才会打印Epoch
@@ -135,7 +145,7 @@ def core(world_size, rank, attack_index, attack_type):
                 count = 0
                 # 传入valid_ids，转换为验证集模式。
                 dataset.update_dataset(mode="train", valid_indices=valid_ids)
-                valid_loader = DataLoader(dataset=dataset, batch_size=config.batch_size)
+                valid_loader = DataLoader(dataset=dataset, batch_size=config.batch_size, num_workers=config.num_workers)
                 with tqdm(valid_loader, desc=f"Valid", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1) as valid_batch_bar:
                     for valid_batch in valid_loader:
                         valid_batch = valid_batch.to(rank)
@@ -150,8 +160,10 @@ def core(world_size, rank, attack_index, attack_type):
                         valid_all_labels = torch.cat((valid_all_labels, valid_batch.y[:, attack_index]), dim=0)
                         # 更新计算过的图的总数量。
                         count += len(valid_batch)
-                        # 更新valid_batch的后缀信息还有进度条。
-                        valid_batch_bar.set_postfix_str(f"{format(valid_total_loss / count, '.4f')}_当前在用{int(torch.cuda.memory_allocated() / 1024 / 1024)}_已分配{int(torch.cuda.max_memory_allocated() / 1024 / 1024)}_保留部分{int(torch.cuda.memory_reserved() / 1024 / 1024)}")
+                        # 设置在KFold上显示内存利用率。
+                        k_fold_bar.set_postfix_str(f"分配0:{int(torch.cuda.memory_allocated(device=0) / 1024 / 1024)}M 总量0:{int(torch.cuda.memory_reserved(device=0) / 1024 / 1024)}M 分配1:{int(torch.cuda.memory_allocated(device=1) / 1024 / 1024)}M 总量1:{int(torch.cuda.memory_reserved(device=1) / 1024 / 1024)}M")
+                        # 在进度条的后缀，显示当前batch的损失信息
+                        valid_batch_bar.set_postfix_str(f"Average Loss:{format(valid_total_loss / count, '.4f')}")
                         valid_batch_bar.update()
                 # 先是对验证集上的结果进行画图，并打印表格，最终返回最好的阈值。
                 config.threshold = valid_score(valid_all_predicts, valid_all_labels, writer, f"{attack_type}_{fold}折中Valid的loss{format(valid_total_loss / len(valid_loader), '.10f')}", attack_index, attack_type)
@@ -164,7 +176,7 @@ def core(world_size, rank, attack_index, attack_type):
                 count = 0
                 # 改变为测试集
                 dataset.update_dataset(mode="test")
-                test_loader = DataLoader(dataset=dataset, batch_size=config.batch_size)
+                test_loader = DataLoader(dataset=dataset, batch_size=config.batch_size, num_workers=config.num_workers)
                 with tqdm(test_loader, desc=f"Test ", leave=False, ncols=config.tqdm_ncols, file=sys.stdout, position=1) as test_batch_bar:
                     for test_batch in test_loader:
                         test_batch = test_batch.to(rank)
@@ -179,8 +191,10 @@ def core(world_size, rank, attack_index, attack_type):
                         test_all_labels = torch.cat((test_all_labels, test_batch.y[:, attack_index]), dim=0)
                         # 更新测试集上已经经过训练的图的总张数
                         count += len(test_batch)
-                        # 更新测试集进度条上的平均损失
-                        test_batch_bar.set_postfix_str(f"{format(test_total_loss / count, '.4f')}_当前在用{int(torch.cuda.memory_allocated() / 1024 / 1024)}_已分配{int(torch.cuda.max_memory_allocated() / 1024 / 1024)}_保留部分{int(torch.cuda.memory_reserved() / 1024 / 1024)}")
+                        # 设置在KFold上显示内存利用率。
+                        k_fold_bar.set_postfix_str(f"分配0:{int(torch.cuda.memory_allocated(device=0) / 1024 / 1024)}M 总量0:{int(torch.cuda.memory_reserved(device=0) / 1024 / 1024)}M 分配1:{int(torch.cuda.memory_allocated(device=1) / 1024 / 1024)}M 总量1:{int(torch.cuda.memory_reserved(device=1) / 1024 / 1024)}M")
+                        # 在进度条的后缀，显示当前batch的损失信息
+                        test_batch_bar.set_postfix_str(f"Average Loss:{format(test_total_loss / count, '.4f')}")
                         test_batch_bar.update()
                 # 先是打印表格，最终返回4*1的表格，并每一折叠加一次。
                 metric[fold] = torch.as_tensor(np.array([list(map(float, x)) for x in test_score(test_all_predicts, test_all_labels, f"{attack_type}_{fold}折中Test的loss{format(test_total_loss / len(test_loader), '.10f')}", rank, attack_index, attack_type)]))
@@ -199,3 +213,5 @@ def core(world_size, rank, attack_index, attack_type):
         k_fold_bar.close()
         # 打印平均以后的计算结果。
         utils.tqdm_write(f"K折平均值为:{torch.mean(metric, dim=0)}")
+    # 关闭显存管理工具的句柄。
+    pynvml.nvmlShutdown()
