@@ -22,7 +22,8 @@ import utils
 def train():
     # 如果processed文件夹存在，而且内容不是空，那就说明数据集已经生成好了，直接进行训练即可。
     if os.path.exists(config.data_process_dir_path) and os.listdir(config.data_process_dir_path):
-        attack_type_list = ["reentry", "timestamp", "arithmetic"]
+        # 注意：这里的漏洞顺序是可以被修改的，也就是说我想检测哪种就可以先检测谁。
+        attack_type_list = ["arithmetic", "reentry", "timestamp"]
         # 遍历每一种漏洞类型进行训练。
         for attack_type in attack_type_list:
             attack_index = config.attack_list.index(attack_type)
@@ -30,7 +31,7 @@ def train():
             mp.spawn(run, args=args, nprocs=torch.cuda.device_count(), join=True)
     # 否则随便生成一个数据集就结束。
     else:
-        ASTGNNDataset(config.data_dir_path, "test", "reentry", 0)
+        ASTGNNDataset(config.data_dir_path, "reentry")
 
 
 def run(rank, attack_index: int, attack_type: str):
@@ -109,7 +110,7 @@ def core(world_size, rank, attack_index, attack_type):
                 count += len(train_batch)
                 if rank == 0:
                     # 设置epoch进度条的后缀。
-                    epoch_bar.set_postfix_str(f"Total  Loss:{format(train_total_loss, '.4f')}")
+                    epoch_bar.set_postfix_str(f"Total   Loss:{format(train_total_loss, '.4f')}")
                     # 设置在KFold上显示内存利用率。
                     zero_meminfo = pynvml.nvmlDeviceGetMemoryInfo(zero_handle)
                     first_meminfo = pynvml.nvmlDeviceGetMemoryInfo(first_handle)

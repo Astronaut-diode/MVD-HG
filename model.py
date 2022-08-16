@@ -13,7 +13,8 @@ class ASTGNNModel(MessagePassing):
         self.RGCNconv1 = RGCNConv(in_channels=300, out_channels=64, num_relations=3)
         self.RGCNconv2 = RGCNConv(in_channels=64, out_channels=32, num_relations=3)
         self.RGCNconv3 = RGCNConv(in_channels=32, out_channels=16, num_relations=3)
-        self.final_Linear = Linear(in_channels=16, out_channels=1)
+        self.RGCNconv4 = RGCNConv(in_channels=16, out_channels=8, num_relations=3)
+        self.final_Linear = Linear(in_channels=8, out_channels=1)
         self.relu = ReLU()
 
     def forward(self, data):
@@ -22,6 +23,8 @@ class ASTGNNModel(MessagePassing):
         x = self.RGCNconv2(x, data.edge_index, data.edge_attr)
         x = self.relu(x)
         x = self.RGCNconv3(x, data.edge_index, data.edge_attr)
+        x = self.relu(x)
+        x = self.RGCNconv4(x, data.edge_index, data.edge_attr)
         x = self.relu(x)
         x = global_mean_pool(x=x, batch=data.batch)
         x = self.final_Linear(x)
