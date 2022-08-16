@@ -2,9 +2,8 @@
 from typing import Tuple, Union, List
 from torch_geometric.data import Data, Dataset
 from sklearn.model_selection import train_test_split
-from tqdm import tqdm
+import shutil
 import numpy as np
-import sys
 import torch
 import json
 import os
@@ -86,28 +85,33 @@ class ASTGNNDataset(Dataset):
             # 这里replace成AST_json是因为目前来说只有AST_json里面的文件夹是完整的，sol_source里面已经被删除了。
             for now_dir, child_dirs, child_files in os.walk(project_full_path.replace("raw", "AST_json")):
                 for file_name in child_files:
-                    file_name_key = f"{now_dir.replace('AST_json', 'sol_source')}/{file_name.replace('.json', '.sol')}"
-                    label_data = np.array([label_in_memory[file_name_key]], dtype=np.float64)
-                    label_data[label_data == 2] = 0
-                    # 通过文件的全路径获取其标签。
-                    y = torch.as_tensor(data=label_data)
-                    # 获取对应raw工程文件夹下的原始文件名_node.json文件中的内容。
-                    x = self.get_x(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    # 获取抽象语法树边的信息
-                    ast_edge_index = self.get_ast_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    # 创建边的属性
-                    ast_edge_attr = torch.zeros(ast_edge_index.shape[1])
-                    cfg_edge_index = self.get_cfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    cfg_edge_attr = torch.zeros(cfg_edge_index.shape[1]) + 1
-                    dfg_edge_index = self.get_dfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
-                    dfg_edge_attr = torch.zeros(dfg_edge_index.shape[1]) + 2
-                    # 将上面三份内容一起使用，用来构造一份数据集。
-                    edge_index = torch.cat((ast_edge_index, cfg_edge_index, dfg_edge_index), dim=1)
-                    edge_attr = torch.cat((ast_edge_attr, cfg_edge_attr, dfg_edge_attr))
-                    # 通过节点属性，边连接情况，边的属性，还有标签一起构建数据集。
-                    graph_train_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-                    # 添加到列表中，待会可以直接一次性保存。
-                    graph_data_list.append(graph_train_data)
+                    try:
+                        file_name_key = f"{now_dir.replace('AST_json', 'sol_source')}/{file_name.replace('.json', '.sol')}"
+                        label_data = np.array([label_in_memory[file_name_key]], dtype=np.float64)
+                        label_data[label_data == 2] = 0
+                        # 通过文件的全路径获取其标签。
+                        y = torch.as_tensor(data=label_data)
+                        # 获取对应raw工程文件夹下的原始文件名_node.json文件中的内容。
+                        x = self.get_x(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
+                        # 获取抽象语法树边的信息
+                        ast_edge_index = self.get_ast_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
+                        # 创建边的属性
+                        ast_edge_attr = torch.zeros(ast_edge_index.shape[1])
+                        cfg_edge_index = self.get_cfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
+                        cfg_edge_attr = torch.zeros(cfg_edge_index.shape[1]) + 1
+                        dfg_edge_index = self.get_dfg_edge(os.path.join(now_dir.replace("AST_json", "raw"), file_name.replace(".json", "")))
+                        dfg_edge_attr = torch.zeros(dfg_edge_index.shape[1]) + 2
+                        # 将上面三份内容一起使用，用来构造一份数据集。
+                        edge_index = torch.cat((ast_edge_index, cfg_edge_index, dfg_edge_index), dim=1)
+                        edge_attr = torch.cat((ast_edge_attr, cfg_edge_attr, dfg_edge_attr))
+                        # 通过节点属性，边连接情况，边的属性，还有标签一起构建数据集。
+                        graph_train_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+                        # 添加到列表中，待会可以直接一次性保存。
+                        graph_data_list.append(graph_train_data)
+                    except Exception as e:
+                        os.error(f"其中出现了异常，想办法给他删除掉。{file_name_key}")
+                        shutil.rmtree(os.path.dirname(file_name_key.replace("sol_source", "complete")))
+                        shutil.rmtree(os.path.dirname(file_name_key.replace("sol_source", "raw")))
         # 数据构造完毕以后，直接保存到对应文件中即可。
         torch.save(graph_data_list, self.processed_file_names[0])
 
