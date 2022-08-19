@@ -25,6 +25,9 @@ parser.add_argument('--create_corpus_mode', type=str,
 # data_dir_name:数据文件夹的名字，这样子就可以在一个项目里面多次运行，只要多创建data目录就行。
 parser.add_argument('--data_dir_name', type=str,
                     help="数据文件夹的名字，为了可以多进程启动运行:\n")
+# attack_type_name:专门要操作的漏洞的类型的名字。
+parser.add_argument('--attack_type_name', type=str,
+                    help="本次要操作的漏洞的类型，专门只操作这种漏洞。")
 # 下面更新config配置
 args = parser.parse_args()
 # ========================= 运行模式 =========================
@@ -38,6 +41,8 @@ run_mode = args.run_mode
 create_corpus_mode = args.create_corpus_mode
 # frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
 frozen = "frozen"
+# 专门操作的漏洞类型。
+attack_type_name = args.attack_type_name
 # ========================= 运行模式 =========================
 # ========================= 文件夹路径 =========================
 # 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
