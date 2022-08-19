@@ -10,9 +10,9 @@ from prettytable import PrettyTable
 # label:原始标签
 # writer:tensor board画图用的
 # msg:table上的title。
-def valid_score(predict, label, writer, msg, attack_index, attack_type):
+def valid_score(predict, label, writer, msg, attack_type):
     predict = predict.data
-    label = label.data
+    label = label.data.view(1, -1)
     # 记录每种漏洞的最佳阈值。
     best_probability = []
     # 结果矩阵，里面存放的是某漏洞类型的四种基础衡量标准。
@@ -20,7 +20,7 @@ def valid_score(predict, label, writer, msg, attack_index, attack_type):
                     [""],
                     [""],
                     [""]]
-    res = valid_threshold_optimize(predict, label, writer, attack_index)
+    res = valid_threshold_optimize(predict, label, writer)
     best_probability.append(res["probability"])
     # 当前漏洞的四种度量标准，一行是同一种度量
     optimal_list[0] = f"{format(res['accuracy'].item(), '.30f')}"
@@ -44,14 +44,14 @@ def valid_score(predict, label, writer, msg, attack_index, attack_type):
 # predict：预测结果，是概率的一维数组，长度和标签一样长。
 # writer画tensor board的时候用的。
 # fold:到了第几折了。
-def valid_threshold_optimize(predict, label, writer, attack_index):
+def valid_threshold_optimize(predict, label, writer):
     # 求出其中的最佳值，然后返回。
     best_res = {"probability": 0, "accuracy": 0, "precision": 0, "recall": 0, "f_score": 0}
     # 取出所有的不同的概率，然后将概率转换为0和1的predict_matrix矩阵,注意，如果种类太多，会导致GPU都存不下，所以需要少取一些，这里取步长为100好了。
     unique_probability = torch.unique(predict).reshape(-1, 1)
     # 通过步长重新选取，免得取得太多了，内存爆炸。
     unique_probability = unique_probability[::math.ceil(len(unique_probability) / config.threshold_max_classes)]
-    predict_matrix = (predict.view(1, -1) >= unique_probability).add(0)
+    predict_matrix = (predict.view(1, -1) >= unique_probability.view(-1, 1)).add(0)
     # 根据标签矩阵和预测矩阵，求出四个基础标签。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=1).reshape(-1, 1)
     fp = torch.sum(torch.logical_and(torch.sub(1, label), predict_matrix), dim=1).reshape(-1, 1)
@@ -72,24 +72,11 @@ def valid_threshold_optimize(predict, label, writer, attack_index):
     best_res["f_score"] = f_score[best_sample_index, 0]
     # 对每一种概率的每一种度量标准都进行绘制。
     for index, probability in enumerate(unique_probability):
-        if attack_index == 0:
-            writer.add_scalars(f"{config.start_time}-reentry", {"Accuracy": accuracy[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-reentry", {"Precision": precision[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-reentry", {"Recall": recall[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-reentry", {"F-score": f_score[index]}, probability)
-            writer.add_scalar(f"{config.start_time}-reentry-AUC", precision[index], torch.nan_to_num(recall[index]))
-        elif attack_index == 1:
-            writer.add_scalars(f"{config.start_time}-timestamp", {"Accuracy": accuracy[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-timestamp", {"Precision": precision[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-timestamp", {"Recall": recall[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-timestamp", {"F-score": f_score[index]}, probability)
-            writer.add_scalar(f"{config.start_time}-timestamp-AUC", precision[index], torch.nan_to_num(recall[index]))
-        elif attack_index == 2:
-            writer.add_scalars(f"{config.start_time}-arithmetic", {"Accuracy": accuracy[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-arithmetic", {"Precision": precision[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-arithmetic", {"Recall": recall[index]}, probability)
-            writer.add_scalars(f"{config.start_time}-arithmetic", {"F-score": f_score[index]}, probability)
-            writer.add_scalar(f"{config.start_time}-arithmetic-AUC", precision[index], torch.nan_to_num(recall[index]))
+        writer.add_scalars(f"{config.start_time}-{config.attack_type_name}", {"Accuracy": accuracy[index]}, probability)
+        writer.add_scalars(f"{config.start_time}-{config.attack_type_name}", {"Precision": precision[index]}, probability)
+        writer.add_scalars(f"{config.start_time}-{config.attack_type_name}", {"Recall": recall[index]}, probability)
+        writer.add_scalars(f"{config.start_time}-{config.attack_type_name}", {"F-score": f_score[index]}, probability)
+        writer.add_scalar(f"{config.start_time}-{config.attack_type_name}-AUC", precision[index], torch.nan_to_num(recall[index]))
     return best_res
 
 
@@ -99,7 +86,7 @@ def valid_threshold_optimize(predict, label, writer, attack_index):
 # writer:tensor board画图用的
 # fold:外面的交叉验证到哪一步了。
 # model:代表不同的模式
-def test_score(predict, label, msg, rank, attack_index, attack_type):
+def test_score(predict, label, msg, rank, attack_type):
     predict = predict.data
     label = label.data.view(-1, 1)
     # 结果矩阵，里面存放的是四种漏洞类型的四种基础衡量标准。
