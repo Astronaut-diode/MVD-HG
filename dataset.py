@@ -15,7 +15,7 @@ class ASTGNNDataset(Dataset):
     # root_dir,数据集的根目录
     # mode:获取数据集的模式
     # attack_type:漏洞的类型
-    def __init__(self, root_dir, attack_type):
+    def __init__(self, root_dir):
         super().__init__(root_dir)
         # 直接分出测试集和原始的训练集,还有原始训练集中的训练集和测试集部分，如果要使用谁，就将self.data转化为对应的数据集。
         self.test_data = []
@@ -32,7 +32,7 @@ class ASTGNNDataset(Dataset):
             # 记录对应的id
             id_list[index] = id
             # 根据漏洞的类型，取出对应的漏洞类型下标，去获取对应的标签。
-            label_list[index] = data.y[0][config.attack_list.index(attack_type)]
+            label_list[index] = data.y[0]
         # 根据两个容器，对原始的数据集进行划分，划分出测试集。
         train_ids, test_ids, _, _ = train_test_split(id_list, label_list, test_size=config.test_dataset_percent)
         for x in test_ids:
@@ -69,7 +69,8 @@ class ASTGNNDataset(Dataset):
     # 3.获取处理以后文件的名字
     @property
     def processed_file_names(self) -> Union[str, List[str], Tuple]:
-        return [f"{self.root}/processed/graph_train.pt"]
+        # 保存文件为指定的名字。
+        return [f"{self.root}/processed/{config.attack_type_name}.pt"]
 
     # 2.如果原始文件不存在，说明无法生成数据集。
     def download(self):
