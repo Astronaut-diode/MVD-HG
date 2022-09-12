@@ -643,10 +643,14 @@ def get_return(initial_node, pre_variable_node_list, method_params, is_src, is_a
         assignment = initial_node
         left_hand_side = None
         right_hand_side = None
+        tmp_left_node = None
         # 搜索每一个子节点中可以直接连接Assignment的节点。
         for index, child_of_assignment in enumerate(assignment.childes):
             if index == 0:
                 left_hand_side = get_return(child_of_assignment, pre_variable_node_list, method_params, True, True)
+                if initial_node.attribute["operator"][0] == "-=" or initial_node.attribute["operator"][0] == "+=" or initial_node.attribute["operator"][0] == "*=" or initial_node.attribute["operator"][0] == "/=":
+                    now_left = get_return(child_of_assignment, pre_variable_node_list, method_params, False, False)
+                    tmp_left_node = now_left[0]
             if index == 1:
                 right_hand_side = get_return(child_of_assignment, pre_variable_node_list, method_params, False, False)
         # 如果左右个数不一致,这说明是使用了加减乘除，如果是一致且多个，那就是说多返回值。
