@@ -140,6 +140,41 @@ def node_is_condition_node(node):
 
 # 进行时间戳漏洞检测,确定有漏洞返回1，如果疑似漏洞返回2，否则返回0.
 def timestamp_attack(now_node):
+    # 先判断当前节点是不是赋值节点，如果是赋值节点还要判断值的来源是不是时间戳，并且是否有下游。
+    tmp_node = now_node
+    while tmp_node is not None:
+        if tmp_node.node_type == "VariableDeclarationStatement" or tmp_node.node_type == "Assignment":
+            # 接下来只要简单的判定其中是否带有return或者转账的操作
+            stack = LifoQueue(maxsize=0)
+            stack.put(tmp_node.childes[1])
+            visited = []
+            while not stack.empty():
+                pop = stack.get()
+                if visited.__contains__(pop):
+                    continue
+                visited.append(pop)
+                if pop.node_type == "MemberAccess" and pop.attribute["src_code"][0] == "block.timestamp":
+                    if len(tmp_node.childes[0].data_childes) > 0:
+                        while tmp_node.childes[0].node_type == "MemberAccess":
+                            tmp_node = tmp_node.childes[0]
+                        # 判断其中是否有不在require中执行的部分。
+                        for data_child in tmp_node.childes[0].data_childes:
+                            flag = False
+                            tmp = data_child
+                            while tmp is not None:
+                                if tmp.node_type == "require":
+                                    flag = True
+                                if tmp == tmp_node:
+                                    break
+                                tmp = tmp.parent
+                            if flag is False and int(tmp_node.attribute['src'][0].split(":")[0]) < int(data_child.attribute['src'][0].split(":")[0]):
+                                return 1
+                else:
+                    for child in pop.childes:
+                        stack.put(child)
+            break
+        else:
+            tmp_node = tmp_node.parent
     # 先获取判定条件所处在的四种控制流节点。
     res = node_is_condition_node(now_node)
     if res is not None:
@@ -149,7 +184,7 @@ def timestamp_attack(now_node):
         while not stack.empty():
             pop_node = stack.get()
             # 如果含有转账函数或者return的部分，那就直接返回1
-            if pop_node.node_type == "FunctionCall" and (pop_node.attribute["src"][0].__contains__("call.value") or pop_node.attribute["src"][0].__contains__("transfer")):
+            if pop_node.node_type == "FunctionCall" and (pop_node.attribute["src_code"][0].__contains__("call.value") or pop_node.attribute["src_code"][0].__contains__("transfer")):
                 return 1
             if pop_node.node_type == "Return":
                 return 1
