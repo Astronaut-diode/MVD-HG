@@ -102,7 +102,7 @@ def get_all_literal_or_identifier_at_now(node):
             # 如果是block那就代表该停下来了，因为下面的内容不是当前行可以获取的。
             if child.node_type != "Block":
                 stack.put(child)
-        if pop_node.node_type in ["Literal", "Identifier", "MemberAccess", "IndexAccess", "VariableDeclaration"]:
+        if pop_node.node_type in ["Literal", "Identifier", "MemberAccess", "IndexAccess", "VariableDeclaration", "BinaryOperation"]:
             res.append(pop_node)
     return res
 
@@ -201,7 +201,8 @@ def has_same_structure(argument_node, node):
                 continue
             else:
                 return False
-    return True
+        return True
+    return False
 
 
 # 当走到了now_node的时候，进行重入漏洞的判断
@@ -238,9 +239,9 @@ def reentry_attack(pre_variable_list, now_node, path):
             # 记录一次转账的节点，避免下一次重复使用该节点
             use_argument_node_list.append(argument_node)
             # 如果源代码的内容是0或者拥有修饰符,那就说明不可能会有问题,直接返回False，但是修饰符暂不明确可不可以，先留着注释掉。
-            # if have_only_owner_modifiers(now_node):
-            #     return False
-            if argument_node.attribute["src_code"] == "0":
+            if have_only_owner_modifiers(now_node):
+                return False
+            if argument_node.attribute["src_code"] == "0" or (len(argument_node.attribute["src_code"]) > 0 and argument_node.attribute["src_code"][0] == "0"):
                 return False
             # 如果参数是常数,按照常数的方式进行判断
             if argument_node.node_type == "Literal":
@@ -365,6 +366,8 @@ def reentry_attack(pre_variable_list, now_node, path):
                             # 再继续判断该符号的减量是不是找到的这个IndexAccess，如果是，那就大功告成，说明成功找到了减少余额的地方。
                             if other_index_access_node_parent.childes[1] == other_index_access_node:
                                 return False
+                        if other_index_access_node_parent.node_type == "Assignment" and other_index_access_node_parent.attribute["operator"][0] == "=" and len(other_index_access_node_parent.attribute["rightHandSide"]) == 1 and other_index_access_node_parent.attribute["rightHandSide"][0]["nodeType"] == "Literal" and other_index_access_node_parent.attribute["rightHandSide"][0]["value"] == "0":
+                            return False
                 # 经过了一论循环，发现没有余额直接使用IndexAccess进行变动，所以开始找等价情况。
                 # 记录是否有等价的元素
                 have_equal_variable = False
