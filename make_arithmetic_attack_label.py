@@ -11,6 +11,7 @@ import utils
 def make_arithmetic_attack_label(project_node_dict, file_name):
     # 存储和每一个BinaryOperation类型节点最近的控制流节点的数组。
     binary_operation_control_node_list = []
+    assignment_control_node_list = []
     # 先判断是否含有BinaryOperation的键，只有键存在才能进行遍历操作。
     if "BinaryOperation" in project_node_dict.keys():
         for binary_operation_node in project_node_dict["BinaryOperation"]:
@@ -19,10 +20,34 @@ def make_arithmetic_attack_label(project_node_dict, file_name):
             # 将所有的计算结果添加到binary_operation_control_node_list数组中，注意必须得是独一无二的。
             if res not in binary_operation_control_node_list:
                 binary_operation_control_node_list.append(res)
+    # 先判断是否含有Assignment类型的键，只有键存在才能进行遍历操作。
+    if "Assignment" in project_node_dict.keys():
+        for assignment_node in project_node_dict["Assignment"]:
+            if assignment_node.attribute["operator"][0] == "+=" or assignment_node.attribute["operator"][0] == "-=" or assignment_node.attribute["operator"][0] == "*=" or assignment_node.attribute["operator"][0] == "/=":
+                res = get_all_control_node_of_binary_operation(assignment_node)
+                if res not in assignment_control_node_list:
+                    assignment_control_node_list.append(res)
     # 存储所有的require节点，以及该require节点中使用的判定表达式。
     require_node_and_condition_node_dict_list = []
     if "require" in project_node_dict.keys():
         for require_node in project_node_dict["require"]:
+            # 先取出require节点下面使用的函数调用节点。
+            function_call_node = require_node.childes[0]
+            # 获取条件表达式的节点id和节点类型。
+            condition_node_id = function_call_node.attribute["arguments"][0][0]["id"]
+            condition_node_type = function_call_node.attribute["arguments"][0][0]["nodeType"]
+            # 遍历require节点的所有子节点，找出对应的判定表达式节点。
+            for condition_node in function_call_node.childes:
+                if condition_node.node_id == condition_node_id and condition_node.node_type == condition_node_type:
+                    # 将找到的require节点和使用的表达式节点，作为一个字典数组保存下来。
+                    require_node_and_condition_node_dict_list.append({"require_node": require_node, "condition_node": condition_node})
+    if "IfStatement" in project_node_dict.keys():
+        for if_statement_node in project_node_dict["IfStatement"]:
+            # 如果if的内容只有一个节点，而且是BinaryOperation节点，那么就根据其中是否出现了throw进行分别判断。
+            if len(if_statement_node.control_childes) == 1 and if_statement_node.control_childes[0].node_type == "BinaryOperation":
+                require_node_and_condition_node_dict_list.append({"require_node": if_statement_node, "condition_node": if_statement_node.control_childes[0]})
+    if "assert" in project_node_dict.keys():
+        for require_node in project_node_dict["assert"]:
             # 先取出require节点下面使用的函数调用节点。
             function_call_node = require_node.childes[0]
             # 获取条件表达式的节点id和节点类型。
@@ -72,7 +97,7 @@ def make_arithmetic_attack_label(project_node_dict, file_name):
                             now_node = control_child
                             break
                     # 进行控制流+回溯的操作，判断在每一个控制流上是不是都是安全的。
-                    traverse_arithmetic_attack(project_node_dict, function_definition_node, method_params, now_node, [], has_arithmetic_flag, enter_time, binary_operation_control_node_list, require_node_and_condition_node_dict_list)
+                    traverse_arithmetic_attack(project_node_dict, function_definition_node, method_params, now_node, [], has_arithmetic_flag, enter_time, binary_operation_control_node_list, require_node_and_condition_node_dict_list, assignment_control_node_list)
                     if len(has_arithmetic_flag):
                         arithmetic_flag = True
                         break
@@ -87,7 +112,7 @@ def make_arithmetic_attack_label(project_node_dict, file_name):
 # 返回所有的BinaryOperation节点的最近的控制流节点是谁。
 # binary_operation_node：传入的BinaryOperation节点
 def get_all_control_node_of_binary_operation(binary_operation_node):
-    while len(binary_operation_node.control_childes) == 0:
+    while len(binary_operation_node.control_childes) == 0 and len(binary_operation_node.control_parents) == 0 and binary_operation_node.node_type != "Return":
         binary_operation_node = binary_operation_node.parent
         if binary_operation_node is None:
             return []
@@ -154,7 +179,7 @@ def get_all_literal_or_identifier_at_now(node):
 # enter_time:开始运行的时间。
 # binary_operation_control_node_list：每一个BinaryOperation节点的控制流节点的数组。
 # require_node_and_condition_node_dict_list：每一个require以及他的判定节点。
-def traverse_arithmetic_attack(project_node_dict, function_definition_node, params, now_node, path, has_arithmetic_flag, enter_time, binary_operation_control_node_list, require_node_and_condition_node_dict_list):
+def traverse_arithmetic_attack(project_node_dict, function_definition_node, params, now_node, path, has_arithmetic_flag, enter_time, binary_operation_control_node_list, require_node_and_condition_node_dict_list, assignment_control_node_list):
     # 此刻的时间
     now_time = datetime.datetime.now()
     # 打标签的时间太长了
@@ -162,7 +187,7 @@ def traverse_arithmetic_attack(project_node_dict, function_definition_node, para
         raise utils.CustomError("溢出漏洞标签耗时过久，已被移入error文件夹")
     # 如果当前节点不是属于当前的函数定义节点的子节点,结束当前路径。
     if is_child_of_function_definition_node(now_node, function_definition_node) is False:
-        result = arithmetic_attack(params, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list)
+        result = arithmetic_attack(params, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list, assignment_control_node_list)
         # 当前这条路已经走到底了，判断这条路上是否含有算数溢出的漏洞。
         if result == 1 or result == 2:
             has_arithmetic_flag.append(result)
@@ -176,7 +201,7 @@ def traverse_arithmetic_attack(project_node_dict, function_definition_node, para
     # 如果这个节点已经走过两次了，那也结束当前路径，因为这代表进入了死循环之类的。
     if count >= 2:
         # 当前这条路已经走到底了，判断这条路上是否含有算数溢出的漏洞。
-        result = arithmetic_attack(params, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list)
+        result = arithmetic_attack(params, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list, assignment_control_node_list)
         if result == 1 or result == 2:
             has_arithmetic_flag.append(result)
         return
@@ -194,14 +219,14 @@ def traverse_arithmetic_attack(project_node_dict, function_definition_node, para
         path.append(now_node)
         has_traverse_flag = True
         # 进一步的进行检测
-        traverse_arithmetic_attack(project_node_dict, function_definition_node, params, control_child, path, has_arithmetic_flag, enter_time, binary_operation_control_node_list, require_node_and_condition_node_dict_list)
+        traverse_arithmetic_attack(project_node_dict, function_definition_node, params, control_child, path, has_arithmetic_flag, enter_time, binary_operation_control_node_list, require_node_and_condition_node_dict_list, assignment_control_node_list)
         path.pop(-1)
     # 没有进行回溯的节点，说明已经走到头了，可以对当前这条完整的控制流进行判断。
     if has_traverse_flag is False:
         # 一定要像回溯一样，否则最后一个节点不会被记录下来。
         path.append(now_node)
         # 当前这条路已经走到底了，判断这条路上是否含有算数溢出的漏洞。
-        result = arithmetic_attack(params, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list)
+        result = arithmetic_attack(params, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list, assignment_control_node_list)
         if result == 1 or result == 2:
             has_arithmetic_flag.append(result)
         path.pop(-1)
@@ -213,7 +238,7 @@ def traverse_arithmetic_attack(project_node_dict, function_definition_node, para
 # binary_operation_control_node_list：每一个BinaryOperation的节点对应的控制流节点。
 # require_node_and_condition_node_dict_list：每一个require以及对应的判定符号的节点组成的字典数组。
 # 如果存在漏洞，则返回True，否则返回False。
-def arithmetic_attack(pre_variable_list, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list):
+def arithmetic_attack(pre_variable_list, path, binary_operation_control_node_list, require_node_and_condition_node_dict_list, assignment_control_node_list):
     # 先获取当前路径上所有用过的参数以及require节点。
     params, require_list = path_simulation(path, pre_variable_list)
     # 从节点字典中进行查询，比遍历更快。
@@ -228,6 +253,18 @@ def arithmetic_attack(pre_variable_list, path, binary_operation_control_node_lis
             for binary_operation_node in binary_operation_node_list:
                 # 只要其中有一个BinaryOperation没有找到断言，那就直接返回True，代表存在漏洞。
                 if has_same_construct(binary_operation_node["left_variable"], binary_operation_node["right_variable"], binary_operation_node["result_variable"], binary_operation_node["operator"], require_node_and_condition_node_dict_list, path, params, binary_operation_control_node) is False:
+                    return 1
+    # 循环含有加减乘除的等式节点
+    for assignment_control_node in assignment_control_node_list:
+        # 如果发现这个循环的等式节点在路径中出现过，那就有可能是目标节点
+        if assignment_control_node in path:
+            assignment_node = assignment_control_node.childes[0]
+            if assignment_node.childes[0].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"] and assignment_node.childes[1].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"]:
+                left_variable = assignment_node.childes[0]
+                right_variable = assignment_node.childes[1]
+                result_variable = assignment_node.childes[0]
+                operator = assignment_node.attribute["operator"][0][0:1]
+                if has_same_construct(left_variable, right_variable, result_variable, operator, require_node_and_condition_node_dict_list, path, params, assignment_control_node) is False:
                     return 1
     # 经过上面的验证，所有都已经经过了验证，那就说明没有漏洞。
     return 0
@@ -347,6 +384,8 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
             if require_node["require_node"] in path:
                 # 先判断该require的位置对不对，如果不是在当前的BinaryOperation之后，就不需要进行后续的判断。
                 if path.index(require_node["require_node"]) < path.index(binary_operation_control_node):
+                    result_variable_binary_operation_node_1.childes.pop(-1)
+                    result_variable_binary_operation_node_1.childes.pop(-1)
                     continue
                 # 然后传入原始的每一个require下面判定条件，以及我构造的内容，判断结构是否相同。
                 if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
@@ -396,6 +435,40 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
         # 构造出两种可能的结果
         # 判断在所有的require节点中，含有和我构造的结构相同的判断。
         for require_node in require_node_and_condition_node_dict_list:
+            # 记录需要查询require的语句是否在if的使用范围内。
+            in_if_scope = False
+            throw_flag = False
+            # 如果当前的require节点是if语句，那么断言语句是有点特殊的，所以需要特殊处理。
+            if require_node["require_node"] in path:
+                # 先判断该require的位置对不对，如果不是在当前的BinaryOperation之前，就不需要进行后续的判断。
+                if path.index(require_node["require_node"]) > path.index(binary_operation_control_node):
+                    continue
+                if require_node["require_node"].node_type == "IfStatement":
+                    # 先判断使用的BinaryOperationControlNode是不是在if语句的控制范围内部，如果是在if的内容，那么直接用if的符号去判断，如果不在if内部，且if内部含有throw，那么要用反符号。
+                    # 先判断这个节点下面是否含有throw节点，如果含有throw节点，需要将节点使用的符号进行反转。
+                    tmp_queue = LifoQueue(maxsize=0)
+                    for child in require_node["require_node"].childes:
+                        tmp_queue.put(child)
+                    while tmp_queue.empty() is False:
+                        pop = tmp_queue.get()
+                        if pop == binary_operation_control_node:
+                            in_if_scope = True
+                        if pop.node_type == "Throw":
+                            throw_flag = True
+                        for child in pop.childes:
+                            tmp_queue.put(child)
+                    # 分为四种情况
+                    # 在if里面，不需要考虑throw，直接用if的符号即可。不需要操作。
+                    # 在if外面，有throw，等同于require，但是需要反转符号。
+                    # 在if外面，没有throw，等同于无，直接continue
+                    # 如果在if外部，且带有Throw，校验的符号和原来是相反的。
+                    if in_if_scope is False and throw_flag is True:
+                        tmp = result_variable_binary_operation_node_1
+                        result_variable_binary_operation_node_1 = result_variable_binary_operation_node_2
+                        result_variable_binary_operation_node_2 = tmp
+                    # 如果在if之外，而且没有throw，那就说明根本没有用，拦不住的，与require不同。
+                    if in_if_scope is False and throw_flag is False:
+                        continue
             # 下面是第一种，b <= a
             result_variable_binary_operation_node_1.append_child(construct_right_variable)
             result_variable_binary_operation_node_1.append_child(construct_left_variable)
@@ -424,6 +497,11 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
             # 断开左右的节点，以准备下次使用
             result_variable_binary_operation_node_2.childes.pop(-1)
             result_variable_binary_operation_node_2.childes.pop(-1)
+            # 如果当前用来对比的原始节点是if，那么需要判断是不是因为在if内部而发生了符号的变换。
+            if in_if_scope is False and throw_flag is True:
+                tmp = result_variable_binary_operation_node_1
+                result_variable_binary_operation_node_1 = result_variable_binary_operation_node_2
+                result_variable_binary_operation_node_2 = tmp
         # 遍历了每一个require节点，都发现没有符合当前的BinaryOperation的断言，那就直接返回False，代表存在漏洞。
         return False
     elif operator == "*":
@@ -553,6 +631,8 @@ def create_node(origin_node):
         # 可以在后面判断结构相同的时候，顺带判断是否来源相同。
         for data_parent in origin_node.data_parents:
             res.data_parents.append(data_parent)
+        if origin_node.node_type == "Identifier":
+            res.data_parents.append(origin_node)
         return res
     elif origin_node.node_type == "Literal":
         res = Node(None, "Literal", None)
@@ -638,12 +718,37 @@ def structure_equal(node_1, node_2, params):
             else:
                 # 遍历其中一个节点的数据流父节点
                 for data_parent_1 in res[0].data_parents:
+                    tmp_data_parent_1 = data_parent_1
+                    while len(tmp_data_parent_1.data_childes) > 0 and tmp_data_parent_1.data_childes[0].node_type in ["MemberAccess", "IndexAccess"]:
+                        if len(tmp_data_parent_1.data_parents) > 0:
+                            tmp_data_parent_1 = tmp_data_parent_1.data_parents[0]
+                        else:
+                            break
+                    same_parent = False
+                    queue = LifoQueue(maxsize=0)
+                    for data_parent_2 in res[1].data_parents:
+                        queue.put(data_parent_2)
+                        while queue.empty() is False:
+                            pop = queue.get()
+                            if len(pop.data_childes) > 0 and pop.data_childes[0].node_type in ["MemberAccess", "IndexAccess"]:
+                                for data_parent in pop.data_parents:
+                                    queue.put(data_parent)
+                            else:
+                                if tmp_data_parent_1 == pop:
+                                    same_parent = True
+                                    break
+                        if same_parent:
+                            break
+                    if tmp_data_parent_1.node_type == "Literal":
+                        for data_parent_2 in res[1].data_parents:
+                            if data_parent_2.node_type == "Literal" and tmp_data_parent_1.attribute["src_code"] == data_parent_2.attribute["src_code"]:
+                                same_parent = True
                     # 如果该数据流父节点也是另外一个数据流的父节点，同时在参数中出现过，那就是没有问题的，否则返回False。
-                    if (data_parent_1 in res[1].data_parents and data_parent_1 in params) is False:
+                    if (same_parent and data_parent_1 in params) is False:
                         return False
         elif res[0].node_type == "BinaryOperation":
             # 比对操作符号是否相同,如果符号不一样，可以直接返回False
-            if res[0].attribute["operator"] != res[1].attribute["operator"]:
+            if res[0].attribute["operator"][0][0:1] != res[1].attribute["operator"][0][0:1]:
                 return False
     # 到最后都没有发现不对劲，那就直接返回True
     return True
