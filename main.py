@@ -84,6 +84,14 @@ if __name__ == '__main__':
                         # 根据内存中的数据，设定图的数据流。
                         append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                         # 判断文件中是否含有漏洞。
+                        # 一次性检测多种漏洞，后面自己处理一下文件即可，这样就不用跑三趟了。
+                        if config.attack_type_name == "all":
+                            reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                            timestamp_flag = make_timestamp_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                            arithmetic_flag = make_arithmetic_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                            # 避免第二次运行的时候覆盖了第一次计算出来的标签。
+                            if config.create_corpus_mode != "generate_all":
+                                utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, timestamp_flag, arithmetic_flag])
                         if config.attack_type_name == "reentry":
                             reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                             # 避免第二次运行的时候覆盖了第一次计算出来的标签。
