@@ -2,9 +2,15 @@ import os
 import shutil
 import math
 import random
+import json
 
 
 # 切割目标目录文件夹下面的内容，分到n个目标目录中。按照下面的格式输入会将data/sol_source/下面的文件夹全部分割道*/sol_source/底下去。
+# 调用过程
+# 1
+# /home/xjj/AST-GNN/data/sol_source/
+# /home/xjj/AST-GNN/*/sol_source/
+# 20
 def split_dir_file():
     # r"/home/xjj/data/sol_source/"
     source_dir = input("输入需要分割的目录")
@@ -45,7 +51,39 @@ def split_dir_file():
                 shutil.move(os.path.join(source_dir, file), os.path.join(zip_dict[1], file))
 
 
+# 通过取出n个子集中的hash文件，删除重复的部分。
+# 调用过程
+# 2
+# /home/xjj/AST-GNN/*/hash_to_file.json
+# 20
+def elimination():
+    # 需要去重的文件夹中包含的hash文件的表达式，使用*表示数字循环。
+    target_pattern = input("输入去重时使用目标hash文件，使用*代替需要变换的数字,会生成n个该目录，*变为1～n。")
+    n = int(input("输入子集的个数"))
+    hash_file_list = []
+    # 记录所有需要处理的子集的hash文件地址。
+    for i in range(n):
+        hash_file_list.append(target_pattern.replace("*", str(i + 1)))
+    total_hash = {}
+    count = 0
+    for hash_json_file_path in hash_file_list:
+        # 根据路径获取对应的句柄
+        hash_file_handle = open(hash_json_file_path, 'r')
+        # 通过句柄，读取json文件中的内容
+        content = json.load(hash_file_handle)
+        for key in content.keys():
+            if total_hash.__contains__(key):
+                count += 1
+                print(count, content.get(key), "可以删除了")
+                shutil.rmtree(content.get(key))
+            else:
+                total_hash[key] = content.get(key)
+    print(len(total_hash.keys()))
+
+
 if __name__ == '__main__':
     func = input("请输入你选择的功能:")
     if func == "1":
         split_dir_file()
+    if func == "2":
+        elimination()
