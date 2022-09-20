@@ -247,7 +247,7 @@ def arithmetic_attack(pre_variable_list, path, binary_operation_control_node_lis
         if binary_operation_control_node in path and binary_operation_control_node.node_type != "FunctionCall":
             # 获取当前控制流节点下面每一个BinaryOperation的详细情况，每一个Binary会贡献一个对象。
             binary_operation_node_list = get_binary_operation_node_list_of_root(binary_operation_control_node)
-            if len(binary_operation_node_list) > 1:
+            if len(binary_operation_node_list) > 1 and (binary_operation_control_node.attribute.__contains__("operator") and binary_operation_control_node.attribute["operator"][0] not in ["!=", "=="]):
                 return 2
             # 循环其中每一个BinaryOperation，判断我构造出的条件表达式和require中原始给定的条件表达式是否相同，如果不同，直接返回True，代表源文件中存在漏洞。
             for binary_operation_node in binary_operation_node_list:
@@ -377,6 +377,36 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
         # 构造出四种可能的结果
         # 判断在所有的require节点中，含有和我构造的结构相同的判断。
         for require_node in require_node_and_condition_node_dict_list:
+            # 记录需要查询require的语句是否在if的使用范围内。
+            in_if_scope = False
+            throw_flag = False
+            # 如果当前的require节点是if语句，那么断言语句是有点特殊的，所以需要特殊处理。
+            if require_node["require_node"] in path:
+                # 先判断该require的位置对不对，如果不是在当前的BinaryOperation之前，就不需要进行后续的判断。
+                if path.index(require_node["require_node"]) < path.index(binary_operation_control_node):
+                    continue
+                if require_node["require_node"].node_type == "IfStatement":
+                    # 先判断使用的BinaryOperationControlNode是不是在if语句的控制范围内部，如果是在if的内容，那么直接用if的符号去判断，如果不在if内部，且if内部含有throw，那么要用反符号。
+                    # 先判断这个节点下面是否含有throw节点，如果含有throw节点，需要将节点使用的符号进行反转。
+                    tmp_queue = LifoQueue(maxsize=0)
+                    for child in require_node["require_node"].childes:
+                        tmp_queue.put(child)
+                    while tmp_queue.empty() is False:
+                        pop = tmp_queue.get()
+                        if pop == binary_operation_control_node:
+                            in_if_scope = True
+                        if pop.node_type == "Throw":
+                            throw_flag = True
+                        for child in pop.childes:
+                            tmp_queue.put(child)
+                    if in_if_scope is False and throw_flag is True:
+                        tmp = result_variable_binary_operation_node_1
+                        result_variable_binary_operation_node_1 = result_variable_binary_operation_node_2
+                        result_variable_binary_operation_node_2 = tmp
+                    # 这个if一定是要在加法的后面，所以不需要改变两个result_variable_binary_operation_node_1与2中的内容
+                    # 如果在if之外，而且没有throw，那就说明根本没有用，拦不住的，与require不同。
+                    if in_if_scope is False and throw_flag is False:
+                        continue
             # 下面是第一种和第二种，c >= a还有c >= b
             result_variable_binary_operation_node_1.append_child(construct_result_variable)
             result_variable_binary_operation_node_1.append_child(construct_left_variable)
@@ -421,6 +451,11 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
             # 断开左右的节点，以准备下次使用
             result_variable_binary_operation_node_2.childes.pop(-1)
             result_variable_binary_operation_node_2.childes.pop(-1)
+            # 如果当前用来对比的原始节点是if，那么需要判断是不是因为在if内部而发生了符号的变换。
+            if in_if_scope is False and throw_flag is True:
+                tmp = result_variable_binary_operation_node_1
+                result_variable_binary_operation_node_1 = result_variable_binary_operation_node_2
+                result_variable_binary_operation_node_2 = tmp
         # 遍历了每一个require节点，都发现没有符合当前的BinaryOperation的断言，那就直接返回False，代表存在漏洞。
         return False
     elif operator == "-":
@@ -510,6 +545,63 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
         result_variable_binary_operation_node_1.append_attribute("operator", "==")
         result_variable_binary_operation_node_2 = Node(None, "BinaryOperation", None)
         result_variable_binary_operation_node_2.append_attribute("operator", "/")
+        result_variable_binary_operation_node_3 = Node(None, "BinaryOperation", None)
+        result_variable_binary_operation_node_3.append_attribute("operator", "==")
+        result_variable_binary_operation_node_4 = Node(None, "BinaryOperation", None)
+        result_variable_binary_operation_node_4.append_attribute("operator", "||")
+        # 复制两边的内容以及0和结果值。
+        construct_left_variable = copy_node(left_variable)
+        construct_zero_literal = Node(None, "Literal", None)
+        construct_zero_literal.append_attribute("src_code", "0")
+        construct_right_variable = copy_node(right_variable)
+        construct_result_variable = copy_node(result_variable)
+        result_variable_binary_operation_node_4.append_child(result_variable_binary_operation_node_1)
+        result_variable_binary_operation_node_4.append_child(result_variable_binary_operation_node_3)
+        for require_node in require_node_and_condition_node_dict_list:
+            # 如果是在路径当前中的，才有可能是当前控制流的断言语句。
+            if require_node["require_node"] in path:
+                # 先判断该require的位置对不对，如果不是在当前的BinaryOperation之后，就不需要进行后续的判断。
+                if path.index(require_node["require_node"]) > path.index(binary_operation_control_node):
+                    # 下面是第一种，a == 0 || c / a == b
+                    result_variable_binary_operation_node_1.append_child(construct_left_variable)
+                    result_variable_binary_operation_node_1.append_child(construct_zero_literal)
+                    result_variable_binary_operation_node_2.append_child(construct_result_variable)
+                    result_variable_binary_operation_node_2.append_child(construct_left_variable)
+                    result_variable_binary_operation_node_3.append_child(result_variable_binary_operation_node_2)
+                    result_variable_binary_operation_node_3.append_child(construct_right_variable)
+                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_4, params) is True:
+                        return True
+                    # 更新为a == 0 || b == c / a
+                    tmp = result_variable_binary_operation_node_3.childes[0]
+                    result_variable_binary_operation_node_3.childes[0] = result_variable_binary_operation_node_3.childes[1]
+                    result_variable_binary_operation_node_3.childes[1] = tmp
+                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_4, params) is True:
+                        return True
+                    # 还原状态为a == 0 || a / c == b
+                    tmp = result_variable_binary_operation_node_3.childes[0]
+                    result_variable_binary_operation_node_3.childes[0] = result_variable_binary_operation_node_3.childes[1]
+                    result_variable_binary_operation_node_3.childes[1] = tmp
+                    # 下面是第二种，b == 0 || c / b == a
+                    result_variable_binary_operation_node_1.childes[0] = construct_right_variable
+                    result_variable_binary_operation_node_2.childes[1] = construct_right_variable
+                    result_variable_binary_operation_node_3.childes[1] = construct_left_variable
+                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_4, params) is True:
+                        return True
+                    # 更新为 b == 0 || a == c / b
+                    tmp = result_variable_binary_operation_node_3.childes[0]
+                    result_variable_binary_operation_node_3.childes[0] = result_variable_binary_operation_node_3.childes[1]
+                    result_variable_binary_operation_node_3.childes[1] = tmp
+                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_4, params) is True:
+                        return True
+                    # 还原状态为b == 0 || c / b == a
+                    tmp = result_variable_binary_operation_node_3.childes[0]
+                    result_variable_binary_operation_node_3.childes[0] = result_variable_binary_operation_node_3.childes[1]
+                    result_variable_binary_operation_node_3.childes[1] = tmp
+        # 操作符号
+        result_variable_binary_operation_node_1 = Node(None, "BinaryOperation", None)
+        result_variable_binary_operation_node_1.append_attribute("operator", "==")
+        result_variable_binary_operation_node_2 = Node(None, "BinaryOperation", None)
+        result_variable_binary_operation_node_2.append_attribute("operator", "/")
         # 复制两边的内容以及0和结果值。
         construct_left_variable = copy_node(left_variable)
         construct_zero_literal = Node(None, "Literal", None)
@@ -524,32 +616,105 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
         has_post_flag_a = False
         has_post_flag_b = False
         for require_node in require_node_and_condition_node_dict_list:
-            # 下面是第一种，a == 0
-            result_variable_binary_operation_node_1.append_child(construct_left_variable)
-            result_variable_binary_operation_node_1.append_child(construct_zero_literal)
-            # 如果是在路径当前中的，才有可能是当前控制流的断言语句。
+            # 记录需要查询require的语句是否在if的使用范围内。
+            in_if_scope = False
+            return_flag = False
+            is_change = False
+            go_flag = False
+            # 如果当前的require节点是if语句，那么断言语句是有点特殊的，所以需要特殊处理。
             if require_node["require_node"] in path:
-                # 先判断该require的位置对不对，如果不是在当前的BinaryOperation之前，就不需要进行后续的判断。
-                if path.index(require_node["require_node"]) < path.index(binary_operation_control_node):
-                    # 然后传入原始的每一个require下面判定条件，以及我构造的内容，判断结构是否相同。
-                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
-                        has_pre_flag_a = True
-            # 断开左右的节点，以准备下次使用
-            result_variable_binary_operation_node_1.childes.pop(-1)
-            result_variable_binary_operation_node_1.childes.pop(-1)
-            # 下面是第二种，b == 0
-            result_variable_binary_operation_node_1.append_child(construct_right_variable)
-            result_variable_binary_operation_node_1.append_child(construct_zero_literal)
-            # 如果是在路径当前中的，才有可能是当前控制流的断言语句。
+                if require_node["require_node"].node_type == "IfStatement":
+                    # 先判断使用的BinaryOperationControlNode是不是在if语句的控制范围内部，如果是在if的内容，那么直接用if的符号去判断，如果不在if内部，且if内部含有throw，那么要用反符号。
+                    # 先判断这个节点下面是否含有throw节点，如果含有throw节点，需要将节点使用的符号进行反转。
+                    tmp_queue = LifoQueue(maxsize=0)
+                    for child in require_node["require_node"].childes:
+                        tmp_queue.put(child)
+                    while tmp_queue.empty() is False:
+                        pop = tmp_queue.get()
+                        if pop == binary_operation_control_node:
+                            in_if_scope = True
+                        if pop.node_type == "Return":
+                            return_flag = True
+                        for child in pop.childes:
+                            tmp_queue.put(child)
+                    # 如果在if内部，那么需要反转符号，否则检查是否含有return，如果未含有，说明没有效果。
+                    if in_if_scope is True:
+                        is_change = True
+                        result_variable_binary_operation_node_1.attribute["operator"] = "!="
+                    # 如果在if之外，而且没有return，那就说明根本没有用，拦不住的，与require不同。
+                    if in_if_scope is False and return_flag is False:
+                        # 判定最终结果:
+                        if (has_pre_flag_a and has_post_flag_a) or (has_pre_flag_b and has_post_flag_b):
+                            return True
+                        go_flag = True
+                    if go_flag is False:
+                        # 检查分开的情况时，==0的那个选项只能是在if当中。
+                        # 下面是第一种，a == 0
+                        result_variable_binary_operation_node_1.append_child(construct_left_variable)
+                        result_variable_binary_operation_node_1.append_child(construct_zero_literal)
+                        # 如果是在路径当前中的，才有可能是当前控制流的断言语句。
+                        if require_node["require_node"] in path:
+                            # 不需要判断是不是乘法符号之前，因为等于0这个条件在哪里都可以。
+                            # 然后传入原始的每一个require下面判定条件，以及我构造的内容，判断结构是否相同。
+                            if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
+                                has_pre_flag_a = True
+                        # 断开左右的节点，以准备下次使用
+                        result_variable_binary_operation_node_1.childes.pop(-1)
+                        result_variable_binary_operation_node_1.childes.pop(-1)
+                        # 下面是第二种，b == 0
+                        result_variable_binary_operation_node_1.append_child(construct_right_variable)
+                        result_variable_binary_operation_node_1.append_child(construct_zero_literal)
+                        # 如果是在路径当前中的，才有可能是当前控制流的断言语句。
+                        if require_node["require_node"] in path:
+                            # 不需要判断是不是在乘法符号之前，因为等于0这个条件在哪里都可以
+                            # 然后传入原始的每一个require下面判定条件，以及我构造的内容，判断结构是否相同。
+                            if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
+                                has_pre_flag_b = True
+                        # 断开左右的节点，以准备下次使用
+                        result_variable_binary_operation_node_1.childes.pop(-1)
+                        result_variable_binary_operation_node_1.childes.pop(-1)
+                        if is_change:
+                            result_variable_binary_operation_node_1.attribute["operator"] = "=="
+            # 记录需要查询require的语句是否在if的使用范围内。
+            in_if_scope = False
+            throw_flag = False
+            is_change = False
+            # 如果当前的require节点是if语句，那么断言语句是有点特殊的，所以需要特殊处理。
             if require_node["require_node"] in path:
-                # 先判断该require的位置对不对，如果不是在当前的BinaryOperation之前，就不需要进行后续的判断。
-                if path.index(require_node["require_node"]) < path.index(binary_operation_control_node):
-                    # 然后传入原始的每一个require下面判定条件，以及我构造的内容，判断结构是否相同。
-                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
-                        has_pre_flag_b = True
-            # 断开左右的节点，以准备下次使用
-            result_variable_binary_operation_node_1.childes.pop(-1)
-            result_variable_binary_operation_node_1.childes.pop(-1)
+                if require_node["require_node"].node_type == "IfStatement":
+                    # 先判断该require的位置对不对，如果不是在当前的BinaryOperation之后，就不需要进行后续的判断。
+                    if path.index(require_node["require_node"]) < path.index(binary_operation_control_node):
+                        # 判定最终结果:
+                        if (has_pre_flag_a and has_post_flag_a) or (has_pre_flag_b and has_post_flag_b):
+                            return True
+                        continue
+                    # 先判断使用的BinaryOperationControlNode是不是在if语句的控制范围内部，如果是在if的内容，那么直接用if的符号去判断，如果不在if内部，且if内部含有throw，那么要用反符号。
+                    # 先判断这个节点下面是否含有throw节点，如果含有throw节点，需要将节点使用的符号进行反转。
+                    tmp_queue = LifoQueue(maxsize=0)
+                    for child in require_node["require_node"].childes:
+                        tmp_queue.put(child)
+                    while tmp_queue.empty() is False:
+                        pop = tmp_queue.get()
+                        if pop == binary_operation_control_node:
+                            in_if_scope = True
+                        if pop.node_type == "Throw":
+                            throw_flag = True
+                        for child in pop.childes:
+                            tmp_queue.put(child)
+                    # 分为四种情况
+                    # 在if里面，不需要考虑throw，直接用if的符号即可。不需要操作。
+                    # 在if外面，有throw，等同于require，但是需要反转符号。
+                    # 在if外面，没有throw，等同于无，直接continue
+                    # 如果在if外部，且带有Throw，校验的符号和原来是相反的。
+                    if in_if_scope is False and throw_flag is True:
+                        is_change = True
+                        result_variable_binary_operation_node_1.attribute["operator"] = "!="
+                    # 如果在if之外，而且没有throw，那就说明根本没有用，拦不住的，与require不同。
+                    if in_if_scope is False and throw_flag is False:
+                        # 判定最终结果:
+                        if (has_pre_flag_a and has_post_flag_a) or (has_pre_flag_b and has_post_flag_b):
+                            return True
+                        continue
             # 下面是第三种，c / a == b
             result_variable_binary_operation_node_2.append_child(construct_result_variable)
             result_variable_binary_operation_node_2.append_child(construct_left_variable)
@@ -562,6 +727,16 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
                     # 然后传入原始的每一个require下面判定条件，以及我构造的内容，判断结构是否相同。
                     if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
                         has_post_flag_a = True
+                    # 交换位置
+                    tmp = result_variable_binary_operation_node_1.childes[0]
+                    result_variable_binary_operation_node_1.childes[0] = result_variable_binary_operation_node_1.childes[1]
+                    result_variable_binary_operation_node_1.childes[1] = tmp
+                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
+                        has_post_flag_a = True
+                    # 还原位置
+                    tmp = result_variable_binary_operation_node_1.childes[0]
+                    result_variable_binary_operation_node_1.childes[0] = result_variable_binary_operation_node_1.childes[1]
+                    result_variable_binary_operation_node_1.childes[1] = tmp
             # 断开左右的节点，以准备下次使用
             result_variable_binary_operation_node_2.childes.pop(-1)
             result_variable_binary_operation_node_2.childes.pop(-1)
@@ -579,11 +754,23 @@ def has_same_construct(left_variable, right_variable, result_variable, operator,
                     # 然后传入原始的每一个require下面判定条件，以及我构造的内容，判断结构是否相同。
                     if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
                         has_post_flag_b = True
+                    # 交换位置
+                    tmp = result_variable_binary_operation_node_1.childes[0]
+                    result_variable_binary_operation_node_1.childes[0] = result_variable_binary_operation_node_1.childes[1]
+                    result_variable_binary_operation_node_1.childes[1] = tmp
+                    if structure_equal(require_node["condition_node"], result_variable_binary_operation_node_1, params) is True:
+                        has_post_flag_b = True
+                    # 还原位置
+                    tmp = result_variable_binary_operation_node_1.childes[0]
+                    result_variable_binary_operation_node_1.childes[0] = result_variable_binary_operation_node_1.childes[1]
+                    result_variable_binary_operation_node_1.childes[1] = tmp
             # 断开左右的节点，以准备下次使用
             result_variable_binary_operation_node_2.childes.pop(-1)
             result_variable_binary_operation_node_2.childes.pop(-1)
             result_variable_binary_operation_node_1.childes.pop(-1)
             result_variable_binary_operation_node_1.childes.pop(-1)
+            if is_change:
+                result_variable_binary_operation_node_1.attribute["operator"] = "=="
             # 判定最终结果:
             if (has_pre_flag_a and has_post_flag_a) or (has_pre_flag_b and has_post_flag_b):
                 return True
