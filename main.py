@@ -60,8 +60,14 @@ if __name__ == '__main__':
             # 如果当前sol_source下工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):
                 continue
-            # 编译sol_source下工程文件夹内所有的文件,同时在AST_json中生成对应的文件夹，如果发现编译失败，删除对应的源文件。
-            compile_files(data_sol_source_project_dir_path=data_sol_source_project_dir_path, data_ast_json_project_dir_path=data_ast_json_project_dir_path)
+            try:
+                # 编译sol_source下工程文件夹内所有的文件,同时在AST_json中生成对应的文件夹，如果发现编译失败，删除对应的源文件。
+                compile_files(data_sol_source_project_dir_path=data_sol_source_project_dir_path, data_ast_json_project_dir_path=data_ast_json_project_dir_path)
+            except Exception as e:
+                # 编译的时候发现出现了错误，无法进行继续编译，所以先删除掉。
+                shutil.rmtree(data_sol_source_project_dir_path)
+                utils.error(f"{data_sol_source_project_dir_path}出现问题，已被删除，并跳过后续操作。")
+                continue
             # 如果当前sol_source下工程文件夹内部是空的，那就删除文件夹，跳过当前循环。
             if utils.is_blank_now_dir(dir_path=data_sol_source_project_dir_path):
                 continue
@@ -78,11 +84,17 @@ if __name__ == '__main__':
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
                         utils.error(f"{now_dir}/{ast_json_file_name}出现错误，移入错误文件夹,并跳过后续操作。")
                         continue
-                    # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
-                    append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     try:
+                        # 传入工程文件夹完全读完以后的节点列表和节点字典，生成对应的控制流边。
+                        append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                         # 根据内存中的数据，设定图的数据流。
                         append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                    except Exception as e:
+                        # 添加数据流和控制流的时候出错了，删除源文件。
+                        utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
+                        utils.error(f"{now_dir}/{ast_json_file_name}{e}")
+                        continue
+                    try:
                         # 判断文件中是否含有漏洞。
                         # 一次性检测多种漏洞，后面自己处理一下文件即可，这样就不用跑三趟了。
                         if config.attack_type_name == "all":
