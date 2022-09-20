@@ -146,6 +146,8 @@ def timestamp_attack(now_node):
         if tmp_node.node_type == "VariableDeclarationStatement" or tmp_node.node_type == "Assignment":
             # 接下来只要简单的判定其中是否带有return或者转账的操作
             stack = LifoQueue(maxsize=0)
+            if len(tmp_node.childes) < 2:
+                continue
             stack.put(tmp_node.childes[1])
             visited = []
             while not stack.empty():

@@ -259,7 +259,7 @@ def arithmetic_attack(pre_variable_list, path, binary_operation_control_node_lis
         # 如果发现这个循环的等式节点在路径中出现过，那就有可能是目标节点
         if assignment_control_node in path:
             assignment_node = assignment_control_node.childes[0]
-            if assignment_node.childes[0].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"] and assignment_node.childes[1].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"]:
+            if assignment_node.childes[0].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"] and len(assignment_node.childes) >= 2 and assignment_node.childes[1].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"]:
                 left_variable = assignment_node.childes[0]
                 right_variable = assignment_node.childes[1]
                 result_variable = assignment_node.childes[0]
@@ -796,7 +796,7 @@ def copy_node(origin_node):
         # 遍历原始节点的所有子节点
         for child in pop_origin_node.childes:
             # 如果是参数类型，不用去复制，直接跳过。
-            if child.node_type in ["ElementaryTypeName", "ElementaryTypeNameExpression", "FunctionTypeName", "UserDefinedTypeName", "ArrayTypeName"]:
+            if child.node_type in ["Conditional", "ElementaryTypeName", "ElementaryTypeNameExpression", "FunctionTypeName", "UserDefinedTypeName", "ArrayTypeName"]:
                 continue
             # 如果是Unary，切换对象即可。
             if child.node_type == "UnaryOperation":
@@ -880,7 +880,8 @@ def structure_equal(node_1, node_2, params):
         res_1.append(pop_node_1)
         # 首先要节点类型相同。
         for child in pop_node_1.childes:
-            stack.put(child)
+            if child is not None:
+                stack.put(child)
     res_2 = []
     stack = LifoQueue(maxsize=0)
     stack.put(node_2)
@@ -889,7 +890,8 @@ def structure_equal(node_1, node_2, params):
         res_2.append(pop_node_2)
         # 首先要节点类型相同。
         for child in pop_node_2.childes:
-            stack.put(child)
+            if child is not None:
+                stack.put(child)
     # 先判断长度是否相同。
     if len(res_1) != len(res_2):
         return False
@@ -912,11 +914,15 @@ def structure_equal(node_1, node_2, params):
                         else:
                             break
                     same_parent = False
+                    visited = []
                     queue = LifoQueue(maxsize=0)
                     for data_parent_2 in res[1].data_parents:
                         queue.put(data_parent_2)
                         while queue.empty() is False:
                             pop = queue.get()
+                            if visited.__contains__(pop):
+                                continue
+                            visited.append(pop)
                             if len(pop.data_childes) > 0 and pop.data_childes[0].node_type in ["MemberAccess", "IndexAccess"]:
                                 for data_parent in pop.data_parents:
                                     queue.put(data_parent)
