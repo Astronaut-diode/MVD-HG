@@ -4,7 +4,6 @@ import math
 import random
 import json
 import utils
-import config
 
 
 # 切割目标目录文件夹下面的内容，分到n个目标目录中。按照下面的格式输入会将data/sol_source/下面的文件夹全部分割道*/sol_source/底下去。
@@ -110,7 +109,11 @@ def classification_of_documents():
                     utils.dir_exists(f"{parent_path}/{dir_name}/")
                     target_file_path = f"{parent_path}/{dir_name}/{file_name}"
                     print(f"把{key}移入到{target_file_path}中")
-                    shutil.copyfile(key, target_file_path)
+                    try:
+                        shutil.copyfile(key, target_file_path)
+                    except Exception as e:
+                        print(key, "有问题，跳过了")
+                        continue
                     attack_condition[type_name]["attack"] += 1
             utils.tip(f"{file}中{type_name}漏洞的数量为{attack_condition[type_name]['attack']}")
             utils.success("确认有漏洞的文件都已经全部移入到对应的漏洞文件夹中。")
@@ -123,14 +126,42 @@ def classification_of_documents():
             file_name = os.path.basename(key)
             # 文件复制到别的文件夹中以后工程项目的名字
             dir_name = file_name[:-4]
-            if content[key][0] == 0 and content[key][1] == 0 and content[key][2]:
+            if content[key][0] == 0 and content[key][1] == 0 and content[key][2] == 0:
                 utils.dir_exists(f"{parent_path}/{dir_name}/")
                 target_file_path = f"{parent_path}/{dir_name}/{file_name}"
                 print(f"把{key}移入到{target_file_path}中")
-                shutil.copyfile(key, target_file_path)
+                try:
+                    shutil.copyfile(key, target_file_path)
+                except Exception as e:
+                    print(key, "有问题，跳过了")
+                    continue
                 attack_condition["fine"]["no_attack"] += 1
         utils.tip(f"{file}中无漏洞的数量为{attack_condition['fine']['no_attack']}")
         utils.success("确认无漏洞的文件都已经全部移入到对应的文件夹中。")
+
+
+# 从原始目录中抽取任意数量的文件到目标目录中。
+# 调用方式
+# 4
+# 源文件夹的地址
+# 目标文件夹的地址
+# 从源文件中要复制多少个文件目标文件夹
+def extract_random_file_to_dest():
+    source = input("输入原始目录")
+    target = input("输入目标目录")
+    n = int(input("输入文件个数"))
+    list = os.listdir(source)
+    random.shuffle(list)
+    for index, tmp in enumerate(list):
+        if index >= n:
+            break
+        else:
+            # 获取文件的名字
+            dir_name = os.path.basename(tmp)
+            source_path = os.path.join(source, dir_name)
+            target_path = os.path.join(target, dir_name)
+            shutil.copytree(source_path, target_path)
+            print(source_path, "->", target_path)
 
 
 if __name__ == '__main__':
@@ -141,3 +172,5 @@ if __name__ == '__main__':
         elimination()
     if func == "3":
         classification_of_documents()
+    if func == "4":
+        extract_random_file_to_dest()
