@@ -259,13 +259,14 @@ def arithmetic_attack(pre_variable_list, path, binary_operation_control_node_lis
         # 如果发现这个循环的等式节点在路径中出现过，那就有可能是目标节点
         if assignment_control_node in path:
             assignment_node = assignment_control_node.childes[0]
-            if assignment_node.childes[0].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"] and len(assignment_node.childes) >= 2 and assignment_node.childes[1].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"]:
+            if len(assignment_node.childes) >= 1 and assignment_node.childes[0].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"] and len(assignment_node.childes) >= 2 and assignment_node.childes[1].node_type in ["Identifier", "IndexAccess", "MemberAccess", "FunctionCall"]:
                 left_variable = assignment_node.childes[0]
                 right_variable = assignment_node.childes[1]
                 result_variable = assignment_node.childes[0]
-                operator = assignment_node.attribute["operator"][0][0:1]
-                if has_same_construct(left_variable, right_variable, result_variable, operator, require_node_and_condition_node_dict_list, path, params, assignment_control_node) is False:
-                    return 1
+                if "operator" in assignment_node.attribute.keys():
+                    operator = assignment_node.attribute["operator"][0][0:1]
+                    if has_same_construct(left_variable, right_variable, result_variable, operator, require_node_and_condition_node_dict_list, path, params, assignment_control_node) is False:
+                        return 1
     # 经过上面的验证，所有都已经经过了验证，那就说明没有漏洞。
     return 0
 

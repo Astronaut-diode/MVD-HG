@@ -153,7 +153,7 @@ def timestamp_attack(now_node):
             while not stack.empty():
                 pop = stack.get()
                 if visited.__contains__(pop):
-                    continue
+                    break
                 visited.append(pop)
                 if pop.node_type == "MemberAccess" and pop.attribute["src_code"][0] == "block.timestamp":
                     if len(tmp_node.childes[0].data_childes) > 0:
