@@ -147,13 +147,13 @@ def timestamp_attack(now_node):
             # 接下来只要简单的判定其中是否带有return或者转账的操作
             stack = LifoQueue(maxsize=0)
             if len(tmp_node.childes) < 2:
-                continue
+                break
             stack.put(tmp_node.childes[1])
             visited = []
             while not stack.empty():
                 pop = stack.get()
                 if visited.__contains__(pop):
-                    break
+                    continue
                 visited.append(pop)
                 if pop.node_type == "MemberAccess" and pop.attribute["src_code"][0] == "block.timestamp":
                     if len(tmp_node.childes[0].data_childes) > 0:
