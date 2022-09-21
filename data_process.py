@@ -3,6 +3,8 @@ import shutil
 import math
 import random
 import json
+import utils
+import config
 
 
 # 切割目标目录文件夹下面的内容，分到n个目标目录中。按照下面的格式输入会将data/sol_source/下面的文件夹全部分割道*/sol_source/底下去。
@@ -81,9 +83,61 @@ def elimination():
     print(len(total_hash.keys()))
 
 
+# 把20个小型的漏洞检测线程都运行完以后，获得了碎片结果，需要自己合并一下。运行结束以后，会出现四个文件夹，分别代表三种漏洞和没有漏洞的文件。
+# 使用方法，下面是输入
+# 3
+# 其中对应的一个idx_to_file.json的地址。如/home/xjj/AST-GNN/*/idx_to_label.json
+# 20
+def classification_of_documents():
+    target_pattern = input("输入标签文件地址,使用*代替数字")
+    n = int(input("重复多少次"))
+    file_list = []
+    for i in range(n):
+        file_list.append(target_pattern.replace("*", str(i + 1)))
+    attack_condition = {"reentry": {"attack": 0, "suspected_attack": 0, "no_attack": 0}, "timestamp": {"attack": 0, "suspected_attack": 0, "no_attack": 0}, "arithmetic": {"attack": 0, "suspected_attack": 0, "no_attack": 0}, "fine": {"attack": 0, "suspected_attack": 0, "no_attack": 0}}
+    for file in file_list:
+        f = open(f"{file}", 'r', encoding="utf-8")
+        content = json.load(f)
+        types = ["reentry", "timestamp", "arithmetic"]
+        for index, type_name in enumerate(types):
+            parent_path = f"/home/xjj/AST-GNN/{type_name}"
+            for key in content.keys():
+                # 获取文件的名字
+                file_name = os.path.basename(key)
+                # 文件复制到别的文件夹中以后工程项目的名字
+                dir_name = file_name[:-4]
+                if content[key][index] == 1:
+                    utils.dir_exists(f"{parent_path}/{dir_name}/")
+                    target_file_path = f"{parent_path}/{dir_name}/{file_name}"
+                    print(f"把{key}移入到{target_file_path}中")
+                    shutil.copyfile(key, target_file_path)
+                    attack_condition[type_name]["attack"] += 1
+            utils.tip(f"{file}中{type_name}漏洞的数量为{attack_condition[type_name]['attack']}")
+            utils.success("确认有漏洞的文件都已经全部移入到对应的漏洞文件夹中。")
+    for file in file_list:
+        f = open(f"{file}", 'r', encoding="utf-8")
+        content = json.load(f)
+        parent_path = f"/home/xjj/AST-GNN/fine"
+        for key in content.keys():
+            # 获取文件的名字
+            file_name = os.path.basename(key)
+            # 文件复制到别的文件夹中以后工程项目的名字
+            dir_name = file_name[:-4]
+            if content[key][0] == 0 and content[key][1] == 0 and content[key][2]:
+                utils.dir_exists(f"{parent_path}/{dir_name}/")
+                target_file_path = f"{parent_path}/{dir_name}/{file_name}"
+                print(f"把{key}移入到{target_file_path}中")
+                shutil.copyfile(key, target_file_path)
+                attack_condition["fine"]["no_attack"] += 1
+        utils.tip(f"{file}中无漏洞的数量为{attack_condition['fine']['no_attack']}")
+        utils.success("确认无漏洞的文件都已经全部移入到对应的文件夹中。")
+
+
 if __name__ == '__main__':
     func = input("请输入你选择的功能:")
     if func == "1":
         split_dir_file()
     if func == "2":
         elimination()
+    if func == "3":
+        classification_of_documents()
