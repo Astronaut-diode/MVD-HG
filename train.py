@@ -200,7 +200,7 @@ def core(world_size, rank, attack_type):
                 # 先是打印表格，最终返回4*1的表格，并每一折叠加一次。
                 metric[fold] = torch.as_tensor(np.array([list(map(float, x)) for x in test_score(test_all_predicts, test_all_labels, f"{attack_type}_{fold}折中Test的loss{format(test_total_loss / len(test_loader), '.10f')}", rank, attack_type)]))
                 # 每一折计算完之后保存一个模型文件，文件名字的格式是时间_折数——三种漏洞的f分数。
-                torch.save({'model_params': model.state_dict()}, f'{config.model_data_dir}/{attack_type}_{datetime.datetime.now()}_{fold}——{metric[fold][3]}.pth')
+                torch.save({'model_params': model.module.state_dict(), "best_threshold": config.threshold}, f'{config.model_data_dir}/{attack_type}_{datetime.datetime.now()}_{fold}——{metric[fold][3]}.pth')
         if rank == 0:
             # 更新K折的进度条
             k_fold_bar.update()
