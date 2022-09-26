@@ -16,6 +16,7 @@ from classification_of_documents import classification_of_documents
 from tqdm import tqdm
 from make_timestamp_attack_label import make_timestamp_attack_label
 from hash_code import has_equal_hash
+from load_model_to_predict import load_model_to_predict
 import datetime
 import config
 import utils
@@ -32,6 +33,8 @@ if __name__ == '__main__':
         utils.dir_exists(config.data_ast_json_dir_path)
         utils.dir_exists(config.data_complete_dir_path)
         utils.dir_exists(config.data_raw_dir_path)
+        # 保存预测全体内容的文件夹
+        utils.dir_exists(config.wait_predict_fold)
         # 判断漏洞文件夹是否存在，不存在则创建
         utils.dir_exists(config.reentry_attack_fold)
         utils.dir_exists(config.timestamp_attack_fold)
@@ -175,6 +178,18 @@ if __name__ == '__main__':
         # 判断模型文件夹是否存在，不存在则创建。
         utils.dir_exists(config.model_data_dir)
         train()
+    elif config.run_mode == "predict":
+        # 保存模型的文件夹
+        utils.dir_exists(config.model_data_dir)
+        # 保存预测全体内容的文件夹
+        utils.dir_exists(config.wait_predict_fold)
+        # 保存预测原始智能合约的文件夹
+        utils.dir_exists(config.wait_predict_sol_source_fold)
+        # 保存智能合约编译后json文件的文件夹
+        utils.dir_exists(config.wait_predict_ast_json_fold)
+        # 保存智能合约转化为图结构数据的文件夹
+        utils.dir_exists(config.wait_predict_data_raw_dir_path)
+        load_model_to_predict()
     end = datetime.datetime.now()
     utils.tip(f"开始时间:{start}")
     utils.tip(f"结束时间:{end}")
