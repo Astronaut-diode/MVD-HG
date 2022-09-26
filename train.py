@@ -76,7 +76,7 @@ def core(world_size, rank, attack_type):
         model = DistributedDataParallel(model, device_ids=[rank])
         # 创建优化器和反向传播函数。
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-        criterion = torch.nn.BCEWithLogitsLoss()
+        criterion = torch.nn.BCELoss()
         # 只有在主线程才会显示Epoch的进度条。
         if rank == 0:
             # epoch的进度条
@@ -101,7 +101,7 @@ def core(world_size, rank, attack_type):
                 # 传入batch，因为是多GPU所以会将batch一个个拆分，送入到模型中进行训练。
                 predict = model(train_batch)
                 # 计算损失值，并进行梯度下降。
-                loss = criterion(predict, train_batch.y.view(predict.shape))
+                loss = criterion(predict, train_batch.y.view(predict.shape).to(torch.float32))
                 loss.backward()
                 optimizer.step()
                 # 计算训练集上总的损失值
@@ -153,7 +153,7 @@ def core(world_size, rank, attack_type):
                         # 传入batch，因为是多GPU所以会将batch一个个拆分，送入到模型中进行训练。
                         predict = model(valid_batch)
                         # 计算损失值。
-                        loss = criterion(predict, valid_batch.y.view(predict.shape))
+                        loss = criterion(predict, valid_batch.y.view(predict.shape).to(torch.float32))
                         # 计算验证集上的总损失值。
                         valid_total_loss += loss.item()
                         # 保存其中每一个mini batch计算出的结果与对应的标签。
@@ -184,7 +184,7 @@ def core(world_size, rank, attack_type):
                         # 传入batch，因为是多GPU所以会将batch一个个拆分，送入到模型中进行训练。
                         predict = model(test_batch)
                         # 计算损失值。
-                        loss = criterion(predict, test_batch.y.view(predict.shape))
+                        loss = criterion(predict, test_batch.y.view(predict.shape).to(torch.float32))
                         # 计算测试集上的总损失值
                         test_total_loss += loss.item()
                         # 保存其中每一个mini batch计算出的结果与对应的标签。
@@ -198,7 +198,7 @@ def core(world_size, rank, attack_type):
                         test_batch_bar.set_postfix_str(f"Average Loss:{format(test_total_loss / count, '.4f')}")
                         test_batch_bar.update()
                 # 先是打印表格，最终返回4*1的表格，并每一折叠加一次。
-                metric[fold] = torch.as_tensor(np.array([list(map(float, x)) for x in test_score(test_all_predicts, test_all_labels, f"{attack_type}_{fold}折中Test的loss{format(test_total_loss / len(test_loader), '.10f')}", rank, attack_type)]))
+                metric[fold] = torch.as_tensor(np.array([list(map(float, x)) for x in test_score(test_all_predicts, test_all_labels, f"{attack_type}_{fold}折中Test的loss{format(test_total_loss / len(test_loader), '.5f')}阈值{format(config.threshold[0].item(), '.5f')}", rank, attack_type)]))
                 # 每一折计算完之后保存一个模型文件，文件名字的格式是时间_折数——三种漏洞的f分数。
                 torch.save({'model_params': model.module.state_dict(), "best_threshold": config.threshold}, f'{config.model_data_dir}/{attack_type}_{datetime.datetime.now()}_{fold}——{metric[fold][3]}.pth')
         if rank == 0:
