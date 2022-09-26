@@ -48,7 +48,8 @@ def built_corpus_bfs(project_node_list, file_name):
         f.write(string)
         f.close()
         utils.success(f"{file_name}语料库添加成功")
-    elif config.create_corpus_mode == "update":
+    # 如果是预测是时候，可能因为没有见过单词，所以会出错，所以要加判断。
+    elif config.create_corpus_mode == "update" or config.run_mode == "predict":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
             # 加载之前已经保存好的文件。
@@ -100,6 +101,7 @@ def built_corpus_dfs(project_node_list, file_name):
                 # 如果有子节点，把子节点一个个添加进去
                 for child in parent.childes:
                     dfs_stack.put(child)
+    # predict的时候肯定已经创建过了，所以不用判断。
     if config.create_corpus_mode == "create_corpus_txt":
         f = open(config.corpus_txt_path, 'a', encoding="utf-8")
         string = ""
@@ -108,7 +110,8 @@ def built_corpus_dfs(project_node_list, file_name):
         f.write(string)
         f.close()
         utils.success(f"{file_name}语料库添加成功")
-    elif config.create_corpus_mode == "update":
+    # 如果是预测是时候，可能因为没有见过单词，所以会出错，所以要加判断。
+    elif config.create_corpus_mode == "update" or config.run_mode == "predict":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
             # 加载之前已经保存好的文件。
