@@ -2,7 +2,7 @@
 from torch_geometric.nn import MessagePassing, GATConv, global_mean_pool, Linear, RGCNConv
 from typing import Optional
 from torch import Tensor
-from torch.nn import ReLU
+from torch.nn import ReLU, Sigmoid
 from torch_sparse import SparseTensor
 import config
 
@@ -16,6 +16,7 @@ class ASTGNNModel(MessagePassing):
         self.RGCNconv4 = RGCNConv(in_channels=16, out_channels=8, num_relations=3)
         self.final_Linear = Linear(in_channels=8, out_channels=1)
         self.relu = ReLU()
+        self.sigmoid = Sigmoid()
 
     def forward(self, data):
         x = self.RGCNconv1(data.x, data.edge_index, data.edge_attr)
@@ -28,6 +29,7 @@ class ASTGNNModel(MessagePassing):
         x = self.relu(x)
         x = global_mean_pool(x=x, batch=data.batch)
         x = self.final_Linear(x)
+        x = self.sigmoid(x)
         return x
 
     def message(self, x_j: Tensor) -> Tensor:
