@@ -35,6 +35,8 @@ def load_model_to_predict():
     best_threshold = model_params_dict["best_threshold"]
     # 将加载的参数添加到模型当中去
     model.load_state_dict(model_params_dict["model_params"])
+    # 加载词向量的模型,在这里加载是为了服务所有需要被检验的文件。
+    word2vec_model = Word2Vec.load(config.corpus_file_path).wv
     dangerous_count = 0
     safe_count = 0
     exception_count = 0
@@ -60,13 +62,18 @@ def load_model_to_predict():
                     append_control_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 根据内存中的数据，设定图的数据流。
                     append_data_flow_information(project_node_list=project_node_list, project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
-                    # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
-                    built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
-                    built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
-                    # 加载词向量的模型,在这里加载是因为原始的文本库模型文件可能被修改了，但是读入的是原始的。
-                    word2vec_model = Word2Vec.load(config.corpus_file_path).wv
-                    # 创建数据集
-                    built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}", word2vec_model=word2vec_model)
+                    try:
+                        # 创建数据集
+                        built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}", word2vec_model=word2vec_model)
+                    except Exception as e:
+                        utils.error(f"{e}需要先更新词表")
+                        # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
+                        built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                        built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                        # 加载词向量的模型,在这里加载是因为原始的文本库模型文件可能被修改了，但是读入的是原始的。
+                        word2vec_model = Word2Vec.load(config.corpus_file_path).wv
+                        # 创建数据集
+                        built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}", word2vec_model=word2vec_model)
                     # 打印树的样子。
                     generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     # 获取对应raw工程文件夹下的原始文件名_node.json文件中的内容。
@@ -84,14 +91,16 @@ def load_model_to_predict():
                     edge_attr = torch.cat((ast_edge_attr, cfg_edge_attr, dfg_edge_attr))
                     # 通过节点属性，边连接情况，边的属性，还有标签一起构建数据集。
                     predict_data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, batch=torch.as_tensor(data=np.array(np.array([0] * x.shape[0], dtype=np.int64))))
-                    if model(predict_data).item() > best_threshold[0].item():
+                    predict = model(predict_data).item()
+                    utils.tip(predict)
+                    if predict < best_threshold[0].item():
                         utils.success(f"{ast_json_file_name}中并不存在{config.attack_type_name}类型的漏洞")
                         safe_count += 1
                     else:
                         utils.success(f"{ast_json_file_name}中存在{config.attack_type_name}类型的漏洞")
                         dangerous_count += 1
                 except Exception as e:
-                    utils.success(f"{ast_json_file_name}执行过程中出现异常了")
+                    utils.success(f"{ast_json_file_name}执行过程中出现异常了{e}")
                     exception_count += 1
     utils.tip(f"有漏洞的一共有{dangerous_count}")
     utils.tip(f"无漏洞的一共有{safe_count}")
