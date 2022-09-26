@@ -15,7 +15,8 @@ def built_vector_dataset(project_node_list, file_name, word2vec_model):
     # 文件夹里面文件的全路径，但是不包含拓展名。这里映射到了raw文件夹中，是为了待会用来创建三个基本文件。
     raw_project_dir_half_name = file_name.replace("AST_json", "raw").replace(".json", "")
     # 这时候说明才存在模型，可以用来生成三个基本文件。
-    if config.create_corpus_mode == "generate_all":
+    # 如果是预测的时候，也需要生成对应的向量文件，用来计算结果。
+    if config.create_corpus_mode == "generate_all" or config.run_mode == "predict":
         # 先根据节点id进行排序。
         project_node_list.sort(key=lambda obj: obj.node_id)
         # 在数组中节点一开始的节点id——正确对应的元素的id应该是多少
