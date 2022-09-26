@@ -76,6 +76,14 @@ suspected_timestamp_attack_fold = f"{data_dir_path}/attack/suspected_timestamp_a
 suspected_arithmetic_attack_fold = f"{data_dir_path}/attack/suspected_arithmetic_attack/"
 # 运行过程中出错的保存文件夹
 error_file_fold = f"{data_dir_path}/error/"
+# 等待检测的文件夹,里面会包含所有预测时候用到的文件夹
+wait_predict_fold = f"{data_dir_path}/wait_predict"
+# 预测的时候保存源代码的文件夹
+wait_predict_sol_source_fold = f"{wait_predict_fold}/sol_source"
+# 预测时候保存源代码编译后的json文件的文件夹
+wait_predict_ast_json_fold = f"{wait_predict_fold}/AST_json"
+# 保存向量化文件的文件夹
+wait_predict_data_raw_dir_path = f"{wait_predict_fold}/raw"
 # ========================= 文件夹路径 =========================
 # ========================= 编译配置 =========================
 # compile_files中用到的版本匹配规则,仅仅是用来判断当前行是否带有版本信息
