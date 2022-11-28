@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="xjj@10.12.49.193:22">
+  <component name="PublishConfigData" autoUpload="Always" serverName="astronaut@10.12.49.193:22">
     <serverData>
-      <paths name="xjj@10.12.49.193:22">
+      <paths name="AST-GNN">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/xjj/AST-GNN" local="$PROJECT_DIR$" />
+            <mapping deploy="/" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="astronaut@10.12.49.193:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/data/space_station/AST-GNN" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>

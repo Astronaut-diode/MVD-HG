@@ -1,11 +1,14 @@
 <component name="ProjectDictionaryState">
   <dictionary name="Administrator">
     <words>
+      <w>dataloader</w>
       <w>fddad</w>
       <w>figsize</w>
       <w>popen</w>
       <w>solc</w>
       <w>subdomain</w>
+      <w>tensorboard</w>
+      <w>tqdm</w>
     </words>
   </dictionary>
 </component>

@@ -23,7 +23,7 @@ from tqdm import tqdm
 def load_model_to_predict():
     # 挑选出最优秀的模型
     max_score = 0
-    max_mode_file = ""
+    max_mode_file = os.listdir(config.model_data_dir)[0]
     for model_file in os.listdir(config.model_data_dir):
         query = re.search("\[(.*?)\]", model_file, re.I | re.M)
         if float(query.group(1)) > max_score:
