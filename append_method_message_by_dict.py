@@ -1,9 +1,20 @@
 # coding=UTF-8
 from utils import success
+from queue import LifoQueue
 
 
 # 设置函数的method_name等详细信息到attribute上。
 def append_method_message_by_dict(project_node_dict, file_name):
+    for node in project_node_dict['ContractDefinition']:
+        # 使用深度遍历的方法为所有的子节点设置所属合约信息
+        # 进行深度遍历，判断是不是等式。
+        queue = LifoQueue(maxsize=0)
+        queue.put(node)
+        while not queue.empty():
+            sub_node = queue.get()
+            sub_node.set_owner_contract(node.attribute['name'][0])
+            for c in sub_node.childes:
+                queue.put(c)
     # 存在函数的情况下才调用这段代码
     if "FunctionDefinition" in project_node_dict.keys():
         # 循环所有的FunctionDefinition节点，找出其中的method_name作为新的属性。
@@ -73,6 +84,15 @@ def append_method_message_by_dict(project_node_dict, file_name):
                 # 将这里的函数名字和参数都添加到FunctionDefinition节点的attribute上。
                 node.append_attribute("method_name", method_name)
                 node.append_attribute("params", params)
+            # 使用深度遍历的方法为所有的子节点设置所属函数信息
+            # 进行深度遍历，判断是不是等式。
+            queue = LifoQueue(maxsize=0)
+            queue.put(node)
+            while not queue.empty():
+                sub_node = queue.get()
+                sub_node.set_owner_function(node.attribute["method_name"][0])
+                for c in sub_node.childes:
+                    queue.put(c)
     # 如果存在修饰符才启动这段代码
     if "ModifierDefinition" in project_node_dict.keys():
         # 循环所有的ModifierDefinition节点，找出其中的method_name作为新的属性。
@@ -114,4 +134,13 @@ def append_method_message_by_dict(project_node_dict, file_name):
             # 将这里的函数名字和参数都添加到ModifierDefinition节点的attribute上。
             node.append_attribute("method_name", method_name)
             node.append_attribute("params", params)
+            # 使用深度遍历的方法为所有的子节点设置所属函数信息
+            # 进行深度遍历，判断是不是等式。
+            queue = LifoQueue(maxsize=0)
+            queue.put(node)
+            while not queue.empty():
+                sub_node = queue.get()
+                sub_node.set_owner_function(node.attribute["method_name"][0])
+                for c in sub_node.childes:
+                    queue.put(c)
     success(f"{file_name}函数信息更新成功")
