@@ -32,6 +32,8 @@ def remove_comments(data_sol_source_project_dir_path):
                     for line in origin_file_handle:
                         # 如果注释状态是开着的，那就需要去找关闭状态
                         if annotation_state:
+                            # 如果还在段注释中，一样需要输入回车
+                            tmp_file_handle.write("\n")
                             # 如果发现了其中是含有*/的，那就说明可以关闭注释状态了
                             if len(re.findall("\\*/", line)) > 0:
                                 # 在*/这个之后的部分是要记录下来的
