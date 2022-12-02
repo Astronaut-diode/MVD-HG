@@ -113,6 +113,15 @@ def create_graph(content, node_list, source_file_name):
             index_list = content["src"].split(":")
             # 根据开始和结束的位置我们可以截取出其中的字节部分
             src_content = src[int(index_list[0]): int(index_list[0]) + int(index_list[1])]
+            # 找出int(index_list[0])这部分之前有多少个10，就代表前面有多少行。
+            line_count = 1
+            for ch in src[0: int(index_list[0])]:
+                if ch == 10:
+                    line_count = line_count + 1
+            # 增加行号管理
+            parent_node.set_owner_line(line_count)
+            # 增加文件管理
+            parent_node.set_owner_file(source_file_name)
             # 根据字节的部分，我们再将其重新转化为原始的内容
             src_content = str(bytes(src_content), encoding="utf-8")
             # 将原始的内容添加到src_code当中。
@@ -142,6 +151,15 @@ def create_graph(content, node_list, source_file_name):
                         index_list = q["src"].split(":")
                         # 根据开始和结束的位置，截取出byte的串
                         src_content = src[int(index_list[0]): int(index_list[0]) + int(index_list[1])]
+                        # 找出int(index_list[0])这部分之前有多少个10，就代表前面有多少行。
+                        line_count = 1
+                        for ch in src[0: int(index_list[0])]:
+                            if ch == 10:
+                                line_count = line_count + 1
+                        # 增加行号管理
+                        node.set_owner_line(line_count)
+                        # 增加文件管理
+                        node.set_owner_file(source_file_name)
                         # 根据byte的串，我们可以重新转化为原文
                         src_content = str(bytes(src_content), encoding="utf-8")
                         # 将原文添加到对应的属性中。
@@ -172,6 +190,15 @@ def create_graph(content, node_list, source_file_name):
                                 index_list = obj["src"].split(":")
                                 # 根据开始和结束的位置，我们可以获取对应的byte串
                                 src_content = src[int(index_list[0]): int(index_list[0]) + int(index_list[1])]
+                                # 找出int(index_list[0])这部分之前有多少个10，就代表前面有多少行。
+                                line_count = 1
+                                for ch in src[0: int(index_list[0])]:
+                                    if ch == 10:
+                                        line_count = line_count + 1
+                                # 增加行号管理
+                                node.set_owner_line(line_count)
+                                # 增加文件管理
+                                node.set_owner_file(source_file_name)
                                 # 将byte串重新转化为字符串
                                 src_content = str(bytes(src_content), encoding="utf-8")
                                 # 将字符串直接添加到我们设定好的属性中去。
