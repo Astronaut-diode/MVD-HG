@@ -62,8 +62,27 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
                     if s in word2vec_model:
                         # 将拆分以后的结果一个个的添加到向量中。
                         node_feature = node_feature + word2vec_model[s]
-        # 第一规则：根据每一个节点的类型，获取他的向量化表示
-        obj = {"node_id": id_mapping_id[node.node_id], "node_feature": node_feature.tolist()}
+        # 第一规则：根据每一个节点的类型，获取他的向量化表示,同时记录下它的所属范围。
+        obj = {"node_id": id_mapping_id[node.node_id], "node_feature": node_feature.tolist(), "owner_file": node.owner_file, "owner_contract": node.owner_contract, "owner_function": node.owner_function, "owner_line": node.owner_line}
+        # =============合约和行标签的读取=============
+        origin_contract_label_file_path = f"{config.data_dir_path}/contract_labels.json"
+        origin_contract_label_file_handle = open(origin_contract_label_file_path, 'r')
+        origin_contract_label_content = json.load(origin_contract_label_file_handle)
+        for index, content in enumerate(origin_contract_label_content):
+            if content["contract_name"] == f"{node.owner_file[node.owner_file.rfind('/') + 1: node.owner_file.rfind('.')]}-{node.owner_contract}":
+                obj["contract_label"] = content["targets"]
+                break
+        origin_contract_label_file_handle.close()
+        origin_line_label_file_path = f"{config.data_dir_path}/solidifi_labels.json"
+        origin_line_label_file_handle = open(origin_line_label_file_path, 'r')
+        origin_line_label_content = json.load(origin_line_label_file_handle)
+        # 如果当前节点的行在漏洞行中被记录过，那么就代表是存在漏洞的。
+        if node.owner_line in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]][config.attack_type_name]:
+            obj["line_label"] = 1
+        else:
+            obj["line_label"] = 0
+        origin_line_label_file_handle.close()
+        # ============合约和行标签读取完毕==============
         # 添加到数组中，循环结束直接录入到节点特征文件当中。
         node_feature_list.append(obj)
     # 将节点信息保存到文件当中去。
