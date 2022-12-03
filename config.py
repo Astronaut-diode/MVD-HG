@@ -8,20 +8,26 @@ import torch
 parser = argparse.ArgumentParser(description='参数表')
 # create:创建数据集的时候用的
 # train:训练模式
-# valid:预测模式
+# predict:预测模式,后面这里可能要开两个预测的分支。
 # truncated:语言模型受损，需要重新训练。
 parser.add_argument('--run_mode', type=str,
                     help="运行模式:\n"
                          "1.create:创建数据集的时候用的。\n"
-                         "2.train:训练模式。\n"
-                         "3.valid:预测模式。\n"
-                         "4.truncated:语言模型受损，需要重新训练。\n")
+                         "2.train:训练模式(这个是文件级别的)。\n"
+                         "3.predict:预测模式。\n"
+                         "4.truncated:语言模型受损，需要重新训练。\n"
+                         "5.line_classification_train:行级别的漏洞检测。\n"
+                         "6.contract_classification_train:合约级别的漏洞检测。\n")
 # create_corpus_txt:仅仅创建语料库文件。
 # generate_all: 生成所有的向量文件。
+# 如果run_mode已经进行了训练阶段或者预测阶段，建议这里直接设置为无效值。
 parser.add_argument('--create_corpus_mode', type=str,
                     help="创建文件的模式:\n"
                          "1.create_corpus_txt:仅仅创建语料库文件。\n"
                          "2.generate_all: 生成所有的向量文件。\n")
+parser.add_argument('--train_mode', type=str,
+                    help="针对创建文件的模式一起使用的，如果创建文件的模式是generate_all"
+                         "那么这里应该标注是合约级别还是行级别，因为built_vector_dataset的时候需要根据不同的任务类型，读取不一样的json文件")
 # data_dir_name:数据文件夹的名字，这样子就可以在一个项目里面多次运行，只要多创建data目录就行。
 parser.add_argument('--data_dir_name', type=str,
                     help="数据文件夹的名字，为了可以多进程启动运行:\n")
@@ -33,12 +39,14 @@ args = parser.parse_args()
 # ========================= 运行模式 =========================
 # create:创建数据集的时候用的
 # train:训练模式
-# valid:预测模式
+# predict:预测模式
 # truncated:语言模型受损，需要重新训练。
 run_mode = args.run_mode
 # create_corpus_txt:仅仅创建语料库文件。
 # generate_all: 生成所有的向量文件
 create_corpus_mode = args.create_corpus_mode
+# 如果create_corpus_mode的模式是generate_all,这里会影响到built_vector_dataset中读取的json文件是哪些。
+train_mode = args.train_mode
 # frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
 frozen = "frozen"
 # 专门操作的漏洞类型。
@@ -149,7 +157,7 @@ batch_size = 64
 # 学习率
 learning_rate = 0.005
 # 世代数量
-epoch_size = 20
+epoch_size = 50
 # K折交叉验证的数量。
 k_folds = 10
 # 模型文件的保存位置
