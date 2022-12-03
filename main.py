@@ -17,6 +17,7 @@ from tqdm import tqdm
 from make_timestamp_attack_label import make_timestamp_attack_label
 from hash_code import has_equal_hash
 from load_model_to_predict import load_model_to_predict
+from line_classification.line_classification_train import line_classification_train
 import datetime
 import config
 import utils
@@ -78,9 +79,11 @@ if __name__ == '__main__':
             for now_dir, child_dirs, child_files in os.walk(data_ast_json_project_dir_path):
                 # 遍历工程项目中的每一个文件
                 for ast_json_file_name in child_files:
+                    # 读取每个节点代表的源代码的同时，设置所属行数以及所属的文件。
                     project_node_list, project_node_dict = read_compile(now_dir=now_dir, ast_json_file_name=ast_json_file_name)
                     try:
                         # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
+                        # 同时对所有函数节点为根的子树，设置所属函数。
                         append_method_message_by_dict(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                     except Exception as e:
                         # 发现错误，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
@@ -178,6 +181,10 @@ if __name__ == '__main__':
         # 判断模型文件夹是否存在，不存在则创建。
         utils.dir_exists(config.model_data_dir)
         train()
+    # 进行源代码行级别分类的训练
+    elif config.run_mode == "line_classification_train":
+        utils.dir_exists(config.model_data_dir)
+        line_classification_train()
     elif config.run_mode == "predict":
         # 保存模型的文件夹
         utils.dir_exists(config.model_data_dir)
