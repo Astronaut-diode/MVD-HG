@@ -47,6 +47,28 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
     node_feature_handle = open(node_feature_file_name, 'w', encoding="UTF-8")
     # 保存到json文件中的节点列表
     node_feature_list = []
+    # ======================= 读取源文件，看看最大行数是多少，创建对应的标签数组。
+    # 保存当前源文件源代码的数组，相当于将源代码直接拆分为了['p', 'r', 'a', 'g', ...]这样子，后面直接从中间取出来就知道了节点代表的是哪条语句。
+    src = []
+    # 将内容进行循环遍历最终记录到上面的src的数组中。
+    with open(raw_project_dir_half_name.replace("raw", "sol_source") + ".sol", 'r') as read_file:
+        # 读取其中的字符，这样子可以实现后面的源代码对齐。
+        for char in read_file.read():
+            # 通过utf-8的编码格式进行编码，这样子如果遇见了中文这些汉字可以转化为三个字节，更加的适配。
+            # 而且src中的部分也是因为有中文等才会出现不对齐的情况。
+            byte_list = bytes(char, encoding="utf-8")
+            for byte in byte_list:
+                src.append(byte)
+    # 遍历所有的节点，先找出最大的节点的代码行，然后创建
+    max_num = 1
+    for i in src:
+        if i == 10:
+            max_num += 1
+    # 保存当前的合约文件中包含多少行漏洞行。
+    contract_buggy_line = []
+    for i in range(max_num):
+        contract_buggy_line.append(0)
+    # ============================= 创建标签数组，用于计算行为基准的结果。
     # 遍历所有的节点，待会一一操作，保存到node_feature_list中去。
     for node in project_node_list:
         node_feature = word2vec_model[node.node_type]
@@ -63,21 +85,26 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
                         # 将拆分以后的结果一个个的添加到向量中。
                         node_feature = node_feature + word2vec_model[s]
         # 第一规则：根据每一个节点的类型，获取他的向量化表示,同时记录下它的所属范围。
-        obj = {"node_id": id_mapping_id[node.node_id], "node_feature": node_feature.tolist(), "owner_file": node.owner_file, "owner_contract": node.owner_contract, "owner_function": node.owner_function, "owner_line": node.owner_line}
+        obj = {"node_id": id_mapping_id[node.node_id], "owner_file": node.owner_file, "owner_contract": node.owner_contract, "owner_function": node.owner_function, "owner_line": node.owner_line, "node_feature": node_feature.tolist()}
         # =============合约和行标签的读取=============
         origin_contract_label_file_path = f"{config.data_dir_path}/contract_labels.json"
         origin_contract_label_file_handle = open(origin_contract_label_file_path, 'r')
         origin_contract_label_content = json.load(origin_contract_label_file_handle)
         for index, content in enumerate(origin_contract_label_content):
-            if content["contract_name"] == f"{node.owner_file[node.owner_file.rfind('/') + 1: node.owner_file.rfind('.')]}-{node.owner_contract}":
+            if content["contract_name"] == f"{node.owner_file[node.owner_file.rfind('/') + 1: node.owner_file.rfind('.')]}-{node.owner_contract}{node.owner_file[node.owner_file.rfind('.'):]}":
                 obj["contract_label"] = content["targets"]
                 break
+        # 如果该对象不包含标签，说明该节点是没有所属合约的，可以直接设置为0，这样大家才会统一都有标签。
+        if not obj.__contains__("contract_label"):
+            obj["contract_label"] = 0
         origin_contract_label_file_handle.close()
         origin_line_label_file_path = f"{config.data_dir_path}/solidifi_labels.json"
         origin_line_label_file_handle = open(origin_line_label_file_path, 'r')
         origin_line_label_content = json.load(origin_line_label_file_handle)
         # 如果当前节点的行在漏洞行中被记录过，那么就代表是存在漏洞的。
-        if node.owner_line in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]][config.attack_type_name]:
+        if node.owner_file != '' and origin_line_label_content.__contains__(node.owner_file[node.owner_file.rfind('/') + 1:]) and node.owner_line in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]][config.attack_type_name]:
+            for label in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]][config.attack_type_name]:
+                contract_buggy_line[label - 1] = 1
             obj["line_label"] = 1
         else:
             obj["line_label"] = 0
@@ -85,8 +112,10 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
         # ============合约和行标签读取完毕==============
         # 添加到数组中，循环结束直接录入到节点特征文件当中。
         node_feature_list.append(obj)
+    # 里面保存的是节点的特征，以及每一行对应的正确的标签，注意第一行保存在了下标0之中。
+    final_data = {"node_feature_list": node_feature_list, "contract_buggy_line": contract_buggy_line}
     # 将节点信息保存到文件当中去。
-    json.dump(node_feature_list, node_feature_handle, ensure_ascii=False)
+    json.dump(final_data, node_feature_handle, ensure_ascii=False)
     # 关闭句柄文件。
     node_feature_handle.close()
     utils.success(f"{node_feature_file_name}节点特征文件已经构建完毕")
