@@ -48,13 +48,11 @@ def line_classification_train():
             correct += (predict.T == train.line_classification_label).sum()
             count += len(train)
             total += predict.size(0)
-        print(f"{epoch}.结束，一共训练了{count}张图")
+        print(f"{epoch + 1}.结束，一共训练了{count}张图")
         print("准确率为:", (correct / total).item(), "%总损失值为:", train_total_loss)
     # 验证部分
     model.eval()
     test_loader = DataLoader(dataset=test_dataset, batch_size=1)
-    correct = 0
-    total = 0
     # 节点级别的预测标签以及正确标签
     node_test_all_predicts = torch.tensor([])
     node_test_all_labels = torch.tensor([])
@@ -65,8 +63,6 @@ def line_classification_train():
         predict = model(test)
         predict[predict > 0.5] = 1
         predict[predict <= 0.5] = 0
-        correct += (predict.T == test.line_classification_label).sum()
-        total += predict.size(0)
         # 记录节点级别的总标签，方便一整个验证集计算完毕以后直接计算完整的四种度量标准。
         node_test_all_predicts = torch.cat((node_test_all_predicts, predict), dim=0)
         node_test_all_labels = torch.cat((node_test_all_labels, test.line_classification_label), dim=0)
