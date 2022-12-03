@@ -18,6 +18,7 @@ from make_timestamp_attack_label import make_timestamp_attack_label
 from hash_code import has_equal_hash
 from load_model_to_predict import load_model_to_predict
 from line_classification.line_classification_train import line_classification_train
+from contract_classification.contract_classification_train import contract_classification_train
 import datetime
 import config
 import utils
@@ -185,6 +186,9 @@ if __name__ == '__main__':
     elif config.run_mode == "line_classification_train":
         utils.dir_exists(config.model_data_dir)
         line_classification_train()
+    elif config.run_mode == "contract_classification_train":
+        utils.dir_exists(config.model_data_dir)
+        contract_classification_train()
     elif config.run_mode == "predict":
         # 保存模型的文件夹
         utils.dir_exists(config.model_data_dir)
