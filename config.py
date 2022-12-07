@@ -144,6 +144,7 @@ color_dict = {"SourceUnit": "#ddd02f",
 ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
 # ========================= 图可视化配置 =========================
 # ========================= 模型和度量标准配置 =========================
+average_num = 1
 # 开几个线程进行计算。
 thread_num = 2
 # 配置环境,设定当前程序可见GPU只有这几个,这样子就可以设定多GPU用哪几块。
