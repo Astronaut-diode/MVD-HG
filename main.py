@@ -24,6 +24,7 @@ import config
 import utils
 import os
 import shutil
+import torch
 import sys
 
 if __name__ == '__main__':
@@ -104,28 +105,37 @@ if __name__ == '__main__':
                     try:
                         # 判断文件中是否含有漏洞。
                         # 一次性检测多种漏洞，后面自己处理一下文件即可，这样就不用跑三趟了。
-                        if config.attack_type_name == "all":
+                        # 暂时改掉，为了不浪费时间
+                        if config.attack_type_name == "all1":
                             reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                             timestamp_flag = make_timestamp_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                             arithmetic_flag = make_arithmetic_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                             # 避免第二次运行的时候覆盖了第一次计算出来的标签。
                             if config.create_corpus_mode != "generate_all":
                                 utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag, timestamp_flag, arithmetic_flag])
-                        if config.attack_type_name == "reentry":
+                        # 暂时改掉，为了不浪费时间
+                        if config.attack_type_name == "reentry1":
                             reentry_flag = make_reentry_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                             # 避免第二次运行的时候覆盖了第一次计算出来的标签。
                             if config.create_corpus_mode != "generate_all":
                                 utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [reentry_flag])
-                        if config.attack_type_name == "timestamp":
+                        # 暂时改掉，为了不浪费时间
+                        if config.attack_type_name == "timestamp1":
                             timestamp_flag = make_timestamp_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                             # 避免第二次运行的时候覆盖了第一次计算出来的标签。
                             if config.create_corpus_mode != "generate_all":
                                 utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [timestamp_flag])
-                        if config.attack_type_name == "arithmetic":
+                        # 暂时改掉，为了不浪费时间
+                        if config.attack_type_name == "arithmetic1":
                             arithmetic_flag = make_arithmetic_attack_label(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
                             # 避免第二次运行的时候覆盖了第一次计算出来的标签。
                             if config.create_corpus_mode != "generate_all":
                                 utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [arithmetic_flag])
+                        # 为了节省时间，不管什么类型，都直接标记为0
+                        # if config not in ["all", "reentry", "timestamp", "arithmetic"]:
+                            # 避免第二次运行的时候覆盖了第一次计算出来的标签。
+                        if config.create_corpus_mode != "generate_all":
+                            utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [0])
                     except utils.CustomError as e:
                         # 运行时间过长，是里面的控制流太多了，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
@@ -184,11 +194,55 @@ if __name__ == '__main__':
         train()
     # 进行源代码行级别分类的训练
     elif config.run_mode == "line_classification_train":
+        res = []
         utils.dir_exists(config.model_data_dir)
-        line_classification_train()
+        for i in range(config.average_num):
+            print(f"第{i + 1}趟")
+            res.append(line_classification_train())
+        ans = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        for r in res:
+            for index, content in enumerate(r):
+                if type(content) == datetime.timedelta:
+                    ans[index] += (content.total_seconds() / config.average_num)
+                elif type(content) == torch.Tensor:
+                    ans[index] += (content.item() / config.average_num)
+                else:
+                    ans[index] += (content / config.average_num)
+        with open(f"{config.data_dir_path}/ans.txt", 'w') as write_file:
+            for r in res:
+                for index, content in enumerate(r):
+                    if type(content) == datetime.timedelta:
+                        write_file.write(f"{content.total_seconds()} ")
+                    elif type(content) == torch.Tensor:
+                        write_file.write(f"{content.item()} ")
+                    else:
+                        write_file.write(f"{content} ")
+                write_file.write("\n")
     elif config.run_mode == "contract_classification_train":
+        res = []
         utils.dir_exists(config.model_data_dir)
-        contract_classification_train()
+        for i in range(config.average_num):
+            print(f"第{i + 1}趟")
+            res.append(contract_classification_train())
+        ans = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        for r in res:
+            for index, content in enumerate(r):
+                if type(content) == datetime.timedelta:
+                    ans[index] += (content.total_seconds() / config.average_num)
+                elif type(content) == torch.Tensor:
+                    ans[index] += (content.item() / config.average_num)
+                else:
+                    ans[index] += (content / config.average_num)
+        with open(f"{config.data_dir_path}/ans.txt", 'w') as write_file:
+            for r in res:
+                for index, content in enumerate(r):
+                    if type(content) == datetime.timedelta:
+                        write_file.write(f"{content.total_seconds()} ")
+                    elif type(content) == torch.Tensor:
+                        write_file.write(f"{content.item()} ")
+                    else:
+                        write_file.write(f"{content} ")
+                write_file.write("\n")
     elif config.run_mode == "predict":
         # 保存模型的文件夹
         utils.dir_exists(config.model_data_dir)
