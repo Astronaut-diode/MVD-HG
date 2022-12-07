@@ -189,7 +189,7 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
         origin_line_label_file_handle = open(origin_line_label_file_path, 'r')
         origin_line_label_content = json.load(origin_line_label_file_handle)
         # 如果当前节点的行在漏洞行中被记录过，那么就代表是存在漏洞的。
-        if node.owner_file != '' and origin_line_label_content.__contains__(node.owner_file[node.owner_file.rfind('/') + 1:]) and node.owner_line in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]][config.attack_type_name]:
+        if node.owner_file != '' and origin_line_label_content.__contains__(node.owner_file[node.owner_file.rfind('/') + 1:]) and config.attack_type_name in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]] and node.owner_line in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]][config.attack_type_name]:
             for label in origin_line_label_content[node.owner_file[node.owner_file.rfind('/') + 1:]][config.attack_type_name]:
                 contract_buggy_line[label - 1] = 1
             obj["line_label"] = 1
