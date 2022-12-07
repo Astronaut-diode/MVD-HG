@@ -13,10 +13,33 @@ import utils
 
 
 def line_classification_train():
-    # 获取完整的行级数据集，并直接分割为两部分
-    total_dataset = line_classification_dataset(config.data_dir_path)
-    train_dataset = total_dataset[0:42]
-    test_dataset = total_dataset[42:]
+    while True:
+        # 获取完整的行级数据集，并直接分割为两部分
+        total_dataset = line_classification_dataset(config.data_dir_path)
+        split = int(len(total_dataset) * 0.7)
+        train_dataset = total_dataset[0:split]
+        test_dataset = total_dataset[split:]
+        buggy1 = 0
+        clear1 = 0
+        tmp = DataLoader(dataset=train_dataset, batch_size=1)
+        for index, t in enumerate(tmp):
+            for i in t.contract_buggy_line[0]:
+                if i == 1:
+                    buggy1 += 1
+                else:
+                    clear1 += 1
+        buggy2 = 0
+        clear2 = 0
+        tmp = DataLoader(dataset=test_dataset, batch_size=1)
+        for index, t in enumerate(tmp):
+            for i in t.contract_buggy_line[0]:
+                if i == 1:
+                    buggy2 += 1
+                else:
+                    clear2 += 1
+        if buggy1 != 0 and clear1 != 0 and buggy2 != 0 and clear2 != 0:
+            print(buggy1, buggy2, clear1, clear2)
+            break
     # 获取行级别漏洞检测的模型。
     model = line_classification_model()
     # 这里就直接定死batch_size设置为1，反正数据集也很小，不需要特殊处理。
@@ -24,6 +47,7 @@ def line_classification_train():
     # 创建优化器和反向传播函数。
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     criterion = torch.nn.BCELoss()
+    train_start_time = datetime.datetime.now()
     for epoch in range(config.epoch_size):
         # 开始训练的信号,进行训练集上的计算
         model.train()
@@ -50,6 +74,8 @@ def line_classification_train():
             total += predict.size(0)
         print(f"{epoch + 1}.结束，一共训练了{count}张图")
         print("准确率为:", (correct / total).item(), "%总损失值为:", train_total_loss)
+    train_end_time = datetime.datetime.now()
+    eval_start_time = datetime.datetime.now()
     # 验证部分
     model.eval()
     test_loader = DataLoader(dataset=test_dataset, batch_size=1)
@@ -76,8 +102,23 @@ def line_classification_train():
         line_test_all_labels = torch.cat((line_test_all_labels, torch.tensor(test.contract_buggy_line[0])), dim=0)
         # 为每一个单独的文件计算对应的行级别的四种度量标准。
         test_score(torch.tensor(line_predict).view(-1, 1), torch.tensor(test.contract_buggy_line[0]), f"第{index}张图{test.owner_file[0][0][test.owner_file[0][0].rfind('/') + 1:]}行级的结果", config.attack_type_name)
-    test_score(line_test_all_predicts, line_test_all_labels, f"{config.attack_type_name}类型行级别结果", config.attack_type_name)
-    test_score(node_test_all_predicts, node_test_all_labels, f"{config.attack_type_name}类型节点级结果", config.attack_type_name)
+    eval_end_time = datetime.datetime.now()
+    loader = DataLoader(dataset=total_dataset, batch_size=1)
+    total_edge_number = 0
+    total_node_number = 0
+    for data in loader:
+        total_edge_number += data.edge_index.shape[1]
+        total_node_number += data.x.shape[0]
+    utils.tip(f"总共的训练集共有{len(total_dataset)}张图，边有{total_edge_number}条，节点有{total_node_number}")
+    utils.tip(f"训练{config.epoch_size}轮一共耗时{train_end_time - train_start_time}")
+    utils.tip(f"训练图共有{split + 1}张")
+    utils.tip(f"验证一共耗时{eval_end_time - eval_start_time}")
+    utils.tip(f"验证图共有{len(total_dataset) - (split + 1)}张")
+    optimal_list1 = test_score(line_test_all_predicts, line_test_all_labels, f"{config.attack_type_name}类型行级别结果", config.attack_type_name)
+    optimal_list2 = test_score(node_test_all_predicts, node_test_all_labels, f"{config.attack_type_name}类型节点级结果", config.attack_type_name)
+    return [optimal_list1[0], optimal_list1[1], optimal_list1[2], optimal_list1[3],
+            optimal_list2[0], optimal_list2[1], optimal_list2[2], optimal_list2[3],
+            train_end_time - train_start_time, eval_end_time - eval_start_time, len(total_dataset), total_edge_number, total_node_number, len(train_dataset), len(test_dataset)]
 
 
 # 测试集上的度量方法，阈值已经由config中给出。
