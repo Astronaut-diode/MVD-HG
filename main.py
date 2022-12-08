@@ -26,6 +26,7 @@ import os
 import shutil
 import torch
 import sys
+import math
 
 if __name__ == '__main__':
     start = datetime.datetime.now()
@@ -196,6 +197,27 @@ if __name__ == '__main__':
     elif config.run_mode == "line_classification_train":
         res = []
         utils.dir_exists(config.model_data_dir)
+        i = 1
+        while i <= config.average_num:
+            print(f"第{i}趟")
+            tmp = line_classification_train()
+            flag = False
+            for content in tmp:
+                if type(content) == datetime.timedelta:
+                    continue
+                elif type(content) == torch.Tensor:
+                    if math.isnan(content.item()):
+                        flag = True
+                else:
+                    if math.isnan(content):
+                        flag = True
+            if flag:
+                print(f"原始结果为:{tmp}")
+                print(f"第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
+                i -= 1
+            else:
+                res.append(tmp)
+            i += 1
         for i in range(config.average_num):
             print(f"第{i + 1}趟")
             res.append(line_classification_train())
@@ -218,12 +240,38 @@ if __name__ == '__main__':
                     else:
                         write_file.write(f"{content} ")
                 write_file.write("\n")
+            for index, content in enumerate(ans):
+                if type(content) == datetime.timedelta:
+                    write_file.write(f"{content.total_seconds()} ")
+                elif type(content) == torch.Tensor:
+                    write_file.write(f"{content.item()} ")
+                else:
+                    write_file.write(f"{content} ")
+            write_file.write("\n")
     elif config.run_mode == "contract_classification_train":
         res = []
         utils.dir_exists(config.model_data_dir)
-        for i in range(config.average_num):
-            print(f"第{i + 1}趟")
-            res.append(contract_classification_train())
+        i = 1
+        while i <= config.average_num:
+            print(f"第{i}趟")
+            tmp = contract_classification_train()
+            flag = False
+            for content in tmp:
+                if type(content) == datetime.timedelta:
+                    continue
+                elif type(content) == torch.Tensor:
+                    if math.isnan(content.item()):
+                        flag = True
+                else:
+                    if math.isnan(content):
+                        flag = True
+            if flag:
+                print(f"原始结果为:{tmp}")
+                print(f"第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
+                i -= 1
+            else:
+                res.append(tmp)
+            i += 1
         ans = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         for r in res:
             for index, content in enumerate(r):
@@ -243,6 +291,13 @@ if __name__ == '__main__':
                     else:
                         write_file.write(f"{content} ")
                 write_file.write("\n")
+            for index, content in enumerate(ans):
+                if type(content) == datetime.timedelta:
+                    write_file.write(f"{content.total_seconds()} ")
+                elif type(content) == torch.Tensor:
+                    write_file.write(f"{content.item()} ")
+                else:
+                    write_file.write(f"{content} ")
     elif config.run_mode == "predict":
         # 保存模型的文件夹
         utils.dir_exists(config.model_data_dir)
