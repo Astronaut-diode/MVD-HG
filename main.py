@@ -218,9 +218,6 @@ if __name__ == '__main__':
             else:
                 res.append(tmp)
             i += 1
-        for i in range(config.average_num):
-            print(f"第{i + 1}趟")
-            res.append(line_classification_train())
         ans = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         for r in res:
             for index, content in enumerate(r):
