@@ -8,6 +8,7 @@ import datetime
 import sys
 import config
 import os
+import math
 import torch
 import utils
 
@@ -48,6 +49,8 @@ def line_classification_train():
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     criterion = torch.nn.BCELoss()
     train_start_time = datetime.datetime.now()
+    line_train_all_predicts = torch.tensor([])
+    line_train_all_labels = torch.tensor([])
     for epoch in range(config.epoch_size):
         # 开始训练的信号,进行训练集上的计算
         model.train()
@@ -55,53 +58,33 @@ def line_classification_train():
         train_total_loss = 0.0
         # 截至目前已经训练过的图的张数。
         count = 0
-        # 节点级别计算正确的数量
-        correct = 0
-        # 节点级别已经计算的节点总数量
-        total = 0
         for index, train in enumerate(train_loader):
             optimizer.zero_grad()
-            predict = model(train)
-            loss = criterion(predict, train.line_classification_label.view(predict.shape).to(torch.float32))
+            predict, stand = model(train)
+            line_train_all_predicts = torch.cat((line_train_all_predicts, predict), dim=0)
+            line_train_all_labels = torch.cat((line_train_all_labels, stand.view(-1, 1)), dim=0)
+            loss = criterion(predict, stand.view(predict.shape).to(torch.float32))
             loss.backward()
             optimizer.step()
-            # 计算训练时刻节点级别的准确率以及损失值。
+            # 计算训练时刻行级别的准确率以及损失值。
             train_total_loss += loss.item()
-            predict[predict > 0.5] = 1
-            predict[predict <= 0.5] = 0
-            correct += (predict.T == train.line_classification_label).sum()
             count += len(train)
-            total += predict.size(0)
-        print(f"{epoch + 1}.结束，一共训练了{count}张图")
-        print("准确率为:", (correct / total).item(), "%总损失值为:", train_total_loss)
+        print(f"epoch{epoch + 1}.结束，一共训练了{count}张图", "总损失值为:", train_total_loss)
+    # 根据所有epoch的训练结果，求出最优的异常阈值，待会给验证集使用。
+    config.threshold = get_best_metric(line_train_all_predicts, line_train_all_labels, "所有epoch的结果放在一起计算最优的阈值")["probability"]
     train_end_time = datetime.datetime.now()
     eval_start_time = datetime.datetime.now()
     # 验证部分
     model.eval()
     test_loader = DataLoader(dataset=test_dataset, batch_size=1)
-    # 节点级别的预测标签以及正确标签
-    node_test_all_predicts = torch.tensor([])
-    node_test_all_labels = torch.tensor([])
     # 行级别的预测标签以及正确标签
     line_test_all_predicts = torch.tensor([])
     line_test_all_labels = torch.tensor([])
     for index, test in enumerate(test_loader):
-        predict = model(test)
-        predict[predict > 0.5] = 1
-        predict[predict <= 0.5] = 0
-        # 记录节点级别的总标签，方便一整个验证集计算完毕以后直接计算完整的四种度量标准。
-        node_test_all_predicts = torch.cat((node_test_all_predicts, predict), dim=0)
-        node_test_all_labels = torch.cat((node_test_all_labels, test.line_classification_label), dim=0)
-        # 记录当前文件为所有行打的标签，以此来计算四种度量标准
-        line_predict = [0] * (len(test.contract_buggy_line[0]))
-        for jndex, pre in enumerate(predict.T[0]):
-            if test.line_classification_label[jndex] == 1:
-                line_predict[test[0].owner_line[jndex] - 1] = 1
-        # 记录行级别的总标签，方便一整个验证集计算完毕以后直接计算完整的四种度量标准。
-        line_test_all_predicts = torch.cat((line_test_all_predicts, torch.tensor(line_predict).view(-1, 1)), dim=0)
-        line_test_all_labels = torch.cat((line_test_all_labels, torch.tensor(test.contract_buggy_line[0])), dim=0)
-        # 为每一个单独的文件计算对应的行级别的四种度量标准。
-        test_score(torch.tensor(line_predict).view(-1, 1), torch.tensor(test.contract_buggy_line[0]), f"第{index}张图{test.owner_file[0][0][test.owner_file[0][0].rfind('/') + 1:]}行级的结果", config.attack_type_name)
+        predict, stand = model(test)
+        # 记录所有的标签和预测结果
+        line_test_all_predicts = torch.cat((line_test_all_predicts, predict), dim=0)
+        line_test_all_labels = torch.cat((line_test_all_labels, stand.view(-1, 1)), dim=0)
     eval_end_time = datetime.datetime.now()
     loader = DataLoader(dataset=total_dataset, batch_size=1)
     total_edge_number = 0
@@ -114,10 +97,9 @@ def line_classification_train():
     utils.tip(f"训练图共有{split + 1}张")
     utils.tip(f"验证一共耗时{eval_end_time - eval_start_time}")
     utils.tip(f"验证图共有{len(total_dataset) - (split + 1)}张")
-    optimal_list1 = test_score(line_test_all_predicts, line_test_all_labels, f"{config.attack_type_name}类型行级别结果", config.attack_type_name)
-    optimal_list2 = test_score(node_test_all_predicts, node_test_all_labels, f"{config.attack_type_name}类型节点级结果", config.attack_type_name)
-    return [optimal_list1[0], optimal_list1[1], optimal_list1[2], optimal_list1[3],
-            optimal_list2[0], optimal_list2[1], optimal_list2[2], optimal_list2[3],
+    # 使用最优的阈值求出对应的结果。
+    optimal_list = test_score(line_test_all_predicts, line_test_all_labels, f"{config.attack_type_name}类型行级结果", config.attack_type_name)
+    return [optimal_list[0], optimal_list[1], optimal_list[2], optimal_list[3],
             train_end_time - train_start_time, eval_end_time - eval_start_time, len(total_dataset), total_edge_number, total_node_number, len(train_dataset), len(test_dataset)]
 
 
@@ -136,7 +118,7 @@ def test_score(predict, label, msg, attack_type):
                     [""],
                     [""]]
     # 先将预测值转化为标签内容,记住要将内容转化到主GPU上。
-    predict_matrix = (predict >= 0.5).add(0)
+    predict_matrix = (predict >= torch.as_tensor(data=[config.threshold])).add(0)
     # 这里的结果是一个一行3列的数组，分别代表不同漏洞的TP,FP,TN,FN。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=0).reshape(-1, 1)
     fp = torch.sum(torch.logical_and(torch.sub(1, label), predict_matrix), dim=0).reshape(-1, 1)
@@ -158,3 +140,46 @@ def test_score(predict, label, msg, attack_type):
     utils.tqdm_write(table)
     # 返回每一个测试集上的计算结果，然后最终用来求平均。
     return optimal_list
+
+
+# 找出最好的阈值，用来计算出的结果。
+# predict：预测结果，是概率的一维数组，长度和标签一样长。
+# label:标签
+def get_best_metric(predict, label, msg):
+    # 求出其中的最佳值，然后返回。
+    best_res = {"probability": 0, "accuracy": 0, "precision": 0, "recall": 0, "f_score": 0}
+    # 取出所有的不同的概率，然后将概率转换为0和1的predict_matrix矩阵,注意，如果种类太多，会导致GPU都存不下，所以需要少取一些，这里取步长为100好了。
+    unique_probability = torch.unique(predict).reshape(-1, 1)
+    # 通过步长重新选取，免得取得太多了，内存爆炸。
+    unique_probability = unique_probability[::math.ceil(len(unique_probability) / config.threshold_max_classes)]
+    predict_matrix = (predict.view(1, -1) >= unique_probability.view(-1, 1)).add(0)
+    label = label.T
+    # 根据标签矩阵和预测矩阵，求出四个基础标签。
+    tp = torch.sum(torch.logical_and(label, predict_matrix), dim=1).reshape(-1, 1)
+    fp = torch.sum(torch.logical_and(torch.sub(1, label), predict_matrix), dim=1).reshape(-1, 1)
+    tn = torch.sum(torch.logical_and(torch.sub(1, label), torch.sub(1, predict_matrix)), dim=1).reshape(-1, 1)
+    fn = torch.sum(torch.logical_and(label, torch.sub(1, predict_matrix)), dim=1).reshape(-1, 1)
+    # 由四个基础标签求出对应的四种参数。
+    accuracy = tp.add(tn).div(tp.add(fp).add(tn).add(fn))
+    precision = tp.div(tp.add(fp))
+    recall = tp.div(tp.add(fn))
+    f_score = tp.mul(1 + config.beta ** 2).div(tp.mul(1 + config.beta ** 2).add(fn.mul(config.beta ** 2).add(fp).add(config.epsilon)))
+    # 根据p和r的和，决定谁是效果最好的，直接返回这组结果。
+    # best_sample_index = precision.add(recall).argmax(dim=0)
+    # 改成求出最大的f分数
+    best_sample_index = f_score.argmax(dim=0)
+    # 取出每一种度量标准中的最大得分。
+    best_res["probability"] = unique_probability[best_sample_index, 0]
+    best_res["accuracy"] = accuracy[best_sample_index, 0]
+    best_res["precision"] = precision[best_sample_index, 0]
+    best_res["recall"] = recall[best_sample_index, 0]
+    best_res["f_score"] = f_score[best_sample_index, 0]
+    table = PrettyTable(['', f"最优概率为{best_res['probability']}"])
+    table._table_width = config.table_width
+    table.title = msg
+    table.add_row(["Accuracy", best_res['accuracy']])
+    table.add_row(["Precision", best_res['precision']])
+    table.add_row(["Recall", best_res['recall']])
+    table.add_row(["F-score", best_res['f_score']])
+    utils.tqdm_write(table)
+    return best_res
