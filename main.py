@@ -218,7 +218,7 @@ if __name__ == '__main__':
             else:
                 res.append(tmp)
             i += 1
-        ans = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ans = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         for r in res:
             for index, content in enumerate(r):
                 if type(content) == datetime.timedelta:
@@ -231,19 +231,19 @@ if __name__ == '__main__':
             for r in res:
                 for index, content in enumerate(r):
                     if type(content) == datetime.timedelta:
-                        write_file.write(f"{content.total_seconds()} ")
+                        write_file.write("%.2f " % content.total_seconds())
                     elif type(content) == torch.Tensor:
-                        write_file.write(f"{content.item()} ")
+                        write_file.write("%.2f " % content.item())
                     else:
-                        write_file.write(f"{content} ")
+                        write_file.write("%.2f " % content)
                 write_file.write("\n")
             for index, content in enumerate(ans):
                 if type(content) == datetime.timedelta:
-                    write_file.write(f"{content.total_seconds()} ")
+                    write_file.write("%.2f " % content.total_seconds())
                 elif type(content) == torch.Tensor:
-                    write_file.write(f"{content.item()} ")
+                    write_file.write("%.2f " % content.item())
                 else:
-                    write_file.write(f"{content} ")
+                    write_file.write("%.2f " % content)
             write_file.write("\n")
     elif config.run_mode == "contract_classification_train":
         res = []
@@ -282,19 +282,19 @@ if __name__ == '__main__':
             for r in res:
                 for index, content in enumerate(r):
                     if type(content) == datetime.timedelta:
-                        write_file.write(f"{content.total_seconds()} ")
+                        write_file.write("%.2f " % content.total_seconds())
                     elif type(content) == torch.Tensor:
-                        write_file.write(f"{content.item()} ")
+                        write_file.write("%.2f " % content.item())
                     else:
-                        write_file.write(f"{content} ")
+                        write_file.write("%.2f " % content)
                 write_file.write("\n")
             for index, content in enumerate(ans):
                 if type(content) == datetime.timedelta:
-                    write_file.write(f"{content.total_seconds()} ")
+                    write_file.write("%.2f " % content.total_seconds())
                 elif type(content) == torch.Tensor:
-                    write_file.write(f"{content.item()} ")
+                    write_file.write("%.2f " % content.item())
                 else:
-                    write_file.write(f"{content} ")
+                    write_file.write("%.2f " % content)
     elif config.run_mode == "predict":
         # 保存模型的文件夹
         utils.dir_exists(config.model_data_dir)
