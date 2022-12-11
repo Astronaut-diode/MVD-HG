@@ -144,6 +144,8 @@ color_dict = {"SourceUnit": "#ddd02f",
 ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
 # ========================= 图可视化配置 =========================
 # ========================= 模型和度量标准配置 =========================
+device = torch.device("cuda:0")
+# 使用的gpu设备
 average_num = 20
 # 开几个线程进行计算。
 thread_num = 2
