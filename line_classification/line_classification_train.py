@@ -39,7 +39,7 @@ def line_classification_train():
                 else:
                     clear2 += 1
         if buggy1 != 0 and clear1 != 0 and buggy2 != 0 and clear2 != 0:
-            print(buggy1, buggy2, clear1, clear2)
+            utils.tip(f'{buggy1} {buggy2} {clear1} {clear2}')
             break
     # 获取行级别漏洞检测的模型。
     model = line_classification_model()
@@ -69,7 +69,7 @@ def line_classification_train():
             # 计算训练时刻行级别的准确率以及损失值。
             train_total_loss += loss.item()
             count += len(train)
-        print(f"epoch{epoch + 1}.结束，一共训练了{count}张图", "总损失值为:", train_total_loss)
+        utils.tip(f"epoch{epoch + 1}.结束，一共训练了{count}张图, 总损失值为: {train_total_loss}")
     # 根据所有epoch的训练结果，求出最优的异常阈值，待会给验证集使用。
     config.threshold = get_best_metric(line_train_all_predicts, line_train_all_labels, "所有epoch的结果放在一起计算最优的阈值")["probability"]
     train_end_time = datetime.datetime.now()
@@ -82,6 +82,9 @@ def line_classification_train():
     line_test_all_labels = torch.tensor([])
     for index, test in enumerate(test_loader):
         predict, stand = model(test)
+        # for i in range(predict.shape[0]):
+            # if (predict[i] > 0.5).add(0) != stand[i]:
+                # utils.error(f"判断错误的行是{test.owner_file[0][0]} {i + 1} predict{predict[i]} stand{stand[i]}")
         # 记录所有的标签和预测结果
         line_test_all_predicts = torch.cat((line_test_all_predicts, predict), dim=0)
         line_test_all_labels = torch.cat((line_test_all_labels, stand.view(-1, 1)), dim=0)
