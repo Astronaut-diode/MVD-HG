@@ -134,7 +134,7 @@ if __name__ == '__main__':
                                 utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [arithmetic_flag])
                         # 为了节省时间，不管什么类型，都直接标记为0
                         # if config not in ["all", "reentry", "timestamp", "arithmetic"]:
-                            # 避免第二次运行的时候覆盖了第一次计算出来的标签。
+                        # 避免第二次运行的时候覆盖了第一次计算出来的标签。
                         if config.create_corpus_mode != "generate_all":
                             utils.update_label_file(f"{now_dir}/{ast_json_file_name}", [0])
                     except utils.CustomError as e:
@@ -199,7 +199,7 @@ if __name__ == '__main__':
         utils.dir_exists(config.model_data_dir)
         i = 1
         while i <= config.average_num:
-            print(f"第{i}趟")
+            utils.tip(f"第{i}趟")
             tmp = line_classification_train()
             flag = False
             for content in tmp:
@@ -211,9 +211,13 @@ if __name__ == '__main__':
                 else:
                     if math.isnan(content):
                         flag = True
+            # 如果f1的分数过低，同样也不计入结果，重新进行计算。
             if flag:
-                print(f"原始结果为:{tmp}")
-                print(f"第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
+                utils.error(f"原始结果为:{tmp},第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
+                i -= 1
+            elif tmp[3].item() < 0.8:
+                utils.tip(tmp)
+                utils.error(f"原始结果为:{tmp},第{i}趟中结果过低，重新进行计算，不计入最终结果。")
                 i -= 1
             else:
                 res.append(tmp)
@@ -250,7 +254,7 @@ if __name__ == '__main__':
         utils.dir_exists(config.model_data_dir)
         i = 1
         while i <= config.average_num:
-            print(f"第{i}趟")
+            utils.tip(f"第{i}趟")
             tmp = contract_classification_train()
             flag = False
             for content in tmp:
@@ -263,8 +267,7 @@ if __name__ == '__main__':
                     if math.isnan(content):
                         flag = True
             if flag:
-                print(f"原始结果为:{tmp}")
-                print(f"第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
+                utils.tip(f"原始结果为:{tmp},第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
                 i -= 1
             else:
                 res.append(tmp)
