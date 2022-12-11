@@ -38,7 +38,7 @@ def contract_classification_train():
                 else:
                     clear2 += 1
         if buggy1 != 0 and clear1 != 0 and buggy2 != 0 and clear2 != 0:
-            print(buggy1, buggy2, clear1, clear2)
+            utils.tip(f"{buggy1} {buggy2} {clear1} {clear2}")
             break
     # 获取模型。
     model = contract_classification_model()
@@ -71,8 +71,7 @@ def contract_classification_train():
             correct += (predict.T == stand).sum()
             total += predict.size(0)
             count += len(train)
-        print(f"{epoch + 1}.结束，一共训练了{count}张图")
-        print("准确率为:", (correct / total).item(), "%总损失值为:", total_loss_of_now_epoch)
+        utils.tip(f"{epoch + 1}.结束，一共训练了{count}张图, 准确率为: {(correct / total).item()}, %总损失值为: {total_loss_of_now_epoch}")
     train_end_time = datetime.datetime.now()
     eval_start_time = datetime.datetime.now()
     # 开始验证集部分。
