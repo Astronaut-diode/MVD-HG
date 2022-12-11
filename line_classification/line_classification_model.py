@@ -38,7 +38,8 @@ class line_classification_model(MessagePassing):
             # 针对当前遍历的行号+1找出所有对应的节点
             for index, ite in enumerate(data.owner_line[0]):
                 # 如果名字匹配，那么index就说明找到目标节点了。
-                if ite == line + 1:
+                # 兼容下上下两行的内容
+                if ite in [line, line + 1, line - 1]:
                     global_tmp += x[index]
                     count += 1
             if count == 0:
