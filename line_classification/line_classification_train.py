@@ -42,15 +42,15 @@ def line_classification_train():
             utils.tip(f'{buggy1} {buggy2} {clear1} {clear2}')
             break
     # 获取行级别漏洞检测的模型。
-    model = line_classification_model()
+    model = line_classification_model().to(config.device)
     # 这里就直接定死batch_size设置为1，反正数据集也很小，不需要特殊处理。
     train_loader = DataLoader(dataset=train_dataset, batch_size=1)
     # 创建优化器和反向传播函数。
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     criterion = torch.nn.BCELoss()
     train_start_time = datetime.datetime.now()
-    line_train_all_predicts = torch.tensor([])
-    line_train_all_labels = torch.tensor([])
+    line_train_all_predicts = torch.tensor([]).to(config.device)
+    line_train_all_labels = torch.tensor([]).to(config.device)
     for epoch in range(config.epoch_size):
         # 开始训练的信号,进行训练集上的计算
         model.train()
@@ -59,6 +59,7 @@ def line_classification_train():
         # 截至目前已经训练过的图的张数。
         count = 0
         for index, train in enumerate(train_loader):
+            train = train.to(config.device)
             optimizer.zero_grad()
             predict, stand = model(train)
             line_train_all_predicts = torch.cat((line_train_all_predicts, predict), dim=0)
@@ -78,9 +79,10 @@ def line_classification_train():
     model.eval()
     test_loader = DataLoader(dataset=test_dataset, batch_size=1)
     # 行级别的预测标签以及正确标签
-    line_test_all_predicts = torch.tensor([])
-    line_test_all_labels = torch.tensor([])
+    line_test_all_predicts = torch.tensor([]).to(config.device)
+    line_test_all_labels = torch.tensor([]).to(config.device)
     for index, test in enumerate(test_loader):
+        test = test.to(config.device)
         predict, stand = model(test)
         # for i in range(predict.shape[0]):
             # if (predict[i] > 0.5).add(0) != stand[i]:
@@ -121,7 +123,7 @@ def test_score(predict, label, msg, attack_type):
                     [""],
                     [""]]
     # 先将预测值转化为标签内容,记住要将内容转化到主GPU上。
-    predict_matrix = (predict >= torch.as_tensor(data=[config.threshold])).add(0)
+    predict_matrix = (predict >= torch.as_tensor(data=[config.threshold]).to(config.device)).add(0)
     # 这里的结果是一个一行3列的数组，分别代表不同漏洞的TP,FP,TN,FN。
     tp = torch.sum(torch.logical_and(label, predict_matrix), dim=0).reshape(-1, 1)
     fp = torch.sum(torch.logical_and(torch.sub(1, label), predict_matrix), dim=0).reshape(-1, 1)
