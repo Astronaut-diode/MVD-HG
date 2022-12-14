@@ -29,11 +29,11 @@ class line_classification_model(MessagePassing):
         x = self.RGCNconv4(x, data.edge_index, data.edge_attr)
         x = self.relu(x)
         # 在这里根据合约的包含范围，对batch进行操作，然后找到需要返回的结果，同时需要用线性层继续学习一下。
-        res = torch.tensor([])
-        stand = torch.tensor(data.contract_buggy_line[0])
+        res = torch.tensor([]).to(config.device)
+        stand = torch.tensor(data.contract_buggy_line[0]).to(config.device)
         # 依次循环遍历每一种contract
         for line in range(len(data.contract_buggy_line[0])):
-            global_tmp = torch.zeros(x[0].shape)
+            global_tmp = torch.zeros(x[0].shape).to(config.device)
             count = 0
             # 针对当前遍历的行号+1找出所有对应的节点
             for index, ite in enumerate(data.owner_line[0]):
