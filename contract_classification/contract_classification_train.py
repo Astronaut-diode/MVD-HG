@@ -41,7 +41,7 @@ def contract_classification_train():
             utils.tip(f"{buggy1} {buggy2} {clear1} {clear2}")
             break
     # 获取模型。
-    model = contract_classification_model()
+    model = contract_classification_model().to(config.device)
     train_loader = DataLoader(dataset=train_dataset, batch_size=1)
     # 创建优化器和反向传播函数
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
@@ -59,6 +59,7 @@ def contract_classification_train():
         # 所有经过训练的contract的数量。
         total = 0
         for index, train in enumerate(train_loader):
+            train = train.to(config.device)
             optimizer.zero_grad()
             # 这里的predict是代表每一个合约是否含有漏洞，注意，返回的顺序需要和built_vector_dataset中的内容一致。
             predict, stand = model(train)
@@ -77,9 +78,10 @@ def contract_classification_train():
     # 开始验证集部分。
     model.eval()
     test_loader = DataLoader(dataset=test_dataset, batch_size=1)
-    test_all_predict_labels = torch.tensor([])
-    test_all_stand_labels = torch.tensor([])
+    test_all_predict_labels = torch.tensor([]).to(config.device)
+    test_all_stand_labels = torch.tensor([]).to(config.device)
     for index, test in enumerate(test_loader):
+        test = test.to(config.device)
         predict, stand = model(test)
         predict[predict > 0.5] = 1
         predict[predict <= 0.5] = 0

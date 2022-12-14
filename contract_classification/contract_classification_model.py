@@ -29,11 +29,11 @@ class contract_classification_model(MessagePassing):
         x = self.RGCNconv4(x, data.edge_index, data.edge_attr)
         x = self.relu(x)
         # 在这里根据合约的包含范围，对batch进行操作，然后找到需要返回的结果，同时需要用线性层继续学习一下。
-        res = torch.tensor([])
-        stand = torch.tensor([])
+        res = torch.tensor([]).to(config.device)
+        stand = torch.tensor([]).to(config.device)
         # 依次循环遍历每一种contract
         for contract_name in data.contract_buggy_record:
-            global_tmp = torch.zeros(x[0].shape)
+            global_tmp = torch.zeros(x[0].shape).to(config.device)
             count = 0
             stand = torch.cat((stand, data.contract_buggy_record[contract_name]))
             # 针对当前遍历的contract找出所有对应的节点
