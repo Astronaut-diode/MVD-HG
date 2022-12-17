@@ -16,9 +16,11 @@ from classification_of_documents import classification_of_documents
 from tqdm import tqdm
 from make_timestamp_attack_label import make_timestamp_attack_label
 from hash_code import has_equal_hash
+from merge import merge
 from load_model_to_predict import load_model_to_predict
 from line_classification.line_classification_train import line_classification_train
 from contract_classification.contract_classification_train import contract_classification_train
+from create_code_snippet import create_code_snippet
 import datetime
 import config
 import utils
@@ -103,6 +105,10 @@ if __name__ == '__main__':
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
                         utils.error(f"{now_dir}/{ast_json_file_name}{e}")
                         continue
+                    # 如果是数据增强，那么就进行数据增强，增强完成以后，跳过后续的所有的操作。
+                    if config.data_augmentation:
+                        merge(f"{now_dir}/{ast_json_file_name}", project_node_list, project_node_dict)
+                        continue
                     try:
                         # 判断文件中是否含有漏洞。
                         # 一次性检测多种漏洞，后面自己处理一下文件即可，这样就不用跑三趟了。
@@ -151,6 +157,10 @@ if __name__ == '__main__':
                     # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
                     built_corpus_bfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
                     built_corpus_dfs(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
+                    # 根据上面创建好的异构图，生成代码片段
+                    if config.create_code_snippet:
+                        create_code_snippet(project_node_list=project_node_list, project_node_dict=project_node_dict, snippet_file_name=f"{now_dir}/{ast_json_file_name}")
+                        continue
                     # 创建数据集
                     built_vector_dataset(project_node_list=project_node_list, file_name=f"{now_dir}/{ast_json_file_name}", word2vec_model=word2vec_model)
                     # 打印树的样子。
@@ -160,7 +170,8 @@ if __name__ == '__main__':
             if config.frozen == "frozen" and os.path.exists(data_sol_source_project_dir_path):
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
-        if config.create_corpus_mode == "create_corpus_txt":
+        # 如果是为了数据增强，那么就不需要文件生成了。
+        if config.create_corpus_mode == "create_corpus_txt" and config.data_augmentation is False:
             # 需要标签文件和语言库文件都在才能处理。
             if os.path.exists(config.idx_to_label_file) and os.path.exists(config.corpus_txt_path):
                 # 同时，处理将这些漏洞文件处理一下，保存到不同文件夹中，方便下一次使用。
@@ -235,19 +246,19 @@ if __name__ == '__main__':
             for r in res:
                 for index, content in enumerate(r):
                     if type(content) == datetime.timedelta:
-                        write_file.write("%.2f " % content.total_seconds())
+                        write_file.write("%.4f " % content.total_seconds())
                     elif type(content) == torch.Tensor:
-                        write_file.write("%.2f " % content.item())
+                        write_file.write("%.4f " % content.item())
                     else:
-                        write_file.write("%.2f " % content)
+                        write_file.write("%.4f " % content)
                 write_file.write("\n")
             for index, content in enumerate(ans):
                 if type(content) == datetime.timedelta:
-                    write_file.write("%.2f " % content.total_seconds())
+                    write_file.write("%.4f " % content.total_seconds())
                 elif type(content) == torch.Tensor:
-                    write_file.write("%.2f " % content.item())
+                    write_file.write("%.4f " % content.item())
                 else:
-                    write_file.write("%.2f " % content)
+                    write_file.write("%.4f " % content)
             write_file.write("\n")
     elif config.run_mode == "contract_classification_train":
         res = []
@@ -285,19 +296,19 @@ if __name__ == '__main__':
             for r in res:
                 for index, content in enumerate(r):
                     if type(content) == datetime.timedelta:
-                        write_file.write("%.2f " % content.total_seconds())
+                        write_file.write("%.4f " % content.total_seconds())
                     elif type(content) == torch.Tensor:
-                        write_file.write("%.2f " % content.item())
+                        write_file.write("%.4f " % content.item())
                     else:
-                        write_file.write("%.2f " % content)
+                        write_file.write("%.4f " % content)
                 write_file.write("\n")
             for index, content in enumerate(ans):
                 if type(content) == datetime.timedelta:
-                    write_file.write("%.2f " % content.total_seconds())
+                    write_file.write("%.4f " % content.total_seconds())
                 elif type(content) == torch.Tensor:
-                    write_file.write("%.2f " % content.item())
+                    write_file.write("%.4f " % content.item())
                 else:
-                    write_file.write("%.2f " % content)
+                    write_file.write("%.4f " % content)
     elif config.run_mode == "predict":
         # 保存模型的文件夹
         utils.dir_exists(config.model_data_dir)
