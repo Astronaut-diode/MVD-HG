@@ -34,6 +34,11 @@ parser.add_argument('--data_dir_name', type=str,
 # attack_type_name:专门要操作的漏洞的类型的名字。
 parser.add_argument('--attack_type_name', type=str,
                     help="本次要操作的漏洞的类型，专门只操作这种漏洞。")
+# create_code_snippet:创建合约的片段的触发器
+parser.add_argument('--create_code_snippet', action='store_true',
+                    help="本次操作是否是用来创建合约的片段的")
+parser.add_argument('--data_augmentation', action='store_true',
+                    help="本次操作是否是用来拓展数据集的")
 # 下面更新config配置
 args = parser.parse_args()
 # ========================= 运行模式 =========================
@@ -48,9 +53,14 @@ create_corpus_mode = args.create_corpus_mode
 # 如果create_corpus_mode的模式是generate_all,这里会影响到built_vector_dataset中读取的json文件是哪些。
 train_mode = args.train_mode
 # frozen,不删除之前的运行结果，而且运行结束的源文件会被移到success文件夹中。
+# not frozen:运行结束的话，sol文件也一直放在原始的sol_source文件中，方便测试
 frozen = "frozen"
 # 专门操作的漏洞类型。
 attack_type_name = args.attack_type_name
+# 创建合约的片段的触发器
+create_code_snippet = args.create_code_snippet
+# 判断当前运行程序的目的是不是用来数据增强的
+data_augmentation = args.data_augmentation
 # ========================= 运行模式 =========================
 # ========================= 文件夹路径 =========================
 # 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
@@ -62,6 +72,8 @@ data_ast_json_dir_path = f"{data_dir_path}/AST_json"
 data_complete_dir_path = f"{data_dir_path}/complete"
 data_raw_dir_path = f"{data_dir_path}/raw"
 data_process_dir_path = f"{data_dir_path}/processed"
+# 片段代码库文件
+code_snippet_library_path = f"{root_dir}/code_snippet_library"
 # 文件hash值的保存位置。
 hash_to_file = f"{data_dir_path}/hash_to_file.json"
 # 标签文件的保存地址，这是加工之前的保存位置。这时候保存的内容比较粗糙,其中保存的格式是{"0": 0, "1": 0, "2": 1}。
@@ -195,3 +207,7 @@ make_arithmetic_attack_label_max_time = 40
 tqdm_ncols = 100
 table_width = 120
 # ========================= 输出配置 =========================
+# ========================= 代码片段的配置 ==============================
+# 每一份的clean文件用来创建多少个代码片段。
+code_snippet_number = 5
+# ========================= 代码片段的配置 ==============================
