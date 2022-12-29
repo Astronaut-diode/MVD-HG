@@ -21,6 +21,7 @@ from load_model_to_predict import load_model_to_predict
 from line_classification.line_classification_train import line_classification_train
 from contract_classification.contract_classification_train import contract_classification_train
 from create_code_snippet import create_code_snippet
+from remove_blank import remove_blank_line
 import datetime
 import config
 import utils
@@ -61,6 +62,8 @@ if __name__ == '__main__':
             data_ast_json_project_dir_path = f'{config.data_ast_json_dir_path}/{project_name}'
             # 删除对应sol_source下工程文件夹中的注释。
             remove_comments(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
+            # 删除每一个源文件中的空白行，这只是会给训练带来压力。
+            remove_blank_line(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
             # 如果已经存在了相同的hash值，那就删除当前的工程文件夹，同时跳过后续处理。
             if has_equal_hash(dir_path=data_sol_source_project_dir_path):
                 shutil.rmtree(data_sol_source_project_dir_path)
@@ -167,11 +170,11 @@ if __name__ == '__main__':
                     generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
             # 如果是冻结模式，直接移动文件到complete文件夹中，代表这个文件下次运行不用操作。这里还是移动文件夹好了，如果移动文件，其中的引用文件被挪走会出事的。
             # 同时还要判断文件夹的是否存在的特性，因为上面的循环可能会删除文件。
-            if config.frozen == "frozen" and os.path.exists(data_sol_source_project_dir_path):
+            if config.frozen == "frozen" and os.path.exists(data_sol_source_project_dir_path) and not config.data_augmentation and config.create_code_snippet is False:
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
         # 如果是为了数据增强，那么就不需要文件生成了。
-        if config.create_corpus_mode == "create_corpus_txt" and config.data_augmentation is False:
+        if config.create_corpus_mode == "create_corpus_txt" and config.data_augmentation is False and config.create_code_snippet is False:
             # 需要标签文件和语言库文件都在才能处理。
             if os.path.exists(config.idx_to_label_file) and os.path.exists(config.corpus_txt_path):
                 # 同时，处理将这些漏洞文件处理一下，保存到不同文件夹中，方便下一次使用。
