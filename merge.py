@@ -4,6 +4,7 @@ import config
 import json
 import random
 import re
+import shutil
 
 
 # path：目标文件所在的位置
@@ -13,7 +14,7 @@ def merge(path, project_node_list, project_node_dict):
     insert_position = random_choose_insert_line(path)
     # 获取当前文件使用哪个版本进行编译
     versions = get_file_version(path)[0]
-    for ite in range(5):
+    for ite in range(10):
         find_flag = False
         for version in versions:
             # 判断对应的版本库中是否存在已经创建好的代码片段
@@ -53,6 +54,9 @@ def merge(path, project_node_list, project_node_dict):
         # 说明当前轮次没有找到合理的插入方式，那后面也不可能有了
         if not find_flag:
             break
+    # 此时应该将所有的tmp_dir中的内容移到原始的目录当中去。
+    for dir_name in os.listdir(f"{config.data_dir_path}/tmp_dir/"):
+        shutil.move(f"{config.data_dir_path}/tmp_dir/{dir_name}", f"{config.data_sol_source_dir_path}/")
 
 
 # 读取目标文件的行级标签，判断应该将新的内容插入到哪一行的位置上。
@@ -433,4 +437,3 @@ def change_label_info(diff_line, target_file_path, origin_file_path, snippet_fil
         json.dump(origin_contract_content, update_contract_file_handle)
         update_contract_file_handle.close()
     snippet_code_contract_name_file.close()
-
