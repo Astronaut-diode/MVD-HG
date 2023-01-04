@@ -24,6 +24,9 @@ def merge(path, project_node_list, project_node_dict):
                 snippet_file_path = f"{config.code_snippet_library_path}/{version}/" + snippet_file_list[random.randint(0, len(snippet_file_list) - 1)]
                 # 开始合并文件
                 target_file_path, diff_line = merge_file(origin_file_path=path, snippet_file_path=snippet_file_path, insert_position=insert_position, project_node_list=project_node_list, project_node_dict=project_node_dict)
+                # 直接break，因为这种文件大概率是行标记错误了。
+                if target_file_path is None and diff_line is None:
+                    continue
                 # 看看这个文件使用这个版本的编译器是否可以编译通过，如果编译可以通过，那么说明生成的文件是合理的。
                 # 使用对应版本的编译器编译目标文件
                 cmd = config.compile_dir_path + "solc-" + version + " " + target_file_path + " --combined-json ast --allow-paths " + target_file_path + " --ast-compact-json"
@@ -55,6 +58,7 @@ def merge(path, project_node_list, project_node_dict):
         if not find_flag:
             break
     # 此时应该将所有的tmp_dir中的内容移到原始的目录当中去。
+    utils.dir_exists(f"{config.data_dir_path}/tmp_dir/")
     for dir_name in os.listdir(f"{config.data_dir_path}/tmp_dir/"):
         shutil.move(f"{config.data_dir_path}/tmp_dir/{dir_name}", f"{config.data_sol_source_dir_path}/")
 
@@ -84,8 +88,9 @@ def random_choose_insert_line(path, attack_type=config.attack_type_name):
         else:
             # 这种情况一般都是带有函数头和函数结尾的
             if len(tmp) > 2:
-                for t in tmp[1: -2]:
-                    random_vulnerable_lines.append(t)
+                # for t in tmp[1: -2]:
+                #     random_vulnerable_lines.append(t)
+                random_vulnerable_lines.append(tmp[-2])
             # 这就代表curated中的漏洞标签了。
             else:
                 for t in tmp:
@@ -242,6 +247,8 @@ def merge_file(origin_file_path, snippet_file_path, insert_position, project_nod
     # 查询到插入行属于哪个函数以及哪个合约
     function_end_line = -1
     function_line, contract_line = get_function_and_contract_msg_from_line(project_node_list, insert_position, project_node_dict)
+    if function_line == -1 or contract_line == -1:
+        return None, None
     # 将生成的文件先放到tmp_dir中，因为这样子可以避免修改sol_source文件夹中的内容，这段代码还在循环中，如果修改了不太合适。
     dir_path = origin_file_path[:origin_file_path.rfind("/")] + "/" + origin_file_path[origin_file_path.rfind("/") + 1:].replace(".sol", "") + snippet_file_path[snippet_file_path.rfind("/") + 1:]
     target_file_path = dir_path.replace("sol_source/", "tmp_dir/")
@@ -262,6 +269,8 @@ def merge_file(origin_file_path, snippet_file_path, insert_position, project_nod
         # 判断是否已经读入过了左括号
         already_flag = False
         while True:
+            if function_end_line == len(origin_lines):
+                return None, None
             if origin_lines[function_end_line].__contains__("{"):
                 already_flag = True
                 embrace_count += 1
@@ -384,7 +393,8 @@ def get_function_and_contract_msg_from_line(project_node_list, line_number, proj
             for contract_definition_node in project_node_dict["ContractDefinition"]:
                 if contract_definition_node.node_type == "ContractDefinition" and contract_definition_node.attribute["name"][0] == contract_name:
                     contract_line = contract_definition_node.owner_line
-            return [function_line, contract_line]
+            return function_line, contract_line
+    return -1, -1
 
 
 # 根据diff_line更新行级标签。
