@@ -66,8 +66,8 @@ def find_all_function_definition_node_not_library(project_node_dict):
                     if next_step.node_type == "ModifierDefinition":
                         has_modifier_definition_flag = True
                         break
-                if function_definition_node.attribute["method_name"][0] == "constructor" or ("isConstructor" in function_definition_node.attribute.keys() and function_definition_node.attribute["isConstructor"]) or not function_definition_node.attribute["implemented"][0] or function_definition_node.owner_contract == "SafeMath" or len(function_definition_node.attribute["src_code"][0]) < 150 or ("superFunction" in function_definition_node.attribute.keys() and function_definition_node.attribute["superFunction"][0] is not None):
-                    continue
+                if function_definition_node.attribute["method_name"][0] == "constructor" or ("isConstructor" in function_definition_node.attribute.keys() and function_definition_node.attribute["isConstructor"]) or not function_definition_node.attribute["implemented"][0] or function_definition_node.owner_contract == "SafeMath" or len(function_definition_node.attribute["src_code"][0]) < 20 or ("superFunction" in function_definition_node.attribute.keys() and function_definition_node.attribute["superFunction"][0] is not None):
+                    pass
                 # 如果含有实现的部分，而且还没有修饰符的部分，记录为可以制作为代码片段的部分。
                 if not has_modifier_definition_flag:
                     normal_function_definition.append(function_definition_node)
