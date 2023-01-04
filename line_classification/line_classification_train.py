@@ -47,11 +47,16 @@ def line_classification_train():
     train_loader = DataLoader(dataset=train_dataset, batch_size=1)
     # 创建优化器和反向传播函数。
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+    # 学习率优化器
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.learning_change_epoch, gamma=config.learning_change_gamma, last_epoch=-1)
     criterion = torch.nn.BCELoss()
     train_start_time = datetime.datetime.now()
     line_train_all_predicts = torch.tensor([]).to(config.device)
     line_train_all_labels = torch.tensor([]).to(config.device)
+    train_total_loss_list = []
     for epoch in range(config.epoch_size):
+        # 更新学习率
+        scheduler.step()
         # 开始训练的信号,进行训练集上的计算
         model.train()
         # 当前这一轮epoch的总损失值
@@ -70,8 +75,26 @@ def line_classification_train():
             # 计算训练时刻行级别的准确率以及损失值。
             train_total_loss += loss.item()
             count += len(train)
-        utils.tip(f"epoch{epoch + 1}.结束，一共训练了{count}张图, 总损失值为: {train_total_loss}")
+        utils.tip(f"epoch{epoch + 1}.结束，一共训练了{count}张图, 总损失值为: {train_total_loss}，学习率为:{optimizer.state_dict()['param_groups'][0]['lr']}")
+        # 判断是不是梯度消失了，如果确定，那么就结束本次重新开始
+        train_total_loss_list.append(train_total_loss)
+        if len(train_total_loss_list) > 2:
+            # 平均每张图的损失达到了0.3或者恒定大于50，并且变化率极小的时候，直接重开。
+            if (train_total_loss_list[-3] > config.exception_for_graph_per * count and train_total_loss_list[-2] > config.exception_for_graph_per * count and train_total_loss_list[-1] > config.exception_for_graph_per * count) or (train_total_loss_list[-3] > config.exception_for_graph_abs and train_total_loss_list[-2] > config.exception_for_graph_abs and train_total_loss_list[-1] > config.exception_for_graph_abs):
+                a = train_total_loss_list[-3]
+                b = train_total_loss_list[-2]
+                diff1 = abs(a - b)
+                c = train_total_loss_list[-1]
+                diff2 = abs(b - c)
+                diff_threshold1 = diff1 / b
+                diff_threshold2 = diff2 / c
+                if diff_threshold1 < config.disappear_threshold and diff_threshold2 < config.disappear_threshold:
+                    utils.error("本次训练梯度消失，准备开始重新当前次实验。")
+                    return [math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan]
     # 根据所有epoch的训练结果，求出最优的异常阈值，待会给验证集使用。
+    # 暂时转换为cpu上的不然gpu会oom
+    line_train_all_predicts = line_train_all_predicts.to("cpu")
+    line_train_all_labels = line_train_all_labels.to("cpu")
     config.threshold = get_best_metric(line_train_all_predicts, line_train_all_labels, "所有epoch的结果放在一起计算最优的阈值")["probability"]
     train_end_time = datetime.datetime.now()
     eval_start_time = datetime.datetime.now()
