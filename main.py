@@ -63,7 +63,8 @@ if __name__ == '__main__':
             # 删除对应sol_source下工程文件夹中的注释。
             remove_comments(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
             # 删除每一个源文件中的空白行，这只是会给训练带来压力。
-            remove_blank_line(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
+            # 暂时不删除了，慢就慢，效果第一。
+            # remove_blank_line(data_sol_source_project_dir_path=data_sol_source_project_dir_path)
             # 如果已经存在了相同的hash值，那就删除当前的工程文件夹，同时跳过后续处理。
             if has_equal_hash(dir_path=data_sol_source_project_dir_path):
                 shutil.rmtree(data_sol_source_project_dir_path)
@@ -222,14 +223,16 @@ if __name__ == '__main__':
                 elif type(content) == torch.Tensor:
                     if math.isnan(content.item()):
                         flag = True
+                        break
                 else:
                     if math.isnan(content):
                         flag = True
+                        break
             # 如果f1的分数过低，同样也不计入结果，重新进行计算。
             if flag:
                 utils.error(f"原始结果为:{tmp},第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
                 i -= 1
-            elif tmp[3].item() < 0.8:
+            elif tmp[3].item() < 0.6:
                 utils.tip(tmp)
                 utils.error(f"原始结果为:{tmp},第{i}趟中结果过低，重新进行计算，不计入最终结果。")
                 i -= 1
