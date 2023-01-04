@@ -39,6 +39,7 @@ parser.add_argument('--create_code_snippet', action='store_true',
                     help="本次操作是否是用来创建合约的片段的")
 parser.add_argument('--data_augmentation', action='store_true',
                     help="本次操作是否是用来拓展数据集的")
+parser.add_argument('--gpu_id', default=0, type=int, help="本次操作的gpu用哪个")
 # 下面更新config配置
 args = parser.parse_args()
 # ========================= 运行模式 =========================
@@ -61,6 +62,8 @@ attack_type_name = args.attack_type_name
 create_code_snippet = args.create_code_snippet
 # 判断当前运行程序的目的是不是用来数据增强的
 data_augmentation = args.data_augmentation
+# 本次使用的gpu_id
+gpu_id = args.gpu_id
 # ========================= 运行模式 =========================
 # ========================= 文件夹路径 =========================
 # 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
@@ -156,7 +159,7 @@ color_dict = {"SourceUnit": "#ddd02f",
 ignore_list = ["ElementaryTypeName", "Assignment", "Literal", "VariableDeclaration", "Identifier", "UnaryOperation"]
 # ========================= 图可视化配置 =========================
 # ========================= 模型和度量标准配置 =========================
-device = torch.device("cuda:0")
+device = torch.device(f"cuda:{gpu_id}")
 # 使用的gpu设备
 average_num = 20
 # 开几个线程进行计算。
@@ -171,6 +174,16 @@ classes = 3
 batch_size = 64
 # 学习率
 learning_rate = 0.005
+# 学习率更新epoch
+learning_change_epoch = 10
+# 学习率更新的倍率
+learning_change_gamma = 0.5
+# 梯度消失的阈值
+disappear_threshold = 0.01
+# 异常损失的绝对值
+exception_for_graph_abs = 50
+# 异常损失对图数量比例
+exception_for_graph_per = 0.3
 # 世代数量
 epoch_size = 50
 # K折交叉验证的数量。
