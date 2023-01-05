@@ -63,17 +63,29 @@ def line_classification_train():
         train_total_loss = 0.0
         # 截至目前已经训练过的图的张数。
         count = 0
+        predict_batch = torch.tensor([]).to(config.device)
+        stand_batch = torch.tensor([]).to(config.device)
         for index, train in enumerate(train_loader):
             train = train.to(config.device)
             optimizer.zero_grad()
             predict, stand = model(train)
             line_train_all_predicts = torch.cat((line_train_all_predicts, predict), dim=0)
             line_train_all_labels = torch.cat((line_train_all_labels, stand.view(-1, 1)), dim=0)
-            loss = criterion(predict, stand.view(predict.shape).to(torch.float32))
-            loss.backward()
-            optimizer.step()
-            # 计算训练时刻行级别的准确率以及损失值。
-            train_total_loss += loss.item()
+            predict_batch = torch.cat((predict_batch, predict), dim=0)
+            stand_batch = torch.cat((stand_batch, stand.view(-1, 1)), dim=0)
+            if (index + 1) % config.batch_size == 0 or index + 1 == len(train_loader):
+                loss = criterion(predict_batch, stand_batch.view(predict_batch.shape).to(torch.float32))
+                predict_batch = torch.tensor([]).to(config.device)
+                stand_batch = torch.tensor([]).to(config.device)
+                loss.backward()
+                optimizer.step()
+                # 计算训练时刻行级别的准确率以及损失值。
+                train_total_loss += loss.item()
+            # loss = criterion(predict, stand.view(predict.shape).to(torch.float32))
+            # loss.backward()
+            # optimizer.step()
+            # # 计算训练时刻行级别的准确率以及损失值。
+            # train_total_loss += loss.item()
             count += len(train)
         utils.tip(f"epoch{epoch + 1}.结束，一共训练了{count}张图, 总损失值为: {train_total_loss}，学习率为:{optimizer.state_dict()['param_groups'][0]['lr']}")
         # 判断是不是梯度消失了，如果确定，那么就结束本次重新开始
