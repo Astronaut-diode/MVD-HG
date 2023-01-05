@@ -196,7 +196,7 @@ tensor_board_position = f"{data_dir_path}/tensorboard_logs"
 beta = 1
 epsilon = 1e-8
 # 阈值调优的时候使用的总长度，到时候计算的总类最大也只会是这个值。
-threshold_max_classes = 100
+threshold_max_classes = 2500
 # 为tensor board创建的文件名字前缀。
 start_time = datetime.datetime.now()
 # 攻击的最佳阈值
