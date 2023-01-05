@@ -171,7 +171,7 @@ num_workers = 0
 # 最终的分类数
 classes = 3
 # 批处理数量
-batch_size = 64
+batch_size = 32
 # 学习率
 learning_rate = 0.005
 # 学习率更新epoch
