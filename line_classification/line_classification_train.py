@@ -11,6 +11,7 @@ import os
 import math
 import torch
 import utils
+import gc
 
 
 def line_classification_train():
@@ -108,8 +109,14 @@ def line_classification_train():
                     if diff_threshold1 < config.disappear_threshold and diff_threshold2 < config.disappear_threshold:
                         utils.error("本次训练梯度消失，准备开始重新当前次实验。")
                         return [math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan]
+        # 转化为cpu，这样gpu就不会上升了，但是速度会慢一些，不过效果好。
+        line_train_all_predicts = line_train_all_predicts.to("cpu")
+        line_train_all_labels = line_train_all_labels.to("cpu")
         # 根据最后一次epoch的训练结果，求出最优的异常阈值，待会给验证集使用。
         config.threshold = get_best_metric(line_train_all_predicts, line_train_all_labels, "根据最后一次epoch的结果放在一起计算最优的阈值")["probability"]
+        # 释放cpu
+        del line_train_all_predicts, line_train_all_labels
+        gc.collect()
         train_end_time = datetime.datetime.now()
         eval_start_time = datetime.datetime.now()
         # 验证部分
@@ -196,7 +203,8 @@ def get_best_metric(predict, label, msg):
     # 取出所有的不同的概率，然后将概率转换为0和1的predict_matrix矩阵,注意，如果种类太多，会导致GPU都存不下，所以需要少取一些，这里取步长为100好了。
     unique_probability = torch.unique(predict).reshape(-1, 1)
     # 通过步长重新选取，免得取得太多了，内存爆炸。
-    unique_probability = unique_probability[::math.ceil(len(unique_probability) / config.threshold_max_classes)]
+    unique_probability = unique_probability[::4]
+    # unique_probability = unique_probability[::math.ceil(len(unique_probability) / config.threshold_max_classes)]
     predict_matrix = (predict.view(1, -1) >= unique_probability.view(-1, 1)).add(0)
     label = label.T
     # 根据标签矩阵和预测矩阵，求出四个基础标签。
@@ -227,4 +235,7 @@ def get_best_metric(predict, label, msg):
     table.add_row(["Recall", best_res['recall']])
     table.add_row(["F-score", best_res['f_score']])
     utils.tqdm_write(table)
+    # 删除所有用到的变量
+    del tp, fp, tn, fn, unique_probability, predict_matrix, best_sample_index
+    gc.collect()
     return best_res
