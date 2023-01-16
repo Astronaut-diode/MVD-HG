@@ -48,7 +48,7 @@ def line_classification_train():
         # 这里就直接定死batch_size设置为1，反正数据集也很小，不需要特殊处理。
         train_loader = DataLoader(dataset=train_dataset, batch_size=1)
         # 创建优化器和反向传播函数。
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+        optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate, weight_decay=0.005)
         # 学习率优化器
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.learning_change_epoch, gamma=config.learning_change_gamma, last_epoch=-1)
         criterion = torch.nn.BCELoss()

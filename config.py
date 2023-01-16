@@ -173,17 +173,17 @@ classes = 3
 # 批处理数量
 batch_size = 32
 # 学习率
-learning_rate = 0.005
+learning_rate = 0.01
 # 学习率更新epoch
-learning_change_epoch = 10
+learning_change_epoch = 17
 # 学习率更新的倍率
-learning_change_gamma = 0.5
+learning_change_gamma = 0.75
 # 梯度消失的阈值
 disappear_threshold = 0.01
 # 异常损失的绝对值
 exception_for_graph_abs = 50
 # 异常损失对图数量比例
-exception_for_graph_per = 0.3
+exception_for_graph_per = 1
 # 世代数量
 epoch_size = 50
 # K折交叉验证的数量。

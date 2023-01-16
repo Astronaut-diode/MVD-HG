@@ -39,9 +39,16 @@ class line_classification_model(MessagePassing):
             for index, ite in enumerate(data.owner_line[0]):
                 # 如果名字匹配，那么index就说明找到目标节点了。
                 # 兼容下上下两行的内容
-                if ite in [line, line + 1, line - 1]:
+                # 为了提高uncheck的精度，直接改成目标行。
+                if ite in [line]:
                     global_tmp += x[index]
                     count += 1
+                if ite in [line + 1]:
+                    global_tmp += x[index] * 0.5
+                    count += 0.5
+                if ite in [line]:
+                    global_tmp += x[index] * 0.5
+                    count += 0.5
             if count == 0:
                 res = torch.cat((res, global_tmp.view(1, -1)), dim=0)
             else:
