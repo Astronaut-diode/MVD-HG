@@ -48,7 +48,7 @@ def line_classification_train():
         # 这里就直接定死batch_size设置为1，反正数据集也很小，不需要特殊处理。
         train_loader = DataLoader(dataset=train_dataset, batch_size=1)
         # 创建优化器和反向传播函数。
-        optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate, weight_decay=0.005)
+        optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
         # 学习率优化器
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.learning_change_epoch, gamma=config.learning_change_gamma, last_epoch=-1)
         criterion = torch.nn.BCELoss()
@@ -97,8 +97,8 @@ def line_classification_train():
             # 判断是不是梯度消失了，如果确定，那么就结束本次重新开始
             train_total_loss_list.append(train_total_loss)
             if len(train_total_loss_list) > 2:
-                # 平均每张图的损失达到了0.3或者恒定大于50，并且变化率极小的时候，直接重开。
-                if (train_total_loss_list[-3] > config.exception_for_graph_per * count and train_total_loss_list[-2] > config.exception_for_graph_per * count and train_total_loss_list[-1] > config.exception_for_graph_per * count) or (train_total_loss_list[-3] > config.exception_for_graph_abs and train_total_loss_list[-2] > config.exception_for_graph_abs and train_total_loss_list[-1] > config.exception_for_graph_abs):
+                # 平均每张图的损失达到了0.3并且恒定大于50，并且变化率极小的时候，直接重开。
+                if (train_total_loss_list[-3] > config.exception_for_graph_per * count and train_total_loss_list[-2] > config.exception_for_graph_per * count and train_total_loss_list[-1] > config.exception_for_graph_per * count) and (train_total_loss_list[-3] > config.exception_for_graph_abs and train_total_loss_list[-2] > config.exception_for_graph_abs and train_total_loss_list[-1] > config.exception_for_graph_abs):
                     a = train_total_loss_list[-3]
                     b = train_total_loss_list[-2]
                     diff1 = abs(a - b)
@@ -107,8 +107,9 @@ def line_classification_train():
                     diff_threshold1 = diff1 / b
                     diff_threshold2 = diff2 / c
                     if diff_threshold1 < config.disappear_threshold and diff_threshold2 < config.disappear_threshold:
-                        utils.error("本次训练梯度消失，准备开始重新当前次实验。")
-                        return [math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan]
+                        # utils.error("本次训练梯度消失，准备开始重新当前次实验。")
+                        # return [math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan, math.nan]
+                        pass
         # 转化为cpu，这样gpu就不会上升了，但是速度会慢一些，不过效果好。
         line_train_all_predicts = line_train_all_predicts.to("cpu")
         line_train_all_labels = line_train_all_labels.to("cpu")

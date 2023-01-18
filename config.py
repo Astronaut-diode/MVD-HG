@@ -173,9 +173,9 @@ classes = 3
 # 批处理数量
 batch_size = 32
 # 学习率
-learning_rate = 0.01
+learning_rate = 0.005
 # 学习率更新epoch
-learning_change_epoch = 17
+learning_change_epoch = 10
 # 学习率更新的倍率
 learning_change_gamma = 0.75
 # 梯度消失的阈值
@@ -184,10 +184,16 @@ disappear_threshold = 0.01
 exception_for_graph_abs = 50
 # 异常损失对图数量比例
 exception_for_graph_per = 1
+# 防止梯度消失
+weight_decay = 0.005
+# dropout的概率
+dropout_pro = 0.3
 # 世代数量
 epoch_size = 50
 # K折交叉验证的数量。
 k_folds = 10
+# 上下文共同计算的系数
+coefficient = [0.5, 1, 0.5]
 # 模型文件的保存位置
 model_data_dir = f"{data_dir_path}/model"
 # 保存tensor board文件的位置
