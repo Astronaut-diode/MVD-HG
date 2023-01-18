@@ -149,6 +149,9 @@ def line_classification_train():
         utils.tip(f"验证图共有{len(total_dataset) - (split + 1)}张")
         # 使用最优的阈值求出对应的结果。
         optimal_list = test_score(line_test_all_predicts, line_test_all_labels, f"{config.attack_type_name}类型行级结果", config.attack_type_name)
+        torch.save({'model_params': model.state_dict(), "best_threshold": config.threshold},
+                   f'{config.model_data_dir}/{optimal_list[0].item()}_{optimal_list[1].item()}_{optimal_list[2].item()}_{optimal_list[3].item()}.pth')
+        utils.success(f"模型保存完毕,路径为{config.model_data_dir}/{optimal_list[0].item()}_{optimal_list[1].item()}_{optimal_list[2].item()}_{optimal_list[3].item()}.pth")
         return [optimal_list[0], optimal_list[1], optimal_list[2], optimal_list[3],
                 train_end_time - train_start_time, eval_end_time - eval_start_time, len(total_dataset), total_edge_number, total_node_number, len(train_dataset), len(test_dataset)]
     except Exception as e:

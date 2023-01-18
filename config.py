@@ -187,7 +187,7 @@ exception_for_graph_per = 1
 # 防止梯度消失
 weight_decay = 0.005
 # dropout的概率
-dropout_pro = 0.3
+dropout_pro = 0.1
 # 世代数量
 epoch_size = 50
 # K折交叉验证的数量。
