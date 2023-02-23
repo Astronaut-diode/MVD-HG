@@ -208,7 +208,7 @@ start_time = datetime.datetime.now()
 # 攻击的最佳阈值
 threshold = 0
 # 测试集的占比。
-test_dataset_percent = 0.1
+test_dataset_percent = 0.3
 # 用问题类型找到对应的下标。
 attack_list = ["reentry", "timestamp", "arithmetic"]
 # ========================= 模型和度量标准配置 =========================
