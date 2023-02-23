@@ -57,7 +57,7 @@ class contract_classification_model(MessagePassing):
         real_stand = 0
         for s in stand:
             real_stand = real_stand | int(s.item())
-        real_stand = torch.zeros(real_stand).to(config.device)
+        real_stand = torch.tensor([real_stand]).to(config.device)
         return real_res, real_stand
 
     def message(self, x_j: Tensor) -> Tensor:
