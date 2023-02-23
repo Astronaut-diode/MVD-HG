@@ -32,6 +32,7 @@ import sys
 import math
 
 if __name__ == '__main__':
+    # ret = []
     start = datetime.datetime.now()
     if config.run_mode == "create":
         # 先验证四个重要的文件夹是否存在，不存在则创建。
@@ -94,6 +95,12 @@ if __name__ == '__main__':
                         # 设置FunctionDefinition还有ModifierDefinition节点中的method_name还有params两个参数，方便后面设置控制流的时候的操作。
                         # 同时对所有函数节点为根的子树，设置所属函数。
                         append_method_message_by_dict(project_node_dict=project_node_dict, file_name=f"{now_dir}/{ast_json_file_name}")
+                        # for cnode in project_node_dict["ContractDefinition"]:
+                        #     contract_name = cnode.attribute['name'][0]
+                        #     file_name = cnode.owner_file[cnode.owner_file.rfind("/") + 1:]
+                        #     res = f'{file_name.replace(".sol", "")}-{contract_name}.sol'
+                        #     print(res)
+                        #     ret.append({"contract_name": f"{res}", "targets": 0})
                     except Exception as e:
                         # 发现错误，但是这里的错误并不是致命的，反正文件多，移到错误文件夹中算了。
                         utils.remove_file(file_path=f"{now_dir}/{ast_json_file_name}")
@@ -173,6 +180,10 @@ if __name__ == '__main__':
             # 同时还要判断文件夹的是否存在的特性，因为上面的循环可能会删除文件。
             if config.frozen == "frozen" and os.path.exists(data_sol_source_project_dir_path) and not config.data_augmentation and config.create_code_snippet is False:
                 shutil.move(data_sol_source_project_dir_path, config.data_complete_dir_path)
+        # import json
+        # output = open(f"/data/space_station/AST-GNN/test/contract_labels.json", 'w', encoding="utf-8")
+        # json.dump(ret, output)
+        # output.close()
         # 如果是create代表上面的循环是为了获取语料，下面训练模型。否则是update，这里不走，但是走上面的built_vector_bfs和dfs的方法。
         # 如果是为了数据增强，那么就不需要文件生成了。
         if config.create_corpus_mode == "create_corpus_txt" and config.data_augmentation is False and config.create_code_snippet is False:
