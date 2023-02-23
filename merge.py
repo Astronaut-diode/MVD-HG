@@ -42,7 +42,7 @@ def merge(path, project_node_list, project_node_dict):
                 if compile_flag and opcode is None:
                     utils.tip(f"{version}适配的代码片段存在,马上退出循环")
                     # 读取原始的行级标签的漏洞，然后对每一行进行diff_line的偏移，以更新漏洞所在的信息。
-                    change_label_info(diff_line, target_file_path, path, snippet_file_path)
+                    change_label_info(diff_line, target_file_path, path, snippet_file_path, project_node_dict)
                     # 说明是存在合理的插入方式的,下次还要插入的话就得换一个版本号了。
                     versions.remove(version)
                     find_flag = True
@@ -352,14 +352,17 @@ def merge_file(origin_file_path, snippet_file_path, insert_position, project_nod
                 break
         # 读取代码片段的部分，直到合约结束的部分
         while True:
-            line = snippet_lines[snippet_index]
-            snippet_index += 1
-            if line != "====================合约的结束符号====================\n":
-                target.write(line)
-                # 读取代码片段：记录当前的原始代码的最后一行已经偏移了多少行。
-                diff_line[-1] += 1
-            else:
-                break
+            try:
+                line = snippet_lines[snippet_index]
+                snippet_index += 1
+                if line != "====================合约的结束符号====================\n":
+                    target.write(line)
+                    # 读取代码片段：记录当前的原始代码的最后一行已经偏移了多少行。
+                    diff_line[-1] += 1
+                else:
+                    break
+            except Exception as e:
+                return None, None
         # 读取剩余所有的原始文件内容
         while origin_index < len(origin_lines):
             line = origin_lines[origin_index]
@@ -402,7 +405,7 @@ def get_function_and_contract_msg_from_line(project_node_list, line_number, proj
 # target_file_path:目标文件的全路径
 # origin_file_path:原始文件的全路径
 # snippet_file_path:代码片段文件保存在code_snippet_library里面的全路径
-def change_label_info(diff_line, target_file_path, origin_file_path, snippet_file_path):
+def change_label_info(diff_line, target_file_path, origin_file_path, snippet_file_path, project_node_dict):
     # 生成两个文件的名字
     target_file_name = target_file_path[target_file_path.rfind("/") + 1:]
     origin_file_name = origin_file_path[origin_file_path.rfind("/") + 1:]
@@ -441,6 +444,12 @@ def change_label_info(diff_line, target_file_path, origin_file_path, snippet_fil
         origin_contract_content = json.load(origin_contract_file)
         for contract in snippet_code_contract_name_json["contract_names"]:
             origin_contract_content.append({"contract_name": target_file_name.replace(".sol", "") + "-" + contract + ".sol", "targets": 0})
+        for contract_node in project_node_dict['ContractDefinition']:
+            target_label_contract_name = f"{origin_file_name.replace('.sol', '')}-{contract_node.owner_contract}.sol"
+            for c in origin_contract_content:
+                if c['contract_name'] == target_label_contract_name:
+                    origin_contract_content.append({"contract_name": target_file_name.replace(".sol", "") + "-" + contract_node.owner_contract + ".sol", "targets": c['targets']})
+                    break
         origin_contract_file.close()
         # 改写内容
         update_contract_file_handle = open(contract_file_path, 'w')

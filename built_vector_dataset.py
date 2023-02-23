@@ -74,7 +74,7 @@ def create_node_feature_json_by_contract_classification(project_node_list, raw_p
     # 保存当前源文件源代码的数组，相当于将源代码直接拆分为了['p', 'r', 'a', 'g', ...]这样子，后面直接从中间取出来就知道了节点代表的是哪条语句。
     src = []
     # 将内容进行循环遍历最终记录到上面的src的数组中。
-    with open(raw_project_dir_half_name.replace("raw", "sol_source") + ".sol", 'r') as read_file:
+    with open(raw_project_dir_half_name.replace("/raw/", "/sol_source/") + ".sol", 'r') as read_file:
         # 读取其中的字符，这样子可以实现后面的源代码对齐。
         for char in read_file.read():
             # 通过utf-8的编码格式进行编码，这样子如果遇见了中文这些汉字可以转化为三个字节，更加的适配。
