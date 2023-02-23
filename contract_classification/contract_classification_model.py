@@ -2,7 +2,7 @@
 from torch_geometric.nn import MessagePassing, GATConv, global_mean_pool, Linear, RGCNConv
 from typing import Optional
 from torch import Tensor
-from torch.nn import ReLU, Sigmoid
+from torch.nn import ReLU, Sigmoid, Dropout
 from torch_sparse import SparseTensor
 import config
 import torch
@@ -16,17 +16,22 @@ class contract_classification_model(MessagePassing):
         self.RGCNconv3 = RGCNConv(in_channels=32, out_channels=16, num_relations=3)
         self.RGCNconv4 = RGCNConv(in_channels=16, out_channels=8, num_relations=3)
         self.final_Linear = Linear(in_channels=8, out_channels=1)
+        self.dropout = Dropout(p=config.dropout_pro)
         self.relu = ReLU()
         self.sigmoid = Sigmoid()
 
     def forward(self, data):
         x = self.RGCNconv1(data.x, data.edge_index, data.edge_attr)
+        x = self.dropout(x)
         x = self.relu(x)
         x = self.RGCNconv2(x, data.edge_index, data.edge_attr)
+        x = self.dropout(x)
         x = self.relu(x)
         x = self.RGCNconv3(x, data.edge_index, data.edge_attr)
+        x = self.dropout(x)
         x = self.relu(x)
         x = self.RGCNconv4(x, data.edge_index, data.edge_attr)
+        x = self.dropout(x)
         x = self.relu(x)
         # 在这里根据合约的包含范围，对batch进行操作，然后找到需要返回的结果，同时需要用线性层继续学习一下。
         res = torch.tensor([]).to(config.device)
@@ -43,9 +48,17 @@ class contract_classification_model(MessagePassing):
                     global_tmp += x[index]
                     count += 1
             res = torch.cat((res, (global_tmp / count).view(1, -1)), dim=0)
-        res = self.final_Linear(res)
-        res = self.sigmoid(res)
-        return res, stand
+        real_res = torch.zeros(8).to(config.device)
+        for r in res:
+            real_res += r
+        real_res = real_res / stand.shape[0]
+        real_res = self.final_Linear(real_res)
+        real_res = self.sigmoid(real_res)
+        real_stand = 0
+        for s in stand:
+            real_stand = real_stand | int(s.item())
+        real_stand = torch.zeros(real_stand).to(config.device)
+        return real_res, real_stand
 
     def message(self, x_j: Tensor) -> Tensor:
         pass
