@@ -45,8 +45,11 @@ def contract_classification_train():
     model = contract_classification_model().to(config.device)
     train_loader = DataLoader(dataset=train_dataset, batch_size=1)
     # 创建优化器和反向传播函数
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+    optimizer = torch.optim.SGD(model.parameters(), lr=config.learning_rate, weight_decay=0.005)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     criterion = torch.nn.BCELoss()
+    # 学习率优化器
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, config.learning_change_epoch, gamma=config.learning_change_gamma, last_epoch=-1)
     train_start_time = datetime.datetime.now()
     line_train_all_predicts = torch.tensor([]).to(config.device)
     line_train_all_labels = torch.tensor([]).to(config.device)
@@ -61,6 +64,8 @@ def contract_classification_train():
         correct = 0
         # 所有经过训练的contract的数量。
         total = 0
+        # 更新学习率
+        scheduler.step()
         for index, train in enumerate(train_loader):
             train = train.to(config.device)
             optimizer.zero_grad()
