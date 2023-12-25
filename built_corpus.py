@@ -49,7 +49,7 @@ def built_corpus_bfs(project_node_list, file_name):
         f.close()
         utils.success(f"{file_name}语料库添加成功")
     # 如果是预测是时候，可能因为没有见过单词，所以会出错，所以要加判断。
-    elif config.create_corpus_mode == "update" or config.run_mode == "predict":
+    elif config.create_corpus_mode == "update" or config.run_mode == "predict_line" or config.run_mode == "predict_contract":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
             # 加载之前已经保存好的文件。
@@ -111,7 +111,7 @@ def built_corpus_dfs(project_node_list, file_name):
         f.close()
         utils.success(f"{file_name}语料库添加成功")
     # 如果是预测是时候，可能因为没有见过单词，所以会出错，所以要加判断。
-    elif config.create_corpus_mode == "update" or config.run_mode == "predict":
+    elif config.create_corpus_mode == "update" or config.run_mode == "predict_line" or config.run_mode == "predict_contract":
         # 将这个语料库，添加到我们的pkl文件中去
         if os.path.exists(config.corpus_file_path):
             # 加载之前已经保存好的文件。
