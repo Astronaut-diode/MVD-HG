@@ -17,7 +17,7 @@ from tqdm import tqdm
 from make_timestamp_attack_label import make_timestamp_attack_label
 from hash_code import has_equal_hash
 from merge import merge
-from load_model_to_predict import load_model_to_predict
+from load_model_to_predict import load_model_to_predict_line, load_model_to_predict_contract
 from line_classification.line_classification_train import line_classification_train
 from contract_classification.contract_classification_train import contract_classification_train
 from create_code_snippet import create_code_snippet
@@ -326,7 +326,7 @@ if __name__ == '__main__':
                     write_file.write("%.4f " % content.item())
                 else:
                     write_file.write("%.4f " % content)
-    elif config.run_mode == "predict":
+    elif config.run_mode == "predict_line":
         # 保存模型的文件夹
         utils.dir_exists(config.model_data_dir)
         # 保存预测全体内容的文件夹
@@ -337,7 +337,19 @@ if __name__ == '__main__':
         utils.dir_exists(config.wait_predict_ast_json_fold)
         # 保存智能合约转化为图结构数据的文件夹
         utils.dir_exists(config.wait_predict_data_raw_dir_path)
-        load_model_to_predict()
+        load_model_to_predict_line()
+    elif config.run_mode == "predict_contract":
+        # 保存模型的文件夹
+        utils.dir_exists(config.model_data_dir)
+        # 保存预测全体内容的文件夹
+        utils.dir_exists(config.wait_predict_fold)
+        # 保存预测原始智能合约的文件夹
+        utils.dir_exists(config.wait_predict_sol_source_fold)
+        # 保存智能合约编译后json文件的文件夹
+        utils.dir_exists(config.wait_predict_ast_json_fold)
+        # 保存智能合约转化为图结构数据的文件夹
+        utils.dir_exists(config.wait_predict_data_raw_dir_path)
+        load_model_to_predict_contract()
     end = datetime.datetime.now()
     utils.tip(f"开始时间:{start}")
     utils.tip(f"结束时间:{end}")

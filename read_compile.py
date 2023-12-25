@@ -14,7 +14,7 @@ def read_compile(now_dir, ast_json_file_name):
     full_ast_json_path = f'{now_dir}/{ast_json_file_name}'
     # 只有在create_corpus_txt的时候才需要创建临时文件
     # 预测的权力是最大的，这样子在跑预测的时候就不需要关注create_corpus_txt的模式了。
-    if config.create_corpus_mode == "create_corpus_txt" or config.run_mode == "predict":
+    if config.create_corpus_mode == "create_corpus_txt" or config.run_mode == "predict_line" or config.run_mode == "predict_contract":
         # 为这个语法树文件删除前几行，因为生成的时候前面带上了一些不必要的信息
         utils.create_file(tmp_file_name)
         with open(full_ast_json_path, 'r') as read_file, open(tmp_file_name, 'w+') as write_file:

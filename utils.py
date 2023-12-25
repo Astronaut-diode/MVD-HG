@@ -107,3 +107,9 @@ def tip(msg, end="\n"):
 
 def tqdm_write(msg):
     tqdm.write(f"\r{msg}")
+
+# 将content保存到path上，以json的格式。
+def save_json(content, path):
+    json_file = open(path, 'w')
+    json.dump(content, json_file)
+    json_file.close()

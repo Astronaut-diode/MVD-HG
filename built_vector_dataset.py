@@ -16,7 +16,7 @@ def built_vector_dataset(project_node_list, file_name, word2vec_model):
     raw_project_dir_half_name = file_name.replace("AST_json", "raw").replace(".json", "")
     # 这时候说明才存在模型，可以用来生成三个基本文件。
     # 如果是预测的时候，也需要生成对应的向量文件，用来计算结果。
-    if config.create_corpus_mode == "generate_all" or config.run_mode == "predict":
+    if config.create_corpus_mode == "generate_all" or config.run_mode == "predict_line" or config.run_mode == "predict_contract":
         if config.train_mode == "line_classification":
             # 先根据节点id进行排序。
             project_node_list.sort(key=lambda obj: obj.node_id)
