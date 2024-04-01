@@ -98,7 +98,7 @@ def create_node_feature_json_by_contract_classification(project_node_list, raw_p
                         # 将拆分以后的结果一个个的添加到向量中。
                         node_feature = node_feature + word2vec_model[s]
         # 第一规则：根据每一个节点的类型，获取他的向量化表示,同时记录下它的所属范围。
-        obj = {"node_id": id_mapping_id[node.node_id], "owner_file": node.owner_file, "owner_contract": node.owner_contract, "owner_function": node.owner_function, "owner_line": node.owner_line, "node_feature": node_feature.tolist()}
+        obj = {"node_id": id_mapping_id[node.node_id], "nodeType": node.node_type, "owner_file": node.owner_file, "owner_contract": node.owner_contract, "owner_function": node.owner_function, "owner_line": node.owner_line, "node_feature": node_feature.tolist()}
         # =============合约标签的读取=============
         origin_contract_label_file_path = f"{config.data_dir_path}/contract_labels.json"
         origin_contract_label_file_handle = open(origin_contract_label_file_path, 'r')
@@ -172,7 +172,7 @@ def create_node_feature_json(project_node_list, raw_project_dir_half_name, id_ma
                         # 将拆分以后的结果一个个的添加到向量中。
                         node_feature = node_feature + word2vec_model[s]
         # 第一规则：根据每一个节点的类型，获取他的向量化表示,同时记录下它的所属范围。
-        obj = {"node_id": id_mapping_id[node.node_id], "owner_file": node.owner_file, "owner_contract": node.owner_contract, "owner_function": node.owner_function, "owner_line": node.owner_line, "node_feature": node_feature.tolist()}
+        obj = {"node_id": id_mapping_id[node.node_id], "nodeType": node.node_type, "owner_file": node.owner_file, "owner_contract": node.owner_contract, "owner_function": node.owner_function, "owner_line": node.owner_line, "node_feature": node_feature.tolist()}
         # =============合约和行标签的读取=============
         origin_contract_label_file_path = f"{config.data_dir_path}/contract_labels.json"
         origin_contract_label_file_handle = open(origin_contract_label_file_path, 'r')

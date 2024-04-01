@@ -1,3 +1,5 @@
+import json
+
 from gensim.models.word2vec import Word2Vec
 from remove_comments import remove_comments
 from compile_files import compile_files
@@ -32,6 +34,8 @@ def load_model_to_predict_line():
         if score > max_score:
             max_score = score
             max_mode_file = model_file
+    import datetime
+    b1 = datetime.datetime.now()
     model = line_classification_model_for_predict()
     # 加载原始保存的参数
     model_params_dict = torch.load(os.path.join(config.model_data_dir, max_mode_file))
@@ -43,12 +47,22 @@ def load_model_to_predict_line():
     dangerous_count = 0
     safe_count = 0
     exception_count = 0
+    detect_res = f"{config.wait_predict_fold}/res_line.json"
     res_list = []
+    if os.path.exists(detect_res):  # 如果文件存在，读取一下
+        with open(detect_res, 'r') as res:
+            res_list = json.load(res)
+    e1 = datetime.datetime.now()
+    utils.tip(f"加载模型一共耗时:{e1 - b1}")
     # 遍历wait_pre下的
     for project_name in tqdm(os.listdir(config.wait_predict_sol_source_fold)):
+        if not project_name == config.target_dir:
+            continue
         # wait_predict/sol_source/下面所有的工程文件夹
         sol_source_project_dir_path = f'{config.wait_predict_sol_source_fold}/{project_name}'
         ast_json_project_dir_path = f'{config.wait_predict_ast_json_fold}/{project_name}'
+        import datetime
+        b2 = datetime.datetime.now()
         # 删除源文件中的注释
         remove_comments(data_sol_source_project_dir_path=sol_source_project_dir_path)
         # 编译sol_source下工程文件夹内所有的文件,同时在AST_json中生成对应的文件夹，如果发现编译失败，删除对应的源文件。
@@ -56,8 +70,12 @@ def load_model_to_predict_line():
                       data_ast_json_project_dir_path=ast_json_project_dir_path)
         # 遍历这个json文件的文件夹，取出其中所有的子文件夹
         for now_dir, child_dirs, child_files in os.walk(ast_json_project_dir_path):
+            if not now_dir.endswith(config.target_dir):
+                continue
             # 遍历工程项目中的每一个文件
             for ast_json_file_name in child_files:
+                if not ast_json_file_name == config.target_file.replace(".sol", ".json"):
+                    continue
                 try:
                     # 读取刚刚记录下来的抽象语法树的json文件
                     project_node_list, project_node_dict = read_compile(now_dir=now_dir,
@@ -105,6 +123,8 @@ def load_model_to_predict_line():
                         # 传入所有的节点信息，生成数据流边的边文件。
                         create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
                         utils.success(f"{file_name}节点和边文件已经构建完毕。")
+                        e2 = datetime.datetime.now()
+                        utils.tip(f"构建基础文件一共耗时:{e2 - b2}")
                     except Exception as e:
                         utils.error(f"{e}需要先更新词表")
                         # 为当前这个工程文件夹中所有的文件构建语料库，如果还有下一个文件，到时候再加进去。
@@ -146,6 +166,8 @@ def load_model_to_predict_line():
                         # 传入所有的节点信息，生成数据流边的边文件。
                         create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
                         utils.success(f"{file_name}节点和边文件已经构建完毕。")
+                        e2 = datetime.datetime.now()
+                        utils.tip(f"构建基础文件一共耗时:{e2 - b2}")
                     # 打印树的样子。
                     generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
 
@@ -307,12 +329,15 @@ class line_classification_model_for_predict(MessagePassing):
 def load_model_to_predict_contract():
     # 挑选出最优秀的模型
     max_score = 0
+    print(config.model_data_dir)
     max_mode_file = os.listdir(config.model_data_dir)[0]
     for model_file in os.listdir(config.model_data_dir):
         score = float(model_file.replace(".pth", "").split("_")[3])
         if score > max_score:
             max_score = score
             max_mode_file = model_file
+    import datetime
+    b1 = datetime.datetime.now()
     model = contract_classification_model_for_predict()
     # 加载原始保存的参数
     model_params_dict = torch.load(os.path.join(config.model_data_dir, max_mode_file))
@@ -324,12 +349,22 @@ def load_model_to_predict_contract():
     dangerous_count = 0
     safe_count = 0
     exception_count = 0
+    detect_res = f"{config.wait_predict_fold}/res_contract.json"
     res_list = []
+    if os.path.exists(detect_res):  # 如果文件存在，读取一下
+        with open(detect_res, 'r') as res:
+            res_list = json.load(res)
+    e1 = datetime.datetime.now()
+    utils.tip(f"加载模型一共耗时:{e1 - b1}")
     # 遍历wait_pre下的
     for project_name in tqdm(os.listdir(config.wait_predict_sol_source_fold)):
+        if not project_name == config.target_dir:
+            continue
         # wait_predict/sol_source/下面所有的工程文件夹
         sol_source_project_dir_path = f'{config.wait_predict_sol_source_fold}/{project_name}'
         ast_json_project_dir_path = f'{config.wait_predict_ast_json_fold}/{project_name}'
+        import datetime
+        begin1 = datetime.datetime.now()
         # 删除源文件中的注释
         remove_comments(data_sol_source_project_dir_path=sol_source_project_dir_path)
         # 编译sol_source下工程文件夹内所有的文件,同时在AST_json中生成对应的文件夹，如果发现编译失败，删除对应的源文件。
@@ -337,8 +372,12 @@ def load_model_to_predict_contract():
                       data_ast_json_project_dir_path=ast_json_project_dir_path)
         # 遍历这个json文件的文件夹，取出其中所有的子文件夹
         for now_dir, child_dirs, child_files in os.walk(ast_json_project_dir_path):
+            if not now_dir.endswith(config.target_dir):
+                continue
             # 遍历工程项目中的每一个文件
             for ast_json_file_name in child_files:
+                if not ast_json_file_name == config.target_file.replace(".sol", ".json"):
+                    continue
                 try:
                     # 读取刚刚记录下来的抽象语法树的json文件
                     project_node_list, project_node_dict = read_compile(now_dir=now_dir,
@@ -389,6 +428,8 @@ def load_model_to_predict_contract():
                         # 传入所有的节点信息，生成数据流边的边文件。
                         create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
                         utils.success(f"{file_name}节点和边文件已经构建完毕。")
+                        end1 = datetime.datetime.now()
+                        utils.tip(f"构建基础文件一共耗时:{end1 - begin1}")
 
                     except Exception as e:
                         utils.error(f"{e}需要先更新词表")
@@ -438,7 +479,8 @@ def load_model_to_predict_contract():
                         # 传入所有的节点信息，生成数据流边的边文件。
                         create_dfg_edge_json(project_node_list, raw_project_dir_half_name, id_mapping_id)
                         utils.success(f"{file_name}节点和边文件已经构建完毕。")
-
+                        end1 = datetime.datetime.now()
+                        utils.tip(f"构建基础文件一共耗时:{end1 - begin1}")
                     # 打印树的样子。
                     generate_svg(project_node_list, file_name=f"{now_dir}/{ast_json_file_name}")
 

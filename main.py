@@ -32,6 +32,9 @@ import sys
 import math
 
 if __name__ == '__main__':
+    # 改变当前工作目录到 /var
+    os.chdir("/root/MVD-HG")
+    utils.tip("本次的系数为:" + str(config.coefficient[0]))
     # ret = []
     start = datetime.datetime.now()
     if config.run_mode == "create":
@@ -243,10 +246,10 @@ if __name__ == '__main__':
             if flag:
                 utils.error(f"原始结果为:{tmp},第{i}趟中出现了nan，重新进行计算，不计入最终结果。")
                 i -= 1
-            elif tmp[3].item() < 0.6:
-                utils.tip(tmp)
-                utils.error(f"原始结果为:{tmp},第{i}趟中结果过低，重新进行计算，不计入最终结果。")
-                i -= 1
+            # elif tmp[3].item() < 0.6:
+            #     utils.tip(tmp)
+            #     utils.error(f"原始结果为:{tmp},第{i}趟中结果过低，重新进行计算，不计入最终结果。")
+            #     i -= 1
             else:
                 res.append(tmp)
             i += 1
@@ -259,7 +262,7 @@ if __name__ == '__main__':
                     ans[index] += (content.item() / config.average_num)
                 else:
                     ans[index] += (content / config.average_num)
-        with open(f"{config.data_dir_path}/ans.txt", 'w') as write_file:
+        with open(f"{config.data_dir_path}/ans-{str(config.coefficient[0])}.txt", 'w') as write_file:
             for r in res:
                 for index, content in enumerate(r):
                     if type(content) == datetime.timedelta:
@@ -357,4 +360,5 @@ if __name__ == '__main__':
     utils.tip("以下是使用的参数")
     utils.tip(f"run_mode:{config.run_mode}")
     utils.tip(f"create_corpus_mode:{config.create_corpus_mode}")
+    utils.tip("本次的系数为:" + str(config.coefficient[0]))
     sys.exit(47)

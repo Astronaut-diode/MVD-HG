@@ -40,6 +40,9 @@ parser.add_argument('--create_code_snippet', action='store_true',
 parser.add_argument('--data_augmentation', action='store_true',
                     help="本次操作是否是用来拓展数据集的")
 parser.add_argument('--gpu_id', default=0, type=int, help="本次操作的gpu用哪个")
+parser.add_argument('--coefficient', type=float, help="系数")
+parser.add_argument('--target_dir', type=str, help="目标文件夹")
+parser.add_argument('--target_file', type=str, help="目标文件")
 # 下面更新config配置
 args = parser.parse_args()
 # ========================= 运行模式 =========================
@@ -64,6 +67,9 @@ create_code_snippet = args.create_code_snippet
 data_augmentation = args.data_augmentation
 # 本次使用的gpu_id
 gpu_id = args.gpu_id
+coefficient_ = args.coefficient
+target_dir = args.target_dir
+target_file = args.target_file
 # ========================= 运行模式 =========================
 # ========================= 文件夹路径 =========================
 # 记录img、data、sol_source、ast_json、complete、raw的文件夹路径
@@ -193,7 +199,7 @@ epoch_size = 50
 # K折交叉验证的数量。
 k_folds = 10
 # 上下文共同计算的系数
-coefficient = [0.5, 1, 0.5]
+coefficient = [coefficient_, 1, coefficient_]
 # 模型文件的保存位置
 model_data_dir = f"{data_dir_path}/model"
 # 保存tensor board文件的位置
