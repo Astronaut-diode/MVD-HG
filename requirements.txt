@@ -1,0 +1,67 @@
+absl-py==2.0.0
+blessed==1.20.0
+cachetools==5.3.2
+certifi==2023.11.17
+charset-normalizer==3.3.2
+filelock==3.13.1
+fsspec==2024.3.1
+gensim==3.6.0
+google-auth==2.25.2
+google-auth-oauthlib==1.0.0
+gpustat==1.1.1
+grpcio==1.60.0
+huggingface-hub==0.21.4
+idna==3.6
+importlib-metadata==7.0.0
+Jinja2==3.1.2
+joblib==1.3.2
+Markdown==3.5.1
+MarkupSafe==2.1.3
+mkl-fft==1.3.1
+mkl-random==1.2.2
+mkl-service==2.4.0
+numpy @ file:///croot/numpy_and_numpy_base_1682520569166/work
+nvidia-ml-py==12.535.133
+nvidia-ml-py3==7.352.0
+oauthlib==3.2.2
+packaging==23.2
+Pillow @ file:///croot/pillow_1696580024257/work
+prettytable==3.9.0
+protobuf==4.25.1
+psutil==5.9.7
+pyasn1==0.5.1
+pyasn1-modules==0.3.0
+pycryptodome==3.19.0
+pygraphviz @ file:///home/conda/feedstock_root/build_artifacts/pygraphviz_1700370297694/work
+pyparsing==3.1.1
+PyYAML==6.0.1
+regex==2023.12.25
+requests==2.31.0
+requests-oauthlib==1.3.1
+rsa==4.9
+safetensors==0.4.2
+scikit-learn==1.3.2
+scipy==1.10.1
+six @ file:///home/conda/feedstock_root/build_artifacts/six_1620240208055/work
+smart-open==6.4.0
+solc-select==1.0.4
+tensorboard==2.14.0
+tensorboard-data-server==0.7.2
+threadpoolctl==3.2.0
+tokenizers==0.15.2
+torch==1.10.0
+torch-cluster @ file:///root/env/torch_cluster-1.5.9-cp38-cp38-linux_x86_64.whl#sha256=ef48f10ac0f255ca841999600ac9aa3afbf7fe00f5b725b24c93c447e4e61c9a
+torch-geometric==2.1.0
+torch-scatter @ file:///root/env/torch_scatter-2.0.9-cp38-cp38-linux_x86_64.whl#sha256=6f8f3b983c79603fd6789c6a038f298e9fa0ab56474b5ce787916f96efa03920
+torch-sparse @ file:///root/env/torch_sparse-0.6.13-cp38-cp38-linux_x86_64.whl#sha256=22b743da4e8e665f32bb983f204b1df3c593438274ce5e28925339482d6d601b
+torch-spline-conv @ file:///root/env/torch_spline_conv-1.2.1-cp38-cp38-linux_x86_64.whl#sha256=e81cd5ff835f9630fd229d4365c4d1cb0bfa91b8af05f9ae201cf7d0b082305d
+torchaudio==0.10.0
+torchvision==0.11.1
+tqdm==4.66.1
+transformers==4.38.2
+typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1702176139754/work
+urllib3==2.1.0
+wcwidth==0.2.12
+Werkzeug==3.0.1
+word2vec==0.4.1
+zipp==3.17.0
