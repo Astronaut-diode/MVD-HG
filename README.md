@@ -4,6 +4,14 @@
 
 为Smart Contract提取以AST、CFG、DFG为基础的异构图，使用图神经网络进行多粒度的分类，实现行级别以及合约级别的漏洞检测任务。
 
+总体框架图如下所示：
+
+![AST-GNN](https://github.com/Astronaut-diode/MVD-HG/assets/57606131/ecaefc9a-6d89-4c72-9f33-2675a1687baa)
+
+得到的异构图案例如下所示：
+
+![AST-GNN1](https://github.com/Astronaut-diode/MVD-HG/assets/57606131/1bd8db14-315a-4611-a178-4e15c4a30da3)
+
 ## Usage
 
 在dataset.zip中已经压缩了28组数据集。分别是7种漏洞类型，每组漏洞类型都分为原始合约级别，增强以后合约级别、原始行级别、增强后行级别。每个文件夹中都存有对应的cmd命令，可用于运行、测试。
@@ -33,6 +41,10 @@
 不同类型组成异构图的消融实验结果(增强以后的数据集)。
 
 ![image](https://github.com/Astronaut-diode/MVD-HG/assets/57606131/26496d3e-9d75-4270-baf4-fa1820b844d0)
+
+进行参数实验以后得到的结果。
+
+![图3-4 参数实验](https://github.com/Astronaut-diode/MVD-HG/assets/57606131/ff3938ef-0f9f-47a5-884b-257c05cd6ecf)
 
 ## Project Architecture
 
