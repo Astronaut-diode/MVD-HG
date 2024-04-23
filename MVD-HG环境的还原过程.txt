@@ -1,0 +1,62 @@
+# 因为一开始啥都没有，先更新apt-get
+root@0efc54cd086a:~# apt-get update
+# 安装sudo
+root@0efc54cd086a:~# apt-get install sudo
+# 安装gcc
+root@0efc54cd086a:~# sudo apt install build-essential
+# 安装ping
+root@0efc54cd086a:~# sudo apt-get install inetutils-ping
+# 安装ifconfig
+root@0efc54cd086a:~# sudo apt-get install net-tools
+# 安装解压缩命令zip、unzip
+root@0efc54cd086a:~# sudo apt-get install zip unzip
+# 下载anaconda3的包，在清华源 https://mirrors.tuna.tsinghua.edu.cn/anaconda/archive/，并上传到服务器上。
+root@0efc54cd086a:~# bash Anaconda3-2023.07-0-Linux-x86_64.sh
+# 根据提示的的内容进行回车和yes的输入，进行下一步，完成安装。
+# 设置环境变量。
+root@0efc54cd086a:~# echo 'export PATH="/{此处应该填写anaconda3文件夹所在的位置}/anaconda3/bin:$PATH"' >> ~/.bashrc
+# 重新加载环境变量。
+root@0efc54cd086a:~# source ~/.bashrc
+# 设置anaconda3的镜像源地址为国内的地址。
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge 
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
+# 设置搜索时显示通道地址。
+conda config --set show_channel_urls yes
+# 创建含有python3.8的环境，名字就叫做lunikhod。
+conda create -n lunikhod python=3.8
+# 激活lunikhod的环境。
+conda activate lunikhod
+# 安装pytorch
+(lunikhod) root@0efc54cd086a:~/env# conda install --channel https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch pytorch=1.10.0 torchvision=0.11.1 torchaudio cudatoolkit=11.3 -c pytorch
+# 上https://pytorch-geometric.com/whl/torch-1.10.0+cu113.html下载四个文件，按照自己的python版本进行下载，然后上传到服务器上，一次性进行离线安装。
+(lunikhod) root@0efc54cd086a:~/env# pip install torch_scatter-2.0.9-cp38-cp38-linux_x86_64.whl torch_spline_conv-1.2.1-cp38-cp38-linux_x86_64.whl torch_cluster-1.5.9-cp38-cp38-linux_x86_64.whl torch_sparse-0.6.13-cp38-cp38-linux_x86_64.whl
+# 安装pytorch-geometric版本
+(lunikhod) root@0efc54cd086a:~/env# pip install torch-geometric==2.1.0 -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 安装gensim和word2vec
+(lunikhod) root@0efc54cd086a:~/env# pip install -i https://pypi.tuna.tsinghua.edu.cn/simple gensim==3.6.0
+(lunikhod) root@0efc54cd086a:~/env# pip install -i https://pypi.tuna.tsinghua.edu.cn/simple word2vec==0.4.1
+# 安装prettytable
+(lunikhod) root@0efc54cd086a:~/env# pip install -i https://pypi.tuna.tsinghua.edu.cn/simple prettytable
+# 安装tensorboard，中间因为版本不对，所以需要换一下setuptools的版本。
+(lunikhod) root@0efc54cd086a:~/env# pip install -i https://pypi.tuna.tsinghua.edu.cn/simple tensorboard
+(lunikhod) root@0efc54cd086a:~/env# pip uninstall setuptools
+(lunikhod) root@0efc54cd086a:~/env# pip install -i https://pypi.tuna.tsinghua.edu.cn/simple setuptools==59.5.0
+(lunikhod) root@0efc54cd086a:~/env# pip uninstall setuptools
+(lunikhod) root@0efc54cd086a:~/env# pip install setuptools==57.5.0
+# 安装pynvml
+(lunikhod) root@0efc54cd086a:~/env# pip install -i https://pypi.tuna.tsinghua.edu.cn/simple nvidia-ml-py3
+# gpu检测
+(lunikhod) root@0efc54cd086a:~/env# pip install -i https://pypi.tuna.tsinghua.edu.cn/simple gpustat
+# 安装solc-select
+(lunikhod) root@0efc54cd086a:~/env# pip3 install solc-select
+# 开始安装solc-select各个版本的编译器，应该包含如下版本： "0.4.0", "0.4.1", "0.4.2", "0.4.3", "0.4.4", "0.4.5", "0.4.6", "0.4.7", "0.4.8", "0.4.9", "0.4.10", "0.4.11", "0.4.12", "0.4.13", "0.4.14", "0.4.15", "0.4.16", "0.4.17", "0.4.18", "0.4.19", "0.4.20", "0.4.21", "0.4.22", "0.4.23", "0.4.24", "0.4.25", "0.4.26","0.5.0", "0.5.1", "0.5.2", "0.5.3", "0.5.4", "0.5.5", "0.5.6", "0.5.7", "0.5.8", "0.5.9", "0.5.10", "0.5.11", "0.5.12", "0.5.13", "0.5.14", "0.5.15", "0.5.16", "0.5.17","0.6.0", "0.6.1", "0.6.2", "0.6.3", "0.6.4", "0.6.5", "0.6.6", "0.6.7", "0.6.8", "0.6.9", "0.6.10", "0.6.11", "0.6.12","0.7.0", "0.7.1", "0.7.2", "0.7.3", "0.7.4", "0.7.5", "0.7.6","0.8.0", "0.8.1", "0.8.2", "0.8.3", "0.8.4", "0.8.5", "0.8.6", "0.8.7", "0.8.8", "0.8.9", "0.8.10", "0.8.11", "0.8.12", "0.8.13", "0.8.14", "0.8.15"。下载完以后检查以下，不可有缺失。
+(lunikhod) root@0efc54cd086a:~/env# solc-select install all
+# 安装pygraphviz
+(lunikhod) root@0efc54cd086a:~/MVD-HG# conda install -c conda-forge pygraphviz
+# 将.solc-select移动到/data/space_station/目录下
+(lunikhod) root@0efc54cd086a:~# cp -r .solc-select /data/space_station
+
+
+在这之后就是根据python main.py --help的提示，填入自己所需要的参数运行项目。
